@@ -172,7 +172,7 @@ List<CommandGroup> buildCommands(BuildContext context, WidgetRef ref) {
         () => showAboutDialog(
           context: context,
           applicationName: 'Tasklet',
-          applicationVersion: '1.0.0',
+          applicationVersion: '1.0.1',
           applicationLegalese: 'Open source under the MIT License.',
         ),
       ),
