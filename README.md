@@ -16,6 +16,10 @@
   <a href="LICENSE">MIT License</a>
 </p>
 
+<p align="center">
+  <img src="docs/screenshots/board.png" alt="Tasklet board with Backlog, Todo, In Progress and Done columns" width="900">
+</p>
+
 ---
 
 ## What is Tasklet?
@@ -29,6 +33,17 @@ computers without any Tasklet server. If you stop using Tasklet one day, your da
 
 **Platforms:** Windows 10 and 11 today. macOS is built from the same code and is being tested; iOS and Android are
 planned.
+
+## Screenshots
+
+| | |
+|---|---|
+| ![Dashboard with overdue, due today, due this week and done this week counts, Up Next and status overview](docs/screenshots/dashboard.png) | ![Task detail panel with status, priority, dates, labels and a description](docs/screenshots/task-panel.png) |
+| **Dashboard:** what's overdue, due today and coming up, plus what you finished. | **Detail panel:** every property as a chip; title and description save as you type. |
+| ![Project list layout in the light theme with collapsible status sections](docs/screenshots/list-light.png) | ![New Task dialog with status, priority, dates, labels and project chips](docs/screenshots/new-task.png) |
+| **List layout and light theme:** compact rows grouped by status. | **New Task (Ctrl+N):** type a title, set properties with chips, press Enter. |
+| ![Export Report dialog with chart preview by status, priority and project](docs/screenshots/reports.png) | |
+| **Reports:** preview charts, then export a prompt for any AI assistant. | |
 
 ## Features
 

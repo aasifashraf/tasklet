@@ -26,7 +26,11 @@ Future<void> main(List<String> args) async {
 
   final support = await getApplicationSupportDirectory();
   ErrorLog.install(support.path);
-  final prefs = await PrefsStore.open(p.join(support.path, 'settings.json'));
+  // Development and automated runs (screenshots, tests) can keep their settings away from the installed app's.
+  const prefsDir = String.fromEnvironment('TASKLET_PREFS_DIR');
+  final prefs = await PrefsStore.open(
+    p.join(prefsDir.isEmpty ? support.path : prefsDir, 'settings.json'),
+  );
   await prefs.watch();
   final overrides = [prefsStoreProvider.overrideWithValue(prefs)];
 
