@@ -7,7 +7,12 @@ final _trailingDigits = RegExp(r'\d+$');
 
 /// First 3 letters of [name] (everything else stripped), uppercased; `PRJ` when there are none.
 String baseKeyFor(String name) {
-  final letters = _letter.allMatches(name).take(3).map((m) => m[0]!).join().toUpperCase();
+  final letters = _letter
+      .allMatches(name)
+      .take(3)
+      .map((m) => m[0]!)
+      .join()
+      .toUpperCase();
   return letters.isEmpty ? 'PRJ' : letters;
 }
 
@@ -45,10 +50,14 @@ Map<String, String> resolveProjectKeys(Iterable<Project> projects) {
   for (final project in ordered) {
     final stored = project.key.trim().toUpperCase();
     final String key;
-    if (stored.isNotEmpty && stored != noProjectKey && !taken.contains(stored)) {
+    if (stored.isNotEmpty &&
+        stored != noProjectKey &&
+        !taken.contains(stored)) {
       key = stored;
     } else {
-      final base = stored.isEmpty ? baseKeyFor(project.name) : stored.replaceFirst(_trailingDigits, '');
+      final base = stored.isEmpty
+          ? baseKeyFor(project.name)
+          : stored.replaceFirst(_trailingDigits, '');
       key = nextFreeKey(base.isEmpty ? 'PRJ' : base, taken);
     }
     taken.add(key);

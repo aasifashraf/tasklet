@@ -30,13 +30,22 @@ class FolderWatcher {
 
   /// Completes once the watcher is ready to report changes.
   Future<void> start() async {
-    final watcher = _polling ? PollingDirectoryWatcher(folder, pollingDelay: pollingDelay) : DirectoryWatcher(folder);
-    _subscription = watcher.events.listen(_onEvent, onError: (Object _) => _fallBackToPolling());
+    final watcher = _polling
+        ? PollingDirectoryWatcher(folder, pollingDelay: pollingDelay)
+        : DirectoryWatcher(folder);
+    _subscription = watcher.events.listen(
+      _onEvent,
+      onError: (Object _) => _fallBackToPolling(),
+    );
     await watcher.ready;
   }
 
   void _onEvent(WatchEvent event) {
-    if (!event.path.endsWith('.json') || isTempFile(event.path) || isOwnWrite(event.path)) return;
+    if (!event.path.endsWith('.json') ||
+        isTempFile(event.path) ||
+        isOwnWrite(event.path)) {
+      return;
+    }
     _timer?.cancel();
     _timer = Timer(debounce, () {
       if (!_controller.isClosed) _controller.add(null);

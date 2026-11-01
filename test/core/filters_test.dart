@@ -18,8 +18,13 @@ void main() {
 
   test('OR within a category, AND across categories', () {
     final urgentTodo = entry(task('a', priority: Priority.urgent));
-    final highDone = entry(task('b', priority: Priority.high, status: TaskStatus.done));
-    final f = BoardFilters(status: {TaskStatus.todo}, priorities: {Priority.urgent, Priority.high});
+    final highDone = entry(
+      task('b', priority: Priority.high, status: TaskStatus.done),
+    );
+    final f = BoardFilters(
+      status: {TaskStatus.todo},
+      priorities: {Priority.urgent, Priority.high},
+    );
     expect(matches(urgentTodo, f), isTrue);
     expect(matches(highDone, f), isFalse);
   });
@@ -38,7 +43,10 @@ void main() {
     expect(matches(bug, BoardFilters(labels: {'bug'})), isTrue);
     expect(matches(bare, BoardFilters(labels: {'bug'})), isFalse);
     expect(matches(bare, BoardFilters(labels: {noLabelFilterId})), isTrue);
-    expect(matches(bug, BoardFilters(labels: {noLabelFilterId, 'bug'})), isTrue);
+    expect(
+      matches(bug, BoardFilters(labels: {noLabelFilterId, 'bug'})),
+      isTrue,
+    );
   });
 
   group('due filter', () {
@@ -46,7 +54,13 @@ void main() {
 
     test('overdue means past due and not done', () {
       expect(due(task('a', due: d('2026-10-14')), DueFilter.overdue), isTrue);
-      expect(due(task('b', due: d('2026-10-14'), status: TaskStatus.done), DueFilter.overdue), isFalse);
+      expect(
+        due(
+          task('b', due: d('2026-10-14'), status: TaskStatus.done),
+          DueFilter.overdue,
+        ),
+        isFalse,
+      );
       expect(due(task('c', due: today), DueFilter.overdue), isFalse);
     });
 
@@ -65,7 +79,15 @@ void main() {
   });
 
   group('search', () {
-    final e = entry(task('a', number: 12, title: 'Fix login button', description: 'Safari only'), web);
+    final e = entry(
+      task(
+        'a',
+        number: 12,
+        title: 'Fix login button',
+        description: 'Safari only',
+      ),
+      web,
+    );
 
     test('every word must appear in id, title, or description', () {
       expect(matchesSearch(e, ''), isTrue);
@@ -88,10 +110,23 @@ void main() {
   });
 
   test('stale filter values are pruned', () {
-    final f = BoardFilters(projects: {'web', 'gone'}, labels: {'bug', 'deleted', noLabelFilterId});
-    final pruned = pruneStaleFilters(f, {'web', app.id, noProjectId}, {'bug', noLabelFilterId});
+    final f = BoardFilters(
+      projects: {'web', 'gone'},
+      labels: {'bug', 'deleted', noLabelFilterId},
+    );
+    final pruned = pruneStaleFilters(
+      f,
+      {'web', app.id, noProjectId},
+      {'bug', noLabelFilterId},
+    );
     expect(pruned.projects, {'web'});
     expect(pruned.labels, {'bug', noLabelFilterId});
-    expect(identical(pruneStaleFilters(pruned, {'web'}, {'bug', noLabelFilterId}), pruned), isTrue);
+    expect(
+      identical(
+        pruneStaleFilters(pruned, {'web'}, {'bug', noLabelFilterId}),
+        pruned,
+      ),
+      isTrue,
+    );
   });
 }

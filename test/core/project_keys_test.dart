@@ -41,17 +41,24 @@ void main() {
     });
 
     test('legacy project without key gets one from its name', () {
-      expect(resolveProjectKeys([project('p1', name: 'Garden', key: '')]), {'p1': 'GAR'});
+      expect(resolveProjectKeys([project('p1', name: 'Garden', key: '')]), {
+        'p1': 'GAR',
+      });
     });
 
-    test('oldest project keeps a contested key, newer gets the next suffix', () {
-      final older = project('b', name: 'Web A', key: 'WEB', created: at(0));
-      final newer = project('a', name: 'Web B', key: 'WEB', created: at(5));
-      expect(resolveProjectKeys([newer, older]), {'a': 'WEB1'});
-    });
+    test(
+      'oldest project keeps a contested key, newer gets the next suffix',
+      () {
+        final older = project('b', name: 'Web A', key: 'WEB', created: at(0));
+        final newer = project('a', name: 'Web B', key: 'WEB', created: at(5));
+        expect(resolveProjectKeys([newer, older]), {'a': 'WEB1'});
+      },
+    );
 
     test('a real project claiming TSK is moved off it', () {
-      expect(resolveProjectKeys([project('p1', name: 'Tasks', key: 'TSK')]), {'p1': 'TSK1'});
+      expect(resolveProjectKeys([project('p1', name: 'Tasks', key: 'TSK')]), {
+        'p1': 'TSK1',
+      });
     });
 
     test('contested suffixed key strips digits before re-suffixing', () {

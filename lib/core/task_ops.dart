@@ -43,14 +43,22 @@ double _topOf(Project project, TaskStatus status) => sortOrderAtTop([
     updatedAt: now,
     completedAt: status == TaskStatus.done ? now : null,
   );
-  final updated = project.copyWith(tasks: [...project.tasks, task], nextNumber: project.nextNumber + 1, updatedAt: now);
+  final updated = project.copyWith(
+    tasks: [...project.tasks, task],
+    nextNumber: project.nextNumber + 1,
+    updatedAt: now,
+  );
   return (updated, task);
 }
 
 /// Changes status, maintaining completedAt. A no-op when the status is unchanged.
 Task withStatus(Task task, TaskStatus status, DateTime now) {
   if (task.status == status) return task;
-  return task.copyWith(status: status, completedAt: status == TaskStatus.done ? now : null, updatedAt: now);
+  return task.copyWith(
+    status: status,
+    completedAt: status == TaskStatus.done ? now : null,
+    updatedAt: now,
+  );
 }
 
 /// Replaces the task with the same id (inserting it if absent, e.g. for undo of a delete).
@@ -65,29 +73,34 @@ Project putTask(Project project, Task task, DateTime now) {
   return project.copyWith(tasks: tasks, updatedAt: now);
 }
 
-Project removeTask(Project project, String taskId, DateTime now) => project.copyWith(
-  tasks: [
-    for (final t in project.tasks)
-      if (t.id != taskId) t,
-  ],
-  updatedAt: now,
-);
+Project removeTask(Project project, String taskId, DateTime now) =>
+    project.copyWith(
+      tasks: [
+        for (final t in project.tasks)
+          if (t.id != taskId) t,
+      ],
+      updatedAt: now,
+    );
 
 /// An exact copy (project, status, priority, dates, labels) with a new id/number and fresh history, at the top of
 /// its status group (SPEC §7.3).
-(Project, Task) duplicateTask(Project project, Task source, {required String newId, required DateTime now}) =>
-    createTask(
-      project,
-      id: newId,
-      title: source.title,
-      description: source.description,
-      status: source.status,
-      priority: source.priority,
-      startDate: source.startDate,
-      dueDate: source.dueDate,
-      labelIds: source.labelIds,
-      now: now,
-    );
+(Project, Task) duplicateTask(
+  Project project,
+  Task source, {
+  required String newId,
+  required DateTime now,
+}) => createTask(
+  project,
+  id: newId,
+  title: source.title,
+  description: source.description,
+  status: source.status,
+  priority: source.priority,
+  startDate: source.startDate,
+  dueDate: source.dueDate,
+  labelIds: source.labelIds,
+  now: now,
+);
 
 /// Moves [task] from [from] to [to]. The task gets [restoreNumber] if given and still free in [to], otherwise
 /// [to]'s next number. Labels not in [allowedLabelIds] (labels usable in [to]) are dropped. Lands at the top of its
@@ -100,7 +113,8 @@ Project removeTask(Project project, String taskId, DateTime now) => project.copy
   int? restoreNumber,
   required DateTime now,
 }) {
-  final numberFree = restoreNumber != null && to.tasks.every((t) => t.number != restoreNumber);
+  final numberFree =
+      restoreNumber != null && to.tasks.every((t) => t.number != restoreNumber);
   final number = numberFree ? restoreNumber : to.nextNumber;
   final moved = task.copyWith(
     number: number,

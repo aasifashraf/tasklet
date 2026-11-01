@@ -12,7 +12,9 @@ import 'package:tasklet/data/save_queue.dart';
 void main() {
   late Directory root;
 
-  setUp(() async => root = await Directory.systemTemp.createTemp('tasklet_queue_'));
+  setUp(
+    () async => root = await Directory.systemTemp.createTemp('tasklet_queue_'),
+  );
   tearDown(() => root.delete(recursive: true));
 
   group('SaveQueue', () {
@@ -34,18 +36,26 @@ void main() {
       await Future.wait([first, second]);
       expect(order, [1, 2]);
       expect(queue.inFlight, 0);
-      await Future<void>.delayed(Duration.zero); // broadcast events are delivered asynchronously
+      await Future<void>.delayed(
+        Duration.zero,
+      ); // broadcast events are delivered asynchronously
       expect(counts, [1, 2, 1, 0]);
     });
 
-    test('a failed write does not block later writes and reports its own error', () async {
-      final queue = SaveQueue();
-      final failing = queue.enqueue('a.json', () async => throw const FileSystemException('locked'));
-      final ok = queue.enqueue('a.json', () async {});
-      await expectLater(failing, throwsA(isA<FileSystemException>()));
-      await expectLater(ok, completes);
-      expect(queue.inFlight, 0);
-    });
+    test(
+      'a failed write does not block later writes and reports its own error',
+      () async {
+        final queue = SaveQueue();
+        final failing = queue.enqueue(
+          'a.json',
+          () async => throw const FileSystemException('locked'),
+        );
+        final ok = queue.enqueue('a.json', () async {});
+        await expectLater(failing, throwsA(isA<FileSystemException>()));
+        await expectLater(ok, completes);
+        expect(queue.inFlight, 0);
+      },
+    );
 
     test('remembers own writes for a short window', () async {
       var now = DateTime(2026);
@@ -71,7 +81,11 @@ void main() {
       final again = await PrefsStore.open(path);
       expect(again.get<String>('name'), 'Ada');
       expect(again.get<double>('sidebarWidth'), 240.0);
-      expect(again.get<int>('name'), isNull, reason: 'wrong type reads as null');
+      expect(
+        again.get<int>('name'),
+        isNull,
+        reason: 'wrong type reads as null',
+      );
       await again.set('name', null);
       expect(again.get<String>('name'), isNull);
       await again.dispose();
@@ -84,7 +98,10 @@ void main() {
 
     test('rejects values that are not JSON-encodable', () async {
       final prefs = await PrefsStore.open(p.join(root.path, 'prefs.json'));
-      expect(() => prefs.set('bad', Object()), throwsA(isA<JsonUnsupportedObjectError>()));
+      expect(
+        () => prefs.set('bad', Object()),
+        throwsA(isA<JsonUnsupportedObjectError>()),
+      );
       await prefs.dispose();
     });
   });

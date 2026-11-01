@@ -60,4 +60,5 @@ Project project(
   tasks: tasks,
 );
 
-ProjectTask entry(Task t, [Project? p]) => ProjectTask(p ?? project('p1', key: 'WEB'), t);
+ProjectTask entry(Task t, [Project? p]) =>
+    ProjectTask(p ?? project('p1', key: 'WEB'), t);

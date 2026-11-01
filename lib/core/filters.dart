@@ -10,7 +10,10 @@ bool matchesDue(Task task, Set<DueFilter> due, LocalDate today) {
     final match = switch (f) {
       DueFilter.overdue => date != null && date.isBefore(today) && !task.isDone,
       DueFilter.today => date == today,
-      DueFilter.week => date != null && !date.isBefore(today) && !date.isAfter(today.addDays(6)),
+      DueFilter.week =>
+        date != null &&
+            !date.isBefore(today) &&
+            !date.isAfter(today.addDays(6)),
       DueFilter.none => date == null,
     };
     if (match) return true;
@@ -20,9 +23,17 @@ bool matchesDue(Task task, Set<DueFilter> due, LocalDate today) {
 
 bool matchesFilters(ProjectTask entry, BoardFilters filters, LocalDate today) {
   final task = entry.task;
-  if (filters.status.isNotEmpty && !filters.status.contains(task.status)) return false;
-  if (filters.priorities.isNotEmpty && !filters.priorities.contains(task.priority)) return false;
-  if (filters.projects.isNotEmpty && !filters.projects.contains(entry.project.id)) return false;
+  if (filters.status.isNotEmpty && !filters.status.contains(task.status)) {
+    return false;
+  }
+  if (filters.priorities.isNotEmpty &&
+      !filters.priorities.contains(task.priority)) {
+    return false;
+  }
+  if (filters.projects.isNotEmpty &&
+      !filters.projects.contains(entry.project.id)) {
+    return false;
+  }
   if (filters.labels.isNotEmpty) {
     final match =
         (filters.labels.contains(noLabelFilterId) && task.labelIds.isEmpty) ||
@@ -35,9 +46,14 @@ bool matchesFilters(ProjectTask entry, BoardFilters filters, LocalDate today) {
 /// Every whitespace-separated word of [query] must appear (case-insensitive) somewhere in the task's
 /// ID + title + description. An empty query matches everything.
 bool matchesSearch(ProjectTask entry, String query) {
-  final words = query.toLowerCase().split(RegExp(r'\s+')).where((w) => w.isNotEmpty);
+  final words = query
+      .toLowerCase()
+      .split(RegExp(r'\s+'))
+      .where((w) => w.isNotEmpty);
   if (words.isEmpty) return true;
-  final haystack = '${entry.displayId} ${entry.task.title} ${entry.task.description}'.toLowerCase();
+  final haystack =
+      '${entry.displayId} ${entry.task.title} ${entry.task.description}'
+          .toLowerCase();
   return words.every(haystack.contains);
 }
 
@@ -54,9 +70,16 @@ Set<String> toggleProjectFilter(Set<String> current, String projectId) {
 
 /// Drops filter values that reference projects/labels which no longer exist or are archived (SPEC §6).
 /// [validProjectIds] should include [noProjectId]; [validLabelIds] should include [noLabelFilterId].
-BoardFilters pruneStaleFilters(BoardFilters filters, Set<String> validProjectIds, Set<String> validLabelIds) {
+BoardFilters pruneStaleFilters(
+  BoardFilters filters,
+  Set<String> validProjectIds,
+  Set<String> validLabelIds,
+) {
   final projects = filters.projects.where(validProjectIds.contains).toSet();
   final labels = filters.labels.where(validLabelIds.contains).toSet();
-  if (projects.length == filters.projects.length && labels.length == filters.labels.length) return filters;
+  if (projects.length == filters.projects.length &&
+      labels.length == filters.labels.length) {
+    return filters;
+  }
   return filters.copyWith(projects: projects, labels: labels);
 }

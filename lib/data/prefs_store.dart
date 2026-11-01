@@ -21,7 +21,8 @@ class PrefsStore {
   StreamSubscription<WatchEvent>? _watch;
 
   /// Opens [path]. A missing or corrupt file starts empty — device prefs are recoverable, unlike workspace data.
-  static Future<PrefsStore> open(String path) async => PrefsStore._(path, await _load(path), SaveQueue());
+  static Future<PrefsStore> open(String path) async =>
+      PrefsStore._(path, await _load(path), SaveQueue());
 
   static Future<Map<String, Object?>> _load(String path) async {
     try {

@@ -24,14 +24,20 @@ void main() {
         updated: at(10),
         completed: at(10),
       );
-      final copy = Task.fromJson(jsonDecode(jsonEncode(original.toJson())) as Map<String, Object?>);
+      final copy = Task.fromJson(
+        jsonDecode(jsonEncode(original.toJson())) as Map<String, Object?>,
+      );
       expect(copy.toJson(), original.toJson());
       expect(copy.status, TaskStatus.done);
       expect(copy.dueDate, d('2026-10-09'));
     });
 
     test('writes status as snake_case and dates as YYYY-MM-DD', () {
-      final json = task('t1', status: TaskStatus.inProgress, due: d('2026-01-05')).toJson();
+      final json = task(
+        't1',
+        status: TaskStatus.inProgress,
+        due: d('2026-01-05'),
+      ).toJson();
       expect(json['status'], 'in_progress');
       expect(json['dueDate'], '2026-01-05');
       expect(json['startDate'], isNull);
@@ -48,11 +54,26 @@ void main() {
 
     test('missing required fields or bad values throw FormatException', () {
       final good = task('t1').toJson();
-      expect(() => Task.fromJson({...good}..remove('id')), throwsFormatException);
-      expect(() => Task.fromJson({...good, 'status': 'archived'}), throwsFormatException);
-      expect(() => Task.fromJson({...good, 'priority': 9}), throwsFormatException);
-      expect(() => Task.fromJson({...good, 'dueDate': '2026-13-01'}), throwsFormatException);
-      expect(() => Task.fromJson({...good, 'createdAt': 'yesterday'}), throwsFormatException);
+      expect(
+        () => Task.fromJson({...good}..remove('id')),
+        throwsFormatException,
+      );
+      expect(
+        () => Task.fromJson({...good, 'status': 'archived'}),
+        throwsFormatException,
+      );
+      expect(
+        () => Task.fromJson({...good, 'priority': 9}),
+        throwsFormatException,
+      );
+      expect(
+        () => Task.fromJson({...good, 'dueDate': '2026-13-01'}),
+        throwsFormatException,
+      );
+      expect(
+        () => Task.fromJson({...good, 'createdAt': 'yesterday'}),
+        throwsFormatException,
+      );
     });
 
     test('copyWith can clear nullable fields', () {
@@ -143,8 +164,14 @@ void main() {
     });
 
     test('round-trips', () {
-      final v = ViewDisplay(order: SortOrder.dueDate, layout: BoardLayout.list, properties: {DisplayProperty.id});
-      final copy = ViewDisplay.fromJson(jsonDecode(jsonEncode(v.toJson())) as Map<String, Object?>);
+      final v = ViewDisplay(
+        order: SortOrder.dueDate,
+        layout: BoardLayout.list,
+        properties: {DisplayProperty.id},
+      );
+      final copy = ViewDisplay.fromJson(
+        jsonDecode(jsonEncode(v.toJson())) as Map<String, Object?>,
+      );
       expect(copy.sameAs(v), isTrue);
       expect(copy.sameAs(ViewDisplay()), isFalse);
     });
@@ -158,14 +185,19 @@ void main() {
       createdAt: t0,
       updatedAt: t0,
     );
-    final copy = SavedView.fromJson(jsonDecode(jsonEncode(v.toJson())) as Map<String, Object?>);
+    final copy = SavedView.fromJson(
+      jsonDecode(jsonEncode(v.toJson())) as Map<String, Object?>,
+    );
     expect(copy.display, isNull);
     expect(copy.filters.priorities, {Priority.urgent});
   });
 
   test('label color rotation picks the least used color, never neutral', () {
     expect(TaskletColor.nextUnused([]), TaskletColor.blue);
-    expect(TaskletColor.nextUnused([TaskletColor.blue, TaskletColor.purple]), TaskletColor.green);
+    expect(
+      TaskletColor.nextUnused([TaskletColor.blue, TaskletColor.purple]),
+      TaskletColor.green,
+    );
     expect(TaskletColor.nextUnused(TaskletColor.rotation), TaskletColor.blue);
   });
 }

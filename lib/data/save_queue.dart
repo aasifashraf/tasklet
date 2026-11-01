@@ -49,7 +49,10 @@ class SaveQueue {
   }
 
   /// Whether this instance wrote [path] within [window] (used to ignore watcher events caused by our own saves).
-  bool isRecentOwnWrite(String path, {Duration window = const Duration(seconds: 2)}) {
+  bool isRecentOwnWrite(
+    String path, {
+    Duration window = const Duration(seconds: 2),
+  }) {
     final key = _key(path);
     if (_tails.containsKey(key)) return true;
     final at = _ownWrites[key];

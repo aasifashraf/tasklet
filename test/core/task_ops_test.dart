@@ -25,7 +25,10 @@ void main() {
 
   group('dates', () {
     test('next Monday is always after today and never a weekend', () {
-      expect(nextMondayAfter(d('2026-10-12')), d('2026-10-19')); // Monday → next Monday
+      expect(
+        nextMondayAfter(d('2026-10-12')),
+        d('2026-10-19'),
+      ); // Monday → next Monday
       expect(nextMondayAfter(d('2026-10-17')), d('2026-10-19')); // Saturday
       expect(nextMondayAfter(d('2026-10-18')), d('2026-10-19')); // Sunday
       expect(nextMondayAfter(d('2026-10-16')), d('2026-10-19')); // Friday
@@ -53,21 +56,35 @@ void main() {
   });
 
   group('task ops', () {
-    test('create assigns sequential numbers and lands at the top of its status', () {
-      var p = project('p', tasks: [task('a', number: 1, sortOrder: 0)]);
-      final (p2, t2) = createTask(p, id: 'b', title: 'B', now: at(1));
-      expect(t2.number, 2);
-      expect(t2.sortOrder, -1000);
-      expect(p2.nextNumber, 3);
-      p = p2;
-      final (p3, t3) = createTask(p, id: 'c', title: 'C', status: TaskStatus.done, now: at(2));
-      expect(t3.completedAt, at(2));
-      expect(t3.sortOrder, 0); // first in Done
-      expect(p3.updatedAt, at(2));
-    });
+    test(
+      'create assigns sequential numbers and lands at the top of its status',
+      () {
+        var p = project('p', tasks: [task('a', number: 1, sortOrder: 0)]);
+        final (p2, t2) = createTask(p, id: 'b', title: 'B', now: at(1));
+        expect(t2.number, 2);
+        expect(t2.sortOrder, -1000);
+        expect(p2.nextNumber, 3);
+        p = p2;
+        final (p3, t3) = createTask(
+          p,
+          id: 'c',
+          title: 'C',
+          status: TaskStatus.done,
+          now: at(2),
+        );
+        expect(t3.completedAt, at(2));
+        expect(t3.sortOrder, 0); // first in Done
+        expect(p3.updatedAt, at(2));
+      },
+    );
 
     test('numbers are never reused after delete', () {
-      final (p1, t1) = createTask(project('p'), id: 'a', title: 'A', now: at(0));
+      final (p1, t1) = createTask(
+        project('p'),
+        id: 'a',
+        title: 'A',
+        now: at(0),
+      );
       final p2 = removeTask(p1, t1.id, at(1));
       final (_, t2) = createTask(p2, id: 'b', title: 'B', now: at(2));
       expect(t2.number, 2);
@@ -82,16 +99,19 @@ void main() {
       expect(withStatus(done, TaskStatus.todo, at(6)).completedAt, isNull);
     });
 
-    test('putTask replaces or inserts (undo of delete restores exact fields)', () {
-      final original = task('a', number: 4, title: 'Keep me');
-      var p = project('p', tasks: [original]);
-      p = removeTask(p, 'a', at(1));
-      p = putTask(p, original, at(2));
-      expect(p.taskById('a')!.toJson(), original.toJson());
-      p = putTask(p, original.copyWith(title: 'Edited'), at(3));
-      expect(p.tasks.length, 1);
-      expect(p.taskById('a')!.title, 'Edited');
-    });
+    test(
+      'putTask replaces or inserts (undo of delete restores exact fields)',
+      () {
+        final original = task('a', number: 4, title: 'Keep me');
+        var p = project('p', tasks: [original]);
+        p = removeTask(p, 'a', at(1));
+        p = putTask(p, original, at(2));
+        expect(p.taskById('a')!.toJson(), original.toJson());
+        p = putTask(p, original.copyWith(title: 'Edited'), at(3));
+        expect(p.tasks.length, 1);
+        expect(p.taskById('a')!.title, 'Edited');
+      },
+    );
 
     test('duplicate copies fields but not history', () {
       final source = task(
@@ -118,17 +138,34 @@ void main() {
     });
 
     test('move issues a new number, drops invalid labels, and can restore the original number', () {
-      final t = task('a', number: 3, labels: ['projectLabel', 'workspaceLabel']);
+      final t = task(
+        'a',
+        number: 3,
+        labels: ['projectLabel', 'workspaceLabel'],
+      );
       final from = project('from', tasks: [t]);
       final to = project('to', tasks: [task('x', number: 1)]);
-      final (from2, to2, moved) = moveTask(from, to, t, allowedLabelIds: {'workspaceLabel'}, now: at(1));
+      final (from2, to2, moved) = moveTask(
+        from,
+        to,
+        t,
+        allowedLabelIds: {'workspaceLabel'},
+        now: at(1),
+      );
       expect(from2.tasks, isEmpty);
       expect(moved.number, 2);
       expect(moved.labelIds, ['workspaceLabel']);
       expect(to2.nextNumber, 3);
 
       // Undo: move back restoring number 3, which is still free in the original project.
-      final (_, back, restored) = moveTask(to2, from2, moved, allowedLabelIds: {}, restoreNumber: 3, now: at(2));
+      final (_, back, restored) = moveTask(
+        to2,
+        from2,
+        moved,
+        allowedLabelIds: {},
+        restoreNumber: 3,
+        now: at(2),
+      );
       expect(restored.number, 3);
       expect(back.nextNumber, 4);
     });

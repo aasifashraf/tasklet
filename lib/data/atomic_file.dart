@@ -17,7 +17,12 @@ bool isTempFile(String path) => p.basename(path).endsWith('.tmp');
 /// Writes [contents] to a temp file next to [path], flushes it, then renames it over [path] (SPEC §2.5).
 /// A crash or a sync client reading mid-save never sees a half-written file.
 Future<void> writeFileAtomic(String path, String contents) async {
-  final tmp = File(p.join(p.dirname(path), '.${p.basename(path)}.${_random.nextInt(1 << 32).toRadixString(36)}.tmp'));
+  final tmp = File(
+    p.join(
+      p.dirname(path),
+      '.${p.basename(path)}.${_random.nextInt(1 << 32).toRadixString(36)}.tmp',
+    ),
+  );
   await tmp.writeAsString(contents, flush: true);
   try {
     await _renameWithRetry(tmp, path);

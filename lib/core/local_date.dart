@@ -2,7 +2,9 @@
 class LocalDate implements Comparable<LocalDate> {
   LocalDate(this.year, this.month, this.day) {
     final normalized = DateTime.utc(year, month, day);
-    if (normalized.year != year || normalized.month != month || normalized.day != day) {
+    if (normalized.year != year ||
+        normalized.month != month ||
+        normalized.day != day) {
       throw FormatException('Invalid date: $year-$month-$day');
     }
   }
@@ -18,7 +20,11 @@ class LocalDate implements Comparable<LocalDate> {
   static LocalDate parse(String value) {
     final match = _pattern.firstMatch(value);
     if (match == null) throw FormatException('Invalid date: $value');
-    return LocalDate(int.parse(match[1]!), int.parse(match[2]!), int.parse(match[3]!));
+    return LocalDate(
+      int.parse(match[1]!),
+      int.parse(match[2]!),
+      int.parse(match[3]!),
+    );
   }
 
   static LocalDate? fromJson(Object? value) => switch (value) {
@@ -59,7 +65,10 @@ class LocalDate implements Comparable<LocalDate> {
 
   @override
   bool operator ==(Object other) =>
-      other is LocalDate && other.year == year && other.month == month && other.day == day;
+      other is LocalDate &&
+      other.year == year &&
+      other.month == month &&
+      other.day == day;
 
   @override
   int get hashCode => Object.hash(year, month, day);

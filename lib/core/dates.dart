@@ -17,6 +17,8 @@ LocalDate startOfWeek(LocalDate date, int firstDayOfWeek) {
 LocalDate startOfMonth(LocalDate date) => LocalDate(date.year, date.month, 1);
 
 LocalDate endOfMonth(LocalDate date) {
-  final next = date.month == 12 ? LocalDate(date.year + 1, 1, 1) : LocalDate(date.year, date.month + 1, 1);
+  final next = date.month == 12
+      ? LocalDate(date.year + 1, 1, 1)
+      : LocalDate(date.year, date.month + 1, 1);
   return next.addDays(-1);
 }
