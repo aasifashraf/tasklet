@@ -582,3 +582,19 @@ class _TrianglePainter extends CustomPainter {
   @override
   bool shouldRepaint(_TrianglePainter old) => old.color != color;
 }
+
+/// "Change Color ▸" submenu with the 8-color grid, for the ⋯ / right-click menus of projects, labels and views — so
+/// recoloring is discoverable, not only by clicking the color icon.
+Widget colorSubmenu({
+  required TaskletColor selected,
+  required ValueChanged<TaskletColor> onPick,
+}) => Builder(
+  builder: (context) => SubmenuButton(
+    leadingIcon: SizedBox(
+      width: 16,
+      child: ColorDot(color: Tokens.of(context).named(selected), size: 9),
+    ),
+    menuChildren: [ColorGrid(selected: selected, onPick: onPick)],
+    child: const Text('Change Color', style: TextStyle(fontSize: 12)),
+  ),
+);

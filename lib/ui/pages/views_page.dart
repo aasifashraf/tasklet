@@ -188,6 +188,11 @@ class _ViewsPageState extends ConsumerState<ViewsPage> {
                   'Rename',
                   onPressed: () => setState(() => _renaming = v.id),
                 ),
+                colorSubmenu(
+                  selected: v.color,
+                  onPick: (c) =>
+                      _controller.updateView(v.id, (x) => x.copyWith(color: c)),
+                ),
                 const Divider(),
                 menuItem(
                   'Delete View…',

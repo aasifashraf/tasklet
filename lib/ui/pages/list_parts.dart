@@ -230,10 +230,12 @@ class TapMenu extends StatelessWidget {
     required this.menuChildren,
     required this.child,
     this.enabled = true,
+    this.tooltip = 'Change color',
   });
   final List<Widget> menuChildren;
   final Widget child;
   final bool enabled;
+  final String tooltip;
 
   @override
   Widget build(BuildContext context) => MenuAnchor(
@@ -244,7 +246,7 @@ class TapMenu extends StatelessWidget {
           : null,
       child: MouseRegion(
         cursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
-        child: child,
+        child: enabled ? Tooltip(message: tooltip, child: child) : child,
       ),
     ),
   );

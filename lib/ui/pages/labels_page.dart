@@ -217,6 +217,14 @@ class _LabelsPageState extends ConsumerState<LabelsPage> {
                 'Rename',
                 onPressed: () => setState(() => _renaming = l.id),
               ),
+              colorSubmenu(
+                selected: l.color,
+                onPick: (c) => _controller.updateLabel(
+                  l.id,
+                  (x) => x.copyWith(color: c),
+                  projectId: project?.id,
+                ),
+              ),
               const Divider(),
               menuItem(
                 'Delete Label…',

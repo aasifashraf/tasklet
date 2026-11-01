@@ -207,6 +207,10 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage> {
                 'Rename',
                 onPressed: () => setState(() => _renaming = p.id),
               ),
+              colorSubmenu(
+                selected: p.color,
+                onPick: (c) => _controller.setProjectColor(p.id, c),
+              ),
               menuItem(
                 p.archived ? 'Unarchive' : 'Archive',
                 onPressed: () => _controller.setArchived(p.id, !p.archived),

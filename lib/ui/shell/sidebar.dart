@@ -250,6 +250,10 @@ class _SidebarState extends ConsumerState<Sidebar> {
           onPressed: () => _controller.setFavorite(p.id, !p.favorite),
         ),
         menuItem('Rename', onPressed: () => setState(() => _renaming = key)),
+        colorSubmenu(
+          selected: p.color,
+          onPick: (c) => _controller.setProjectColor(p.id, c),
+        ),
         menuItem(
           'New Project…',
           onPressed: () {
@@ -323,6 +327,11 @@ class _SidebarState extends ConsumerState<Sidebar> {
     return ContextMenuRegion(
       menuChildren: () => [
         menuItem('Rename', onPressed: () => setState(() => _renaming = key)),
+        colorSubmenu(
+          selected: v.color,
+          onPick: (c) =>
+              _controller.updateView(v.id, (x) => x.copyWith(color: c)),
+        ),
         menuItem(
           'Remove from Sidebar',
           onPressed: () => _controller.setViewPinned(v.id, false),
