@@ -1,7 +1,8 @@
 # Contributing to Tasklet
 
 Thanks for helping! Tasklet aims to be a faithful implementation of [docs/SPEC.md](docs/SPEC.md) — when behavior is in
-question, the spec decides. If you think the spec is wrong, open an issue proposing a change to it first.
+question, the spec decides. If you think the spec is wrong, open an issue proposing a change to it first. Choices made where the spec is silent
+are recorded in [docs/DECISIONS.md](docs/DECISIONS.md).
 
 ## Ground rules
 
