@@ -76,7 +76,7 @@ class _SidebarState extends ConsumerState<Sidebar> {
                 if (pinned.isNotEmpty)
                   _Section(
                     id: 'views',
-                    label: 'Views',
+                    label: 'Saved Views',
                     child: _Reorderable<SavedView>(
                       items: pinned,
                       keyOf: (v) => 'view:${v.id}',

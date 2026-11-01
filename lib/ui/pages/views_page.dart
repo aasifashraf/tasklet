@@ -52,7 +52,7 @@ class _ViewsPageState extends ConsumerState<ViewsPage> {
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
     return PageScaffold(
-      title: 'Views',
+      title: 'Saved Views',
       actions: [
         TextButton.icon(
           onPressed: editable ? _startCreate : null,
@@ -73,7 +73,7 @@ class _ViewsPageState extends ConsumerState<ViewsPage> {
             child: views.isEmpty && !_creating
                 ? EmptyState(
                     icon: Icons.layers_outlined,
-                    title: 'No views yet',
+                    title: 'No saved views yet',
                     message:
                         'A view is a saved set of filters across all your projects, like "Urgent this week". '
                         'Create one, then set its filters.',
@@ -86,7 +86,7 @@ class _ViewsPageState extends ConsumerState<ViewsPage> {
                 : ListView(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                     children: [
-                      ListHeading('Views', views.length),
+                      ListHeading('Saved Views', views.length),
                       if (_creating)
                         ListRowShell(
                           leading: TapMenu(

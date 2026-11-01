@@ -88,3 +88,9 @@ path, and confirming its "replace existing file?" prompt would destroy whatever 
 
 v1 ships as a non-sandboxed, notarized app (like most sync-folder tools), so Tasklet can keep using any folder the user
 picked across launches without security-scoped bookmarks. An App Store build would need the sandbox plus bookmarks.
+
+## D11. "Saved Views" label
+
+The spec calls saved filter sets "Views". With a Board/List view switch on every board, plain "Views" read as
+ambiguous, so the sidebar item, its section, the page title and Settings → Sidebar say **Saved Views**. Routes, data
+files and code names are unchanged.
