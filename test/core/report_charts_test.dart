@@ -84,4 +84,28 @@ void main() {
       isNot(contains('mermaid')),
     );
   });
+
+  test('export file name shows the report period', () {
+    expect(
+      reportFileName(ReportKind.report, json),
+      'Tasklet Report Prompt 2026-10-01 to 2026-10-31.txt',
+    );
+    expect(
+      reportFileName(ReportKind.summary, json),
+      'Tasklet Summary Prompt 2026-10-01 to 2026-10-31.txt',
+    );
+    expect(
+      reportFileName(ReportKind.json, json),
+      'Tasklet Report Data 2026-10-01 to 2026-10-31.json',
+    );
+    final oneDay = {
+      'report': {
+        'period': {'from': '2026-11-01', 'to': '2026-11-01'},
+      },
+    };
+    expect(
+      reportFileName(ReportKind.report, oneDay),
+      'Tasklet Report Prompt 2026-11-01.txt',
+    );
+  });
 }

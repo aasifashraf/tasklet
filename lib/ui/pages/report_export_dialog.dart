@@ -60,11 +60,9 @@ class _ExportDialogState extends ConsumerState<_ExportDialog> {
   Future<void> _export() async {
     setState(() => _saving = true);
     try {
-      final extension = _kind == ReportKind.json ? 'json' : 'txt';
       final uri = await FilePicker.saveFile(
         dialogTitle: 'Export report',
-        fileName:
-            'Tasklet ${_kind == ReportKind.json ? 'Report Data' : _kind.label} ${widget.today}.$extension',
+        fileName: reportFileName(_kind, widget.json),
         bytes: Uint8List.fromList(utf8.encode(_text())),
       );
       if (uri == null || !mounted) return;

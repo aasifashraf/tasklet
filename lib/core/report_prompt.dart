@@ -174,3 +174,19 @@ String buildReportText(
     ..writeln('```');
   return b.toString();
 }
+
+/// The export file name: "Tasklet Report Prompt 2026-10-26 to 2026-11-01.txt" (one date when the period is a single
+/// day). JSON Only exports are named "Tasklet Report Data …" with a .json extension.
+String reportFileName(ReportKind kind, Map<String, Object?> json) {
+  final period =
+      (json['report'] as Map<String, Object?>?)?['period']
+          as Map<String, Object?>?;
+  final from = period?['from'] as String?;
+  final to = period?['to'] as String?;
+  final range = from == null || to == null
+      ? (to ?? from ?? '')
+      : (from == to ? from : '$from to $to');
+  final name = kind == ReportKind.json ? 'Report Data' : kind.label;
+  final extension = kind == ReportKind.json ? 'json' : 'txt';
+  return '${['Tasklet $name', if (range.isNotEmpty) range].join(' ')}.$extension';
+}
