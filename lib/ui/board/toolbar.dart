@@ -435,21 +435,12 @@ class _LayoutToggle extends ConsumerWidget {
       }
     }
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconBtn(
-          icon: Icons.view_kanban_outlined,
-          tooltip: 'Board',
-          active: layout == BoardLayout.board,
-          onPressed: () => set(BoardLayout.board),
-        ),
-        IconBtn(
-          icon: Icons.view_list_outlined,
-          tooltip: 'List',
-          active: layout == BoardLayout.list,
-          onPressed: () => set(BoardLayout.list),
-        ),
+    return SegmentedIconSwitch<BoardLayout>(
+      selected: layout,
+      onChanged: set,
+      options: const [
+        SegmentOption(BoardLayout.board, Icons.view_kanban_outlined, 'Board'),
+        SegmentOption(BoardLayout.list, Icons.view_list_rounded, 'List'),
       ],
     );
   }

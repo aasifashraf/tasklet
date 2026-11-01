@@ -530,3 +530,122 @@ class NoticeBanner extends StatelessWidget {
     );
   }
 }
+
+/// A collapse chevron: points down when expanded, right when collapsed. Uses a glyph that is optically centred
+/// in its box so it lines up with the label next to it.
+class Chevron extends StatelessWidget {
+  const Chevron({
+    super.key,
+    required this.collapsed,
+    this.size = 14,
+    this.color,
+  });
+  final bool collapsed;
+  final double size;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) => AnimatedRotation(
+    turns: collapsed ? -0.25 : 0,
+    duration: const Duration(milliseconds: 120),
+    child: Icon(
+      Icons.keyboard_arrow_down_rounded,
+      size: size,
+      color: color ?? Tokens.of(context).tertiary,
+    ),
+  );
+}
+
+/// One option of a [SegmentedIconSwitch].
+class SegmentOption<T> {
+  const SegmentOption(this.value, this.icon, this.tooltip);
+  final T value;
+  final IconData icon;
+  final String tooltip;
+}
+
+/// A compact segmented switch: one pill with a highlight that slides to the selected option (e.g. Board / List).
+class SegmentedIconSwitch<T> extends StatelessWidget {
+  const SegmentedIconSwitch({
+    super.key,
+    required this.options,
+    required this.selected,
+    required this.onChanged,
+  });
+  final List<SegmentOption<T>> options;
+  final T selected;
+  final ValueChanged<T> onChanged;
+
+  static const _segment = 30.0;
+  static const _height = 26.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Tokens.of(context);
+    final index = options
+        .indexWhere((o) => o.value == selected)
+        .clamp(0, options.length - 1);
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    return Container(
+      height: _height,
+      width: _segment * options.length + 4,
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        border: Border.all(color: t.border),
+        borderRadius: BorderRadius.circular(7),
+      ),
+      child: Stack(
+        children: [
+          AnimatedPositioned(
+            duration: reduceMotion
+                ? Duration.zero
+                : const Duration(milliseconds: 160),
+            curve: Curves.easeOutCubic,
+            left: index * _segment,
+            top: 0,
+            bottom: 0,
+            width: _segment,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: t.selected,
+                borderRadius: BorderRadius.circular(5),
+              ),
+            ),
+          ),
+          Row(
+            children: [
+              for (final o in options)
+                Tooltip(
+                  message: o.tooltip,
+                  child: Semantics(
+                    button: true,
+                    selected: o.value == selected,
+                    label: o.tooltip,
+                    child: MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => onChanged(o.value),
+                        child: SizedBox(
+                          width: _segment,
+                          child: Center(
+                            child: Icon(
+                              o.icon,
+                              size: 15,
+                              color: o.value == selected
+                                  ? t.primary
+                                  : t.tertiary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}

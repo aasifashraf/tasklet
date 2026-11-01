@@ -108,15 +108,7 @@ class _SectionHeader extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Row(
               children: [
-                AnimatedRotation(
-                  turns: collapsed ? -0.25 : 0,
-                  duration: const Duration(milliseconds: 120),
-                  child: Icon(
-                    Icons.arrow_drop_down,
-                    size: 18,
-                    color: t.secondary,
-                  ),
-                ),
+                Chevron(collapsed: collapsed, size: 16, color: t.secondary),
                 const SizedBox(width: 2),
                 StatusIcon(status),
                 const SizedBox(width: 8),

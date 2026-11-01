@@ -447,14 +447,9 @@ class _Section extends ConsumerWidget {
                   children: [
                     Text(label, style: TextStyles.sectionLabel(context)),
                     const SizedBox(width: 4),
-                    AnimatedRotation(
-                      turns: collapsed ? -0.25 : 0,
-                      duration: const Duration(milliseconds: 120),
-                      child: Icon(
-                        Icons.arrow_drop_down,
-                        size: 16,
-                        color: hovered ? t.secondary : t.tertiary,
-                      ),
+                    Chevron(
+                      collapsed: collapsed,
+                      color: hovered ? t.secondary : t.tertiary,
                     ),
                   ],
                 ),
