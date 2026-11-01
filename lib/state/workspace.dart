@@ -444,6 +444,34 @@ class WorkspaceController extends Notifier<WorkspaceState> {
     return moved;
   }
 
+  /// Undo of a project move: takes the task out of [currentId] and puts [snapshot] back into [originalId] with its
+  /// original number if that is still free there (SPEC §7.3), otherwise a fresh one.
+  Future<void> restoreMovedTask(
+    String originalId,
+    String currentId,
+    Task snapshot,
+  ) async {
+    final original = _ws.projectById(originalId);
+    final current = _ws.projectById(currentId);
+    if (original == null || current == null) return;
+    final numberFree = original.tasks.every(
+      (t) => t.id == snapshot.id || t.number != snapshot.number,
+    );
+    final restored = numberFree
+        ? snapshot
+        : snapshot.copyWith(number: original.nextNumber);
+    await _putProjects([
+      ops.removeTask(current, snapshot.id, _now),
+      ops
+          .putTask(original, restored, _now)
+          .copyWith(
+            nextNumber: numberFree
+                ? original.nextNumber
+                : original.nextNumber + 1,
+          ),
+    ]);
+  }
+
   /// Drag-and-drop: set status and/or manual position.
   Future<void> placeTask(
     String projectId,
