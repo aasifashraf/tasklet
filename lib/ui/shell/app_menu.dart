@@ -152,7 +152,7 @@ List<CommandGroup> buildCommands(BuildContext context, WidgetRef ref) {
     CommandGroup('View', [
       AppCommand(
         'Refresh',
-        () => ref.read(workspaceProvider.notifier).refresh(),
+        () => ref.read(workspaceProvider.notifier).refresh(full: true),
         shortcut: const SingleActivator(LogicalKeyboardKey.f5),
       ),
     ]),

@@ -45,16 +45,34 @@ bool matchesFilters(ProjectTask entry, BoardFilters filters, LocalDate today) {
 
 /// Every whitespace-separated word of [query] must appear (case-insensitive) somewhere in the task's
 /// ID + title + description. An empty query matches everything.
-bool matchesSearch(ProjectTask entry, String query) {
-  final words = query
-      .toLowerCase()
-      .split(RegExp(r'\s+'))
-      .where((w) => w.isNotEmpty);
-  if (words.isEmpty) return true;
-  final haystack =
-      '${entry.displayId} ${entry.task.title} ${entry.task.description}'
-          .toLowerCase();
-  return words.every(haystack.contains);
+bool matchesSearch(ProjectTask entry, String query) =>
+    SearchQuery(query).matches(entry);
+
+/// A search query parsed once and applied to many tasks (see [matchesSearch]).
+class SearchQuery {
+  SearchQuery(String query)
+    : words = [
+        for (final w in query.toLowerCase().split(_whitespace))
+          if (w.isNotEmpty) w,
+      ];
+
+  static final _whitespace = RegExp(r'\s+');
+
+  /// Lowercased title + description per task, computed on first search and dropped with the task.
+  static final _lowerText = Expando<String>();
+
+  final List<String> words;
+
+  bool get isEmpty => words.isEmpty;
+
+  bool matches(ProjectTask entry) {
+    if (words.isEmpty) return true;
+    final task = entry.task;
+    final text = _lowerText[task] ??= '${task.title}\n${task.description}'
+        .toLowerCase();
+    final id = entry.displayId.toLowerCase();
+    return words.every((w) => id.contains(w) || text.contains(w));
+  }
 }
 
 /// The Project filter's one-or-the-other model (SPEC §6): "No Project" alone, or one-or-more real projects.

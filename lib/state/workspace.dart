@@ -61,6 +61,9 @@ class WorkspaceController extends Notifier<WorkspaceState> {
   bool _refreshPending = false;
   int _generation = 0;
 
+  /// Bumped by every optimistic change; a refresh read that overlapped one is stale and dropped.
+  int _mutations = 0;
+
   /// Recently deleted tasks for Undo (SPEC §2.5): in memory only, capped at 50.
   final _recentlyDeleted = <String, (String, Task)>{};
 
@@ -155,8 +158,20 @@ class WorkspaceController extends Notifier<WorkspaceState> {
     _store = null;
   }
 
-  /// Re-reads the folder (watcher event, window focus, wake). Skipped while saves are in flight (SPEC §9).
-  Future<void> refresh() async {
+  /// Editors with unsaved, debounced text (the task panel) register here so Quit can save it first.
+  final pendingEditFlushers = <void Function()>{};
+
+  /// Saves debounced edits now and waits until every queued write has landed (before quitting).
+  Future<void> flushSaves() async {
+    for (final flush in [...pendingEditFlushers]) {
+      flush();
+    }
+    await _store?.queue.drain();
+  }
+
+  /// Re-reads the folder (watcher event, window focus, wake). Skipped while saves are in flight (SPEC §9). Only
+  /// changed files are parsed again; [full] re-parses everything (the Refresh command).
+  Future<void> refresh({bool full = false}) async {
     final store = _store;
     if (store == null) return;
     if (store.queue.inFlight > 0) {
@@ -165,13 +180,19 @@ class WorkspaceController extends Notifier<WorkspaceState> {
     }
     _refreshPending = false;
     final generation = _generation;
+    final mutations = _mutations;
     try {
-      final ws = await store.read();
-      // A save that started during the read supersedes it.
-      if (generation != _generation || store.queue.inFlight > 0) {
+      final ws = await store.read(reparse: full);
+      // An edit or save that happened during the read supersedes it.
+      if (generation != _generation ||
+          mutations != _mutations ||
+          store.queue.inFlight > 0) {
         _refreshPending = true;
+        if (store.queue.inFlight == 0) unawaited(refresh());
         return;
       }
+      // An unchanged folder returns the same instance: nothing to rebuild.
+      if (identical(ws, workspace)) return;
       state = ReadyState(ws);
     } on WorkspaceFolderMissing {
       state = FailedState(
@@ -186,7 +207,10 @@ class WorkspaceController extends Notifier<WorkspaceState> {
 
   // ---------------------------------------------------------------- saving
 
-  void _set(Workspace next) => state = ReadyState(next);
+  void _set(Workspace next) {
+    _mutations++;
+    state = ReadyState(next);
+  }
 
   Future<void> _save(Future<void> Function(WorkspaceStore store) write) async {
     final store = _store;
@@ -222,7 +246,9 @@ class WorkspaceController extends Notifier<WorkspaceState> {
     return _save((s) => s.writeProject(project));
   }
 
-  Future<void> _putProjects(List<Project> changed) {
+  /// Replaces several projects and saves them. [inOrder] writes one file after another and stops at the first
+  /// failure: a task move lists the destination first, so a failed write can never leave the task in neither file.
+  Future<void> _putProjects(List<Project> changed, {bool inOrder = false}) {
     final ws = _ws;
     final byId = {for (final p in changed) p.id: p};
     _set(
@@ -231,9 +257,15 @@ class WorkspaceController extends Notifier<WorkspaceState> {
         noProject: byId[noProjectId] ?? ws.noProject,
       ),
     );
-    return _save(
-      (s) => Future.wait([for (final p in changed) s.writeProject(p)]),
-    );
+    return _save((s) async {
+      if (!inOrder) {
+        await Future.wait([for (final p in changed) s.writeProject(p)]);
+        return;
+      }
+      for (final p in changed) {
+        await s.writeProject(p);
+      }
+    });
   }
 
   Project _project(String id) =>
@@ -454,7 +486,7 @@ class WorkspaceController extends Notifier<WorkspaceState> {
       restoreNumber: restoreNumber,
       now: _now,
     );
-    await _putProjects([newFrom, newTo]);
+    await _putProjects([newTo, newFrom], inOrder: true);
     return moved;
   }
 
@@ -475,7 +507,6 @@ class WorkspaceController extends Notifier<WorkspaceState> {
         ? snapshot
         : snapshot.copyWith(number: original.nextNumber);
     await _putProjects([
-      ops.removeTask(current, snapshot.id, _now),
       ops
           .putTask(original, restored, _now)
           .copyWith(
@@ -483,7 +514,8 @@ class WorkspaceController extends Notifier<WorkspaceState> {
                 ? original.nextNumber
                 : original.nextNumber + 1,
           ),
-    ]);
+      ops.removeTask(current, snapshot.id, _now),
+    ], inOrder: true);
   }
 
   /// Drag-and-drop: set status and/or manual position.
@@ -584,12 +616,6 @@ class WorkspaceController extends Notifier<WorkspaceState> {
     }
     if (affected.isNotEmpty) await _putProjects(affected);
   }
-
-  /// Number of tasks carrying [labelId].
-  int labelUsage(String labelId) => _ws.allProjects
-      .expand((p) => p.tasks)
-      .where((t) => t.labelIds.contains(labelId))
-      .length;
 
   // ---------------------------------------------------------------- views
 

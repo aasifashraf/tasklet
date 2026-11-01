@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:path/path.dart' as p;
 
@@ -78,6 +79,21 @@ class WorkspaceStore {
   /// Projects deleted in this session; saving them again would resurrect the file.
   final _deletedProjects = <String>{};
 
+  /// The last parse of each project file and the (modified, size) it had then. A refresh re-parses only files whose
+  /// stamp changed and keeps the same [Project] instances for the rest.
+  final _parsed = <String, ({DateTime modified, int size, Project? project})>{};
+
+  /// What the last [read] saw (every file's stamp) and returned; an unchanged folder returns the same [Workspace].
+  String? _lastSignature;
+  Workspace? _last;
+
+  /// Changed project files larger than this in total are parsed on a background isolate, so a big folder never
+  /// freezes the UI. Smaller reads stay on the async file API (no isolate start-up cost).
+  static const _isolateParseBytes = 256 * 1024;
+
+  /// Projects with more tasks than this are encoded on a background isolate when saved.
+  static const _isolateEncodeTasks = 2000;
+
   String get _projectsDir => p.join(folder, projectsDirName);
   String projectPath(String projectId) =>
       p.join(_projectsDir, '$projectId.json');
@@ -105,8 +121,15 @@ class WorkspaceStore {
   /// - Sync conflict copies are reported and never touched; if a project's main file is missing, its newest copy
   ///   is shown instead (first save recreates the main file).
   /// - Project keys are resolved and changed keys persisted.
-  Future<Workspace> read() async {
+  /// - Only files that changed since the last read are parsed again; if nothing changed, the previous [Workspace]
+  ///   instance is returned. [reparse] forces a full read (explicit Refresh).
+  Future<Workspace> read({bool reparse = false}) async {
     if (!await Directory(folder).exists()) throw WorkspaceFolderMissing(folder);
+    if (reparse) {
+      _parsed.clear();
+      _last = null;
+    }
+    final signature = StringBuffer();
     _readOnly = await _markerIsNewerOrUnreadable();
 
     final (labels, labelsReadable) = await _readList(
@@ -124,11 +147,12 @@ class WorkspaceStore {
     _opaqueLabels = labels.opaque;
     _opaqueViews = views.opaque;
 
-    final conflicts = <SyncConflict>[...await _rootConflicts()];
+    final conflicts = <SyncConflict>[...await _rootConflicts(signature)];
     final canonical = <String, Project>{};
     final copies = <String, List<(String, Project)>>{};
     _unreadableProjects.clear();
     final dir = Directory(_projectsDir);
+    final files = <(File, FileStat)>[];
     if (await dir.exists()) {
       await for (final entity in dir.list(followLinks: false)) {
         final name = p.basename(entity.path);
@@ -137,15 +161,21 @@ class WorkspaceStore {
             name.startsWith('.')) {
           continue;
         }
-        final stem = p.basenameWithoutExtension(name);
-        final project = await _readProject(entity);
-        if (project == null) {
-          if (isSafeProjectId(stem)) _unreadableProjects.add(_key(entity.path));
-        } else if (stem == project.id) {
-          canonical[project.id] = project;
-        } else {
-          (copies[project.id] ??= []).add((entity.path, project));
-        }
+        files.add((entity, await entity.stat()));
+      }
+    }
+    files.sort((a, b) => a.$1.path.compareTo(b.$1.path));
+    await _parseChanged(files);
+    for (final (file, stat) in files) {
+      signature.write('${file.path}|${stat.modified}|${stat.size}\n');
+      final stem = p.basenameWithoutExtension(file.path);
+      final project = _parsed[file.path]!.project;
+      if (project == null) {
+        if (isSafeProjectId(stem)) _unreadableProjects.add(_key(file.path));
+      } else if (stem == project.id) {
+        canonical[project.id] = project;
+      } else {
+        (copies[project.id] ??= []).add((file.path, project));
       }
     }
 
@@ -193,6 +223,12 @@ class WorkspaceStore {
 
     var projects = canonical.values.toList();
     final changedKeys = resolveProjectKeys(projects);
+    final last = _last;
+    if (last != null &&
+        changedKeys.isEmpty &&
+        signature.toString() == _lastSignature) {
+      return last;
+    }
     if (changedKeys.isNotEmpty) {
       projects = [
         for (final pr in projects)
@@ -223,7 +259,7 @@ class WorkspaceStore {
       views.opaque.length,
     ].fold(0, (a, b) => a + b);
 
-    return Workspace(
+    final workspace = Workspace(
       folder: folder,
       projects: projects,
       noProject: noProject,
@@ -236,7 +272,65 @@ class WorkspaceStore {
       readOnly: _readOnly,
       hiddenEntryCount: hidden,
     );
+    // Key self-heal writes change files, so that read is never reused.
+    _last = changedKeys.isEmpty ? workspace : null;
+    _lastSignature = signature.toString();
+    return workspace;
   }
+
+  /// Re-parses the project [files] whose stamp differs from the last parse and forgets files that are gone.
+  Future<void> _parseChanged(List<(File, FileStat)> files) async {
+    final stale = <String>[];
+    var staleBytes = 0;
+    for (final (file, stat) in files) {
+      final cached = _parsed[file.path];
+      if (cached == null ||
+          cached.modified != stat.modified ||
+          cached.size != stat.size) {
+        stale.add(file.path);
+        staleBytes += stat.size;
+      }
+    }
+    final current = {for (final (file, _) in files) file.path};
+    _parsed.removeWhere((path, _) => !current.contains(path));
+    if (stale.isEmpty) return;
+    final results = staleBytes > _isolateParseBytes
+        ? await _parseOnIsolate(stale)
+        : [for (final path in stale) await _readProject(File(path))];
+    final stats = {for (final (file, stat) in files) file.path: stat};
+    for (final (i, path) in stale.indexed) {
+      final stat = stats[path]!;
+      _parsed[path] = (
+        modified: stat.modified,
+        size: stat.size,
+        project: results[i],
+      );
+    }
+  }
+
+  static Future<List<Project?>> _parseOnIsolate(List<String> paths) =>
+      Isolate.run(() => [for (final path in paths) _parseProjectSync(path)]);
+
+  static Project? _parseProjectSync(String path) {
+    try {
+      return _projectFrom(jsonDecode(File(path).readAsStringSync()));
+    } on FormatException {
+      return null;
+    } on FileSystemException {
+      return null; // locked or still downloading
+    }
+  }
+
+  static Project? _projectFrom(Object? json) {
+    if (json is! Map<String, Object?>) return null;
+    final project = Project.fromJson(json);
+    return isSafeProjectId(project.id) ? project : null;
+  }
+
+  static Future<String> _encodeProject(Project project) =>
+      project.tasks.length > _isolateEncodeTasks
+      ? Isolate.run(() => encodeJson(project.toJson()))
+      : Future.value(encodeJson(project.toJson()));
 
   /// Saves one project file atomically. The No-Project file is only created once it has a task (SPEC §2.3).
   Future<void> writeProject(Project project) async {
@@ -255,14 +349,19 @@ class WorkspaceStore {
         'Not saving "${project.name}": its file could not be read and might be mid-sync.',
       );
     }
-    if (project.isNoProject &&
-        project.tasks.isEmpty &&
-        !await File(path).exists()) {
-      return;
-    }
+    // Everything below runs in the queue, so it sees the effect of earlier saves of the same file.
     await queue.enqueue(path, () async {
-      await Directory(_projectsDir).create(recursive: true);
-      await writeFileAtomic(path, encodeJson(project.toJson()));
+      if (project.isNoProject &&
+          project.tasks.isEmpty &&
+          !await File(path).exists()) {
+        return;
+      }
+      // A vanished folder (unplugged drive, sync not ready) is never recreated (SPEC §2.5).
+      if (!await Directory(folder).exists()) {
+        throw WorkspaceFolderMissing(folder);
+      }
+      await Directory(_projectsDir).create();
+      await writeFileAtomic(path, await _encodeProject(project));
     });
   }
 
@@ -359,14 +458,19 @@ class WorkspaceStore {
     }
   }
 
-  /// Conflict copies of labels.json / views.json (e.g. "labels (conflicted copy).json", "views-LAPTOP.json").
-  Future<List<SyncConflict>> _rootConflicts() async {
+  /// Conflict copies of labels.json / views.json (e.g. "labels (conflicted copy).json", "views-LAPTOP.json"). Adds
+  /// every root JSON file's stamp to [signature].
+  Future<List<SyncConflict>> _rootConflicts(StringBuffer signature) async {
     final result = <SyncConflict>[];
-    await for (final entity in Directory(folder).list(followLinks: false)) {
+    final entries = await Directory(folder).list(followLinks: false).toList()
+      ..sort((a, b) => a.path.compareTo(b.path));
+    for (final entity in entries) {
       final name = p.basename(entity.path);
       if (entity is! File || !name.endsWith('.json') || name.startsWith('.')) {
         continue;
       }
+      final stat = await entity.stat();
+      signature.write('$name|${stat.modified}|${stat.size}\n');
       if (name == labelsFileName ||
           name == viewsFileName ||
           name == markerFileName) {
@@ -377,7 +481,9 @@ class WorkspaceStore {
         result.add(SyncConflict(file: entity.path, projectName: 'Labels'));
       }
       if (lower.startsWith('views')) {
-        result.add(SyncConflict(file: entity.path, projectName: 'Quick Filters'));
+        result.add(
+          SyncConflict(file: entity.path, projectName: 'Quick Filters'),
+        );
       }
     }
     return result;
@@ -385,10 +491,7 @@ class WorkspaceStore {
 
   Future<Project?> _readProject(File file) async {
     try {
-      final json = jsonDecode(await file.readAsString());
-      if (json is! Map<String, Object?>) return null;
-      final project = Project.fromJson(json);
-      return isSafeProjectId(project.id) ? project : null;
+      return _projectFrom(jsonDecode(await file.readAsString()));
     } on FormatException {
       return null;
     } on FileSystemException {

@@ -125,8 +125,9 @@ T _opt<T>(Map<String, Object?> json, String key, T fallback) {
   return value is T ? value : fallback;
 }
 
+/// Non-finite values (e.g. `1e999` parses as Infinity) can't be written back as JSON, so they read as 0.
 double _double(Map<String, Object?> json, String key) => switch (json[key]) {
-  final num n => n.toDouble(),
+  final num n when n.isFinite => n.toDouble(),
   _ => 0,
 };
 
@@ -929,17 +930,27 @@ class Workspace {
   /// Labels a task in [project] may use: the project's own, then workspace-wide (SPEC §2.2).
   List<Label> labelsFor(Project project) => [...project.labels, ...labels];
 
-  Label? labelById(String id) {
-    for (final l in labels) {
-      if (l.id == id) return l;
-    }
-    for (final p in projects) {
-      for (final l in p.labels) {
-        if (l.id == id) return l;
+  /// Every label (workspace first, so its id wins a clash) by id. Built once per workspace snapshot.
+  late final Map<String, Label> _labelsById = {
+    for (final p in projects.reversed)
+      for (final l in p.labels.reversed) l.id: l,
+    for (final l in labels.reversed) l.id: l,
+  };
+
+  Label? labelById(String id) => _labelsById[id];
+
+  /// How many tasks carry each label id, counted in one pass. Built once per workspace snapshot.
+  late final Map<String, int> labelUsage = () {
+    final counts = <String, int>{};
+    for (final p in allProjects) {
+      for (final t in p.tasks) {
+        for (final id in t.labelIds) {
+          counts[id] = (counts[id] ?? 0) + 1;
+        }
       }
     }
-    return null;
-  }
+    return counts;
+  }();
 
   Workspace copyWith({
     List<Project>? projects,

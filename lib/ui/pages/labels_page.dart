@@ -162,7 +162,7 @@ class _LabelsPageState extends ConsumerState<LabelsPage> {
     Tokens t,
     bool locked,
   ) {
-    final usage = _controller.labelUsage(l.id);
+    final usage = ref.read(workspaceDataProvider)?.labelUsage[l.id] ?? 0;
     return ListRowShell(
       dimmed: locked,
       leading: TapMenu(

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -35,11 +37,22 @@ class _BoardToolbarState extends ConsumerState<BoardToolbar> {
     _search.text = ref.read(sessionSearchProvider)[widget.kind.id] ?? '';
   }
 
+  /// Typing updates the board after a short pause, so a large board never makes the field lag.
+  Timer? _searchDebounce;
+
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _search.dispose();
     _searchFocus.dispose();
     super.dispose();
+  }
+
+  void _searchChanged(String value) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 200), () {
+      if (mounted) _actions.setSearch(value);
+    });
   }
 
   void _openSearch() {
@@ -52,6 +65,7 @@ class _BoardToolbarState extends ConsumerState<BoardToolbar> {
   }
 
   void _closeSearch() {
+    _searchDebounce?.cancel();
     _search.clear();
     _actions.setSearch(null);
   }
@@ -93,7 +107,7 @@ class _BoardToolbarState extends ConsumerState<BoardToolbar> {
                 controller: _search,
                 focusNode: _searchFocus,
                 style: TextStyles.body(context),
-                onChanged: (v) => _actions.setSearch(v),
+                onChanged: _searchChanged,
                 decoration: InputDecoration(
                   hintText: 'Search title, ID, description',
                   prefixIcon: Icon(Icons.search, size: 15, color: t.tertiary),

@@ -23,8 +23,8 @@ Future<void> writeFileAtomic(String path, String contents) async {
       '.${p.basename(path)}.${_random.nextInt(1 << 32).toRadixString(36)}.tmp',
     ),
   );
-  await tmp.writeAsString(contents, flush: true);
   try {
+    await tmp.writeAsString(contents, flush: true);
     await _renameWithRetry(tmp, path);
   } catch (_) {
     try {

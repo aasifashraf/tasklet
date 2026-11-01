@@ -198,8 +198,9 @@ final boardProvider = Provider.family<BoardData?, BoardKind>((ref, kind) {
   );
 
   final scope = scopeTasks(ws, kind, today, prefs.todayRules).toList();
+  final query = SearchQuery(search);
   final matching = scope.where(
-    (e) => matchesFilters(e, filters, today) && matchesSearch(e, search),
+    (e) => matchesFilters(e, filters, today) && query.matches(e),
   );
   return BoardData(
     kind: kind,
