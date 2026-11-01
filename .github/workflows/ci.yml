@@ -9,7 +9,7 @@ jobs:
   analyze-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       # tray_manager's native code (cnativeapi) is compiled even for `flutter test` and links GTK 3, X11 and Xi.
       - name: Install Linux build dependencies
         run: |
@@ -31,7 +31,7 @@ jobs:
         os: [windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
