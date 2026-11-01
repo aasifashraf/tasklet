@@ -17,3 +17,6 @@ linter:
     - prefer_final_locals
     - prefer_single_quotes
     - unawaited_futures
+
+formatter:
+  page_width: 120
