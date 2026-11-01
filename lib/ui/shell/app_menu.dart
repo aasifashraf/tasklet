@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/models.dart';
 import '../../platform/lifecycle.dart';
 import '../../platform/native.dart';
+import '../../platform/whats_new_notes.dart';
 import '../../platform/windows.dart';
 import '../../state/prefs.dart';
 import '../../state/task_actions.dart';
@@ -172,7 +173,7 @@ List<CommandGroup> buildCommands(BuildContext context, WidgetRef ref) {
         () => showAboutDialog(
           context: context,
           applicationName: 'Tasklet',
-          applicationVersion: '1.0.1',
+          applicationVersion: currentRelease.version,
           applicationLegalese: 'Open source under the MIT License.',
         ),
       ),

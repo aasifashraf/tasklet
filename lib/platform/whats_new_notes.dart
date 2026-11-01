@@ -8,50 +8,86 @@ class ReleaseFeature {
   final String description;
 }
 
+/// The notes for one shipped version.
 class ReleaseNotes {
   const ReleaseNotes({
-    required this.id,
-    required this.subtitle,
-    required this.features,
+    required this.version,
+    required this.month,
+    this.features = const [],
     this.fixes = const [],
   });
 
-  /// Bump only when a release ships new notes; dismissing marks this id as read.
-  final String id;
-  final String subtitle;
+  /// The app version (`pubspec.yaml` without the build number). Dismissing the sheet marks it as read.
+  final String version;
+
+  /// "November 2026", shown as "November 2026 Update".
+  final String month;
   final List<ReleaseFeature> features;
   final List<String> fixes;
+
+  String get id => version;
+  String get subtitle => '$month Update · Version $version';
 }
 
-const currentRelease = ReleaseNotes(
-  id: '1.0.0',
-  subtitle: 'November 2026 Update',
-  features: [
-    ReleaseFeature(
-      Icons.folder_outlined,
-      'Your tasks, your files',
-      'Everything is plain JSON in a folder you choose. Put it in OneDrive, Dropbox or iCloud Drive to sync.',
-    ),
-    ReleaseFeature(
-      Icons.view_kanban_outlined,
-      'Board and list',
-      'Drag cards between columns, reorder by hand, or sort by priority, due date and more.',
-    ),
-    ReleaseFeature(
-      Icons.wb_sunny_outlined,
-      'Today and Dashboard',
-      "See what's due, starting, or overdue, and what you finished this week.",
-    ),
-    ReleaseFeature(
-      Icons.layers_outlined,
-      'Quick filters',
-      'Save any combination of filters and open it in one click from the sidebar.',
-    ),
-    ReleaseFeature(
-      Icons.description_outlined,
-      'Reports for any AI',
-      'Turn on Reports in Settings → Sidebar, then export a ready-made progress report, with optional Mermaid charts, for any AI assistant.',
-    ),
-  ],
-  fixes: ['First release.'],
-);
+/// Every release, newest first. **Each release adds an entry here** (and to CHANGELOG.md); a test fails when the
+/// `pubspec.yaml` version has none. The sheet shows the newest release first and earlier ones below it.
+const releases = <ReleaseNotes>[
+  ReleaseNotes(
+    version: '1.0.2',
+    month: 'November 2026',
+    features: [
+      ReleaseFeature(
+        Icons.speed_outlined,
+        'Fast with big workspaces',
+        'Large folders open without freezing, and switching back to Tasklet is instant, even with tens of thousands of tasks.',
+      ),
+    ],
+    fixes: [
+      'Your last edit is saved when you quit from the tray or File → Exit.',
+      'Changes made in the Settings window and the main window no longer overwrite each other.',
+      'A data folder that goes missing (for example an unplugged drive) is never recreated empty.',
+      'Moving a task to another project can no longer lose it if saving fails.',
+      'New Task can no longer create the same task twice.',
+      'Search keeps up while you type on large boards.',
+      'Easier-to-read secondary text in the light theme.',
+      'The list layout scrollbar works correctly.',
+      'Errors are written to a local log file to help with bug reports.',
+      "What's New now shows every release, newest first.",
+    ],
+  ),
+  ReleaseNotes(
+    version: '1.0.1',
+    month: 'November 2026',
+    features: [
+      ReleaseFeature(
+        Icons.folder_outlined,
+        'Your tasks, your files',
+        'Everything is plain JSON in a folder you choose. Put it in OneDrive, Dropbox or iCloud Drive to sync.',
+      ),
+      ReleaseFeature(
+        Icons.view_kanban_outlined,
+        'Board and list',
+        'Drag cards between columns, reorder by hand, or sort by priority, due date and more.',
+      ),
+      ReleaseFeature(
+        Icons.wb_sunny_outlined,
+        'Today and Dashboard',
+        "See what's due, starting, or overdue, and what you finished this week.",
+      ),
+      ReleaseFeature(
+        Icons.layers_outlined,
+        'Quick filters',
+        'Save any combination of filters and open it in one click from the sidebar.',
+      ),
+      ReleaseFeature(
+        Icons.description_outlined,
+        'Reports for any AI',
+        'Turn on Reports in Settings → Sidebar, then export a ready-made progress report, with optional Mermaid charts, for any AI assistant.',
+      ),
+    ],
+    fixes: ['First public release for Windows.'],
+  ),
+];
+
+/// The newest release: the app's version and what the sheet opens with.
+ReleaseNotes get currentRelease => releases.first;

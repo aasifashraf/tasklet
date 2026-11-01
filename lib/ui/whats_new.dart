@@ -78,7 +78,6 @@ class _WhatsNewDialogState extends State<_WhatsNewDialog> {
   @override
   Widget build(BuildContext context) {
     final t = Tokens.of(context);
-    const notes = currentRelease;
     return Dialog(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 480, maxHeight: 620),
@@ -124,71 +123,24 @@ class _WhatsNewDialogState extends State<_WhatsNewDialog> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        notes.subtitle,
+                        currentRelease.subtitle,
                         textAlign: TextAlign.center,
                         style: TextStyles.bodySecondary(context)
                             .copyWith(fontSize: 13),
                       ),
                       const SizedBox(height: 26),
-                      for (final f in notes.features)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 18),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              SizedBox(
-                                width: 28,
-                                child: Icon(f.icon, size: 20, color: t.accent),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      f.title,
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: t.primary,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      f.description,
-                                      style: TextStyles.bodySecondary(context)
-                                          .copyWith(height: 1.45),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      if (notes.fixes.isNotEmpty) ...[
-                        const SizedBox(height: 4),
+                      _ReleaseBody(currentRelease),
+                      // Earlier releases follow, so the sheet is the whole history.
+                      for (final notes in releases.skip(1)) ...[
+                        const SizedBox(height: 18),
+                        Divider(height: 1, color: t.border),
+                        const SizedBox(height: 18),
                         Text(
-                          'Fixes and polish',
-                          style: TextStyles.sectionLabel(context),
+                          notes.subtitle,
+                          style: TextStyles.section(context),
                         ),
-                        const SizedBox(height: 6),
-                        for (final fix in notes.fixes)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 4),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Icon(Icons.check, size: 13, color: t.tertiary),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    fix,
-                                    style: TextStyles.meta(context),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                        const SizedBox(height: 14),
+                        _ReleaseBody(notes),
                       ],
                     ],
                   ),
@@ -217,6 +169,74 @@ class _WhatsNewDialogState extends State<_WhatsNewDialog> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// One release's feature rows and its "Fixes and polish" list.
+class _ReleaseBody extends StatelessWidget {
+  const _ReleaseBody(this.notes);
+  final ReleaseNotes notes;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Tokens.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final f in notes.features)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 18),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 28,
+                  child: Icon(f.icon, size: 20, color: t.accent),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        f.title,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: t.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        f.description,
+                        style: TextStyles.bodySecondary(context)
+                            .copyWith(height: 1.45),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        if (notes.fixes.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text('Fixes and polish', style: TextStyles.sectionLabel(context)),
+          const SizedBox(height: 6),
+          for (final fix in notes.fixes)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.check, size: 13, color: t.tertiary),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(fix, style: TextStyles.meta(context))),
+                ],
+              ),
+            ),
+        ],
+      ],
     );
   }
 }
