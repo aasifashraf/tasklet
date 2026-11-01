@@ -11,17 +11,25 @@ enum TaskletColor {
   magenta,
   neutral;
 
-  static TaskletColor fromJson(Object? value) {
+  static TaskletColor? tryParse(Object? value) {
     for (final c in values) {
       if (c.name == value) return c;
     }
-    throw FormatException('Unknown color: $value');
+    return null;
   }
 
   String toJson() => name;
 
   /// Colors eligible for automatic assignment (everything except neutral), in rotation order.
-  static const List<TaskletColor> rotation = [blue, purple, green, orange, red, yellow, magenta];
+  static const List<TaskletColor> rotation = [
+    blue,
+    purple,
+    green,
+    orange,
+    red,
+    yellow,
+    magenta,
+  ];
 
   /// The first rotation color not in [used]; cycles from the start when all are used.
   static TaskletColor nextUnused(Iterable<TaskletColor> used) {

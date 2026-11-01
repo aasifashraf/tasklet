@@ -1,8 +1,15 @@
 import 'colors.dart';
 import 'local_date.dart';
 
-// Entities from SPEC §2.2. Every entity preserves unrecognized JSON fields in `extra` and writes them back
-// unchanged (SPEC §2.5), so data written by a newer Tasklet on another machine is never stripped.
+// Entities from SPEC §2.2.
+//
+// Forward compatibility (SPEC §2.5, docs/DECISIONS.md):
+// - unrecognized fields are kept in `extra` and written back unchanged;
+// - a list entry this version can't understand (e.g. a task with a status added by a newer Tasklet, or a
+//   hand-edited task with a broken field) is kept verbatim as "opaque", hidden from the UI, and written back
+//   unchanged — one odd entry never hides the rest of its project;
+// - an unknown color shows as neutral but its original value is written back until the user picks a color.
+// Only damage to the file itself (invalid JSON, missing project id/name/createdAt) makes a whole file unreadable.
 
 /// Reserved id of the built-in "No Project" bucket (SPEC §2.3). Also used as the Project filter value for
 /// "No Project".
@@ -26,8 +33,10 @@ enum TaskStatus {
   final String json;
   final String label;
 
-  static TaskStatus fromJson(Object? value) =>
-      values.firstWhere((s) => s.json == value, orElse: () => throw FormatException('Unknown status: $value'));
+  static TaskStatus fromJson(Object? value) => values.firstWhere(
+    (s) => s.json == value,
+    orElse: () => throw FormatException('Unknown status: $value'),
+  );
 }
 
 enum Priority {
@@ -44,8 +53,10 @@ enum Priority {
   /// Sort rank: Urgent 1 … Low 4, None 5 (SPEC §5.3).
   int get rank => this == none ? 5 : value;
 
-  static Priority fromJson(Object? value) =>
-      values.firstWhere((p) => p.value == value, orElse: () => throw FormatException('Unknown priority: $value'));
+  static Priority fromJson(Object? value) => values.firstWhere(
+    (p) => p.value == value,
+    orElse: () => throw FormatException('Unknown priority: $value'),
+  );
 }
 
 enum SortOrder {
@@ -70,7 +81,15 @@ enum SortDirection { asc, desc }
 
 enum BoardLayout { board, list }
 
-enum DisplayProperty { id, statusIcon, priority, startDate, dueDate, labels, project }
+enum DisplayProperty {
+  id,
+  statusIcon,
+  priority,
+  startDate,
+  dueDate,
+  labels,
+  project,
+}
 
 enum DueFilter {
   overdue('overdue', 'Overdue'),
@@ -118,19 +137,10 @@ DateTime _time(Map<String, Object?> json, String key) {
   return parsed;
 }
 
-DateTime? _timeOrNull(Map<String, Object?> json, String key) => json[key] == null ? null : _time(json, key);
+DateTime? _timeOrNull(Map<String, Object?> json, String key) =>
+    json[key] == null ? null : _time(json, key);
 
 String _timeJson(DateTime t) => t.toUtc().toIso8601String();
-
-List<Map<String, Object?>> _objects(Map<String, Object?> json, String key) {
-  final value = json[key];
-  if (value == null) return const [];
-  if (value is! List) throw FormatException('"$key" must be a list');
-  return [
-    for (final item in value)
-      if (item is Map<String, Object?>) item else throw FormatException('"$key" items must be objects'),
-  ];
-}
 
 List<String> _strings(Object? value) => value is List
     ? [
@@ -138,6 +148,55 @@ List<String> _strings(Object? value) => value is List
           if (v is String) v,
       ]
     : const [];
+
+/// Color with forward compatibility: an unknown value displays as neutral and is remembered for write-back.
+(TaskletColor, String?) _color(Map<String, Object?> json) {
+  final raw = json['color'];
+  if (raw == null) return (TaskletColor.neutral, null);
+  final known = TaskletColor.tryParse(raw);
+  if (known != null) return (known, null);
+  if (raw is String) return (TaskletColor.neutral, raw);
+  throw FormatException('Invalid color: $raw');
+}
+
+/// Entries of a JSON list that parse with [parse] and have a unique id, plus every other entry verbatim.
+class LenientList<T> {
+  LenientList(this.items, this.opaque);
+
+  /// Parses [value] (a JSON list; null means empty). Throws only if [value] isn't a list at all.
+  factory LenientList.parse(
+    Object? value,
+    T Function(Map<String, Object?>) parse,
+    String Function(T) idOf,
+  ) {
+    if (value == null) return LenientList(const [], const []);
+    if (value is! List) throw const FormatException('Expected a list');
+    final items = <T>[];
+    final opaque = <Object?>[];
+    final seen = <String>{};
+    for (final entry in value) {
+      T? item;
+      if (entry is Map<String, Object?>) {
+        try {
+          item = parse(entry);
+        } on FormatException {
+          item = null;
+        }
+      }
+      if (item != null && seen.add(idOf(item))) {
+        items.add(item);
+      } else {
+        opaque.add(entry);
+      }
+    }
+    return LenientList(items, opaque);
+  }
+
+  final List<T> items;
+
+  /// Entries this version doesn't understand (or duplicates of an id), preserved for write-back.
+  final List<Object?> opaque;
+}
 
 class Task {
   Task({
@@ -185,7 +244,9 @@ class Task {
       labelIds: _strings(json['labelIds']),
       sortOrder: _double(json, 'sortOrder'),
       createdAt: createdAt,
-      updatedAt: json['updatedAt'] == null ? createdAt : _time(json, 'updatedAt'),
+      updatedAt: json['updatedAt'] == null
+          ? createdAt
+          : _time(json, 'updatedAt'),
       completedAt: _timeOrNull(json, 'completedAt'),
       extra: _extra(json, _known),
     );
@@ -235,7 +296,9 @@ class Task {
     sortOrder: sortOrder ?? this.sortOrder,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
-    completedAt: completedAt == _unset ? this.completedAt : completedAt as DateTime?,
+    completedAt: completedAt == _unset
+        ? this.completedAt
+        : completedAt as DateTime?,
     extra: extra,
   );
 
@@ -258,28 +321,50 @@ class Task {
 }
 
 class Label {
-  Label({required this.id, required this.name, required this.color, Map<String, Object?> extra = const {}})
-    : extra = Map.unmodifiable(extra);
+  Label({
+    required this.id,
+    required this.name,
+    required this.color,
+    this.unknownColor,
+    Map<String, Object?> extra = const {},
+  }) : extra = Map.unmodifiable(extra);
 
   static const maxNameLength = 40;
   static const _known = {'id', 'name', 'color'};
 
-  factory Label.fromJson(Map<String, Object?> json) => Label(
-    id: _req<String>(json, 'id'),
-    name: _req<String>(json, 'name'),
-    color: TaskletColor.fromJson(json['color']),
-    extra: _extra(json, _known),
-  );
+  factory Label.fromJson(Map<String, Object?> json) {
+    final (color, unknownColor) = _color(json);
+    return Label(
+      id: _req<String>(json, 'id'),
+      name: _req<String>(json, 'name'),
+      color: color,
+      unknownColor: unknownColor,
+      extra: _extra(json, _known),
+    );
+  }
 
   final String id;
   final String name;
   final TaskletColor color;
+
+  /// A color value from a newer version, written back until the user picks a color.
+  final String? unknownColor;
   final Map<String, Object?> extra;
 
-  Label copyWith({String? name, TaskletColor? color}) =>
-      Label(id: id, name: name ?? this.name, color: color ?? this.color, extra: extra);
+  Label copyWith({String? name, TaskletColor? color}) => Label(
+    id: id,
+    name: name ?? this.name,
+    color: color ?? this.color,
+    unknownColor: color == null ? unknownColor : null,
+    extra: extra,
+  );
 
-  Map<String, Object?> toJson() => {...extra, 'id': id, 'name': name, 'color': color.toJson()};
+  Map<String, Object?> toJson() => {
+    ...extra,
+    'id': id,
+    'name': name,
+    'color': unknownColor ?? color.toJson(),
+  };
 }
 
 class Project {
@@ -288,6 +373,7 @@ class Project {
     required this.name,
     required this.key,
     this.color = TaskletColor.blue,
+    this.unknownColor,
     this.archived = false,
     this.favorite = false,
     this.sortOrder = 0,
@@ -297,11 +383,21 @@ class Project {
     required this.createdAt,
     required this.updatedAt,
     List<Task> tasks = const [],
+    List<Object?> opaqueTasks = const [],
+    List<Object?> opaqueLabels = const [],
     Map<String, Object?> extra = const {},
   }) : labels = List.unmodifiable(labels),
        tasks = List.unmodifiable(tasks),
-       // Never hand out a number already used by a task in this file, even if the stored counter is behind.
-       nextNumber = [nextNumber ?? 1, for (final t in tasks) t.number + 1].reduce((a, b) => a > b ? a : b),
+       opaqueTasks = List.unmodifiable(opaqueTasks),
+       opaqueLabels = List.unmodifiable(opaqueLabels),
+       // Never hand out a number already used by any task in this file (including ones this version can't
+       // display), even if the stored counter is behind.
+       nextNumber = [
+         nextNumber ?? 1,
+         for (final t in tasks) t.number + 1,
+         for (final o in opaqueTasks)
+           if (o case {'number': final int n}) n + 1,
+       ].reduce((a, b) => a > b ? a : b),
        extra = Map.unmodifiable(extra);
 
   /// The built-in "No Project" bucket (SPEC §2.3).
@@ -329,20 +425,32 @@ class Project {
 
   factory Project.fromJson(Map<String, Object?> json) {
     final createdAt = _time(json, 'createdAt');
+    final (color, unknownColor) = _color(json);
+    final labels = LenientList.parse(
+      json['labels'],
+      Label.fromJson,
+      (l) => l.id,
+    );
+    final tasks = LenientList.parse(json['tasks'], Task.fromJson, (t) => t.id);
     return Project(
       id: _req<String>(json, 'id'),
       name: _req<String>(json, 'name'),
       key: _opt(json, 'key', ''),
-      color: json['color'] == null ? TaskletColor.neutral : TaskletColor.fromJson(json['color']),
+      color: color,
+      unknownColor: unknownColor,
       archived: _opt(json, 'archived', false),
       favorite: _opt(json, 'favorite', false),
       sortOrder: _double(json, 'sortOrder'),
       favoriteOrder: _double(json, 'favoriteOrder'),
-      labels: [for (final l in _objects(json, 'labels')) Label.fromJson(l)],
+      labels: labels.items,
+      opaqueLabels: labels.opaque,
       nextNumber: _opt<int?>(json, 'nextNumber', null),
       createdAt: createdAt,
-      updatedAt: json['updatedAt'] == null ? createdAt : _time(json, 'updatedAt'),
-      tasks: [for (final t in _objects(json, 'tasks')) Task.fromJson(t)],
+      updatedAt: json['updatedAt'] == null
+          ? createdAt
+          : _time(json, 'updatedAt'),
+      tasks: tasks.items,
+      opaqueTasks: tasks.opaque,
       extra: _extra(json, _known),
     );
   }
@@ -353,6 +461,9 @@ class Project {
   /// Task-ID prefix (SPEC §2.4). Empty only for a legacy file not yet assigned a key.
   final String key;
   final TaskletColor color;
+
+  /// A color value from a newer version, written back until the user picks a color.
+  final String? unknownColor;
   final bool archived;
   final bool favorite;
   final double sortOrder;
@@ -362,9 +473,16 @@ class Project {
   final DateTime createdAt;
   final DateTime updatedAt;
   final List<Task> tasks;
+
+  /// Task/label entries this version can't display; preserved verbatim on save.
+  final List<Object?> opaqueTasks;
+  final List<Object?> opaqueLabels;
   final Map<String, Object?> extra;
 
   bool get isNoProject => id == noProjectId;
+
+  /// Entries hidden because they come from a newer version or are damaged.
+  int get hiddenEntryCount => opaqueTasks.length + opaqueLabels.length;
 
   Task? taskById(String taskId) {
     for (final t in tasks) {
@@ -392,6 +510,7 @@ class Project {
     name: name ?? this.name,
     key: key ?? this.key,
     color: color ?? this.color,
+    unknownColor: color == null ? unknownColor : null,
     archived: archived ?? this.archived,
     favorite: favorite ?? this.favorite,
     sortOrder: sortOrder ?? this.sortOrder,
@@ -401,6 +520,8 @@ class Project {
     createdAt: createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     tasks: tasks ?? this.tasks,
+    opaqueTasks: opaqueTasks,
+    opaqueLabels: opaqueLabels,
     extra: extra,
   );
 
@@ -409,16 +530,16 @@ class Project {
     'id': id,
     'name': name,
     'key': key,
-    'color': color.toJson(),
+    'color': unknownColor ?? color.toJson(),
     'archived': archived,
     'favorite': favorite,
     'sortOrder': sortOrder,
     'favoriteOrder': favoriteOrder,
-    'labels': [for (final l in labels) l.toJson()],
+    'labels': [for (final l in labels) l.toJson(), ...opaqueLabels],
     'nextNumber': nextNumber,
     'createdAt': _timeJson(createdAt),
     'updatedAt': _timeJson(updatedAt),
-    'tasks': [for (final t in tasks) t.toJson()],
+    'tasks': [for (final t in tasks) t.toJson(), ...opaqueTasks],
   };
 }
 
@@ -476,7 +597,13 @@ class BoardFilters {
   final Map<String, Object?> extra;
 
   /// Number of non-empty categories (SPEC §4.6 filter summary).
-  int get activeCategoryCount => [status, priorities, projects, labels, due].where((c) => c.isNotEmpty).length;
+  int get activeCategoryCount => [
+    status,
+    priorities,
+    projects,
+    labels,
+    due,
+  ].where((c) => c.isNotEmpty).length;
 
   bool get isEmpty => activeCategoryCount == 0;
 
@@ -520,17 +647,31 @@ class ViewDisplay {
        extra = Map.unmodifiable(extra);
 
   static const allProperties = {...DisplayProperty.values};
-  static const _known = {'order', 'direction', 'layout', 'hideEmptySections', 'properties'};
+  static const _known = {
+    'order',
+    'direction',
+    'layout',
+    'hideEmptySections',
+    'properties',
+  };
 
   /// Today's own defaults (SPEC §4.2): list layout, Priority and Start Date hidden.
   static final todayDefaults = ViewDisplay(
     layout: BoardLayout.list,
-    properties: {...DisplayProperty.values}..removeAll({DisplayProperty.priority, DisplayProperty.startDate}),
+    properties: {...DisplayProperty.values}
+      ..removeAll({DisplayProperty.priority, DisplayProperty.startDate}),
   );
 
   factory ViewDisplay.fromJson(Map<String, Object?> json) => ViewDisplay(
-    order: SortOrder.values.firstWhere((o) => o.json == json['order'], orElse: () => SortOrder.manual),
-    direction: _byName(SortDirection.values, json['direction'], SortDirection.asc),
+    order: SortOrder.values.firstWhere(
+      (o) => o.json == json['order'],
+      orElse: () => SortOrder.manual,
+    ),
+    direction: _byName(
+      SortDirection.values,
+      json['direction'],
+      SortDirection.asc,
+    ),
     layout: _byName(BoardLayout.values, json['layout'], BoardLayout.board),
     hideEmptySections: _opt(json, 'hideEmptySections', false),
     properties: json['properties'] is List
@@ -553,7 +694,8 @@ class ViewDisplay {
   bool shows(DisplayProperty p) => properties.contains(p);
 
   /// Picking an order also resets direction to that order's default (SPEC §5.3).
-  ViewDisplay withOrder(SortOrder order) => copyWith(order: order, direction: order.defaultDirection);
+  ViewDisplay withOrder(SortOrder order) =>
+      copyWith(order: order, direction: order.defaultDirection);
 
   ViewDisplay copyWith({
     SortOrder? order,
@@ -597,6 +739,7 @@ class SavedView {
     required this.id,
     required this.name,
     this.color = TaskletColor.blue,
+    this.unknownColor,
     BoardFilters? filters,
     this.display,
     this.inSidebar = false,
@@ -621,10 +764,12 @@ class SavedView {
 
   factory SavedView.fromJson(Map<String, Object?> json) {
     final createdAt = _time(json, 'createdAt');
+    final (color, unknownColor) = _color(json);
     return SavedView(
       id: _req<String>(json, 'id'),
       name: _req<String>(json, 'name'),
-      color: json['color'] == null ? TaskletColor.neutral : TaskletColor.fromJson(json['color']),
+      color: color,
+      unknownColor: unknownColor,
       filters: BoardFilters.fromJson(json['filters']),
       display: json['display'] is Map<String, Object?>
           ? ViewDisplay.fromJson(json['display']! as Map<String, Object?>)
@@ -632,7 +777,9 @@ class SavedView {
       inSidebar: _opt(json, 'inSidebar', false),
       sidebarOrder: _double(json, 'sidebarOrder'),
       createdAt: createdAt,
-      updatedAt: json['updatedAt'] == null ? createdAt : _time(json, 'updatedAt'),
+      updatedAt: json['updatedAt'] == null
+          ? createdAt
+          : _time(json, 'updatedAt'),
       extra: _extra(json, _known),
     );
   }
@@ -640,6 +787,9 @@ class SavedView {
   final String id;
   final String name;
   final TaskletColor color;
+
+  /// A color value from a newer version, written back until the user picks a color.
+  final String? unknownColor;
   final BoardFilters filters;
 
   /// Null means "use the defaults".
@@ -662,6 +812,7 @@ class SavedView {
     id: id,
     name: name ?? this.name,
     color: color ?? this.color,
+    unknownColor: color == null ? unknownColor : null,
     filters: filters ?? this.filters,
     display: display == _unset ? this.display : display as ViewDisplay?,
     inSidebar: inSidebar ?? this.inSidebar,
@@ -675,7 +826,7 @@ class SavedView {
     ...extra,
     'id': id,
     'name': name,
-    'color': color.toJson(),
+    'color': unknownColor ?? color.toJson(),
     'filters': filters.toJson(),
     'display': display?.toJson(),
     'inSidebar': inSidebar,
@@ -685,11 +836,21 @@ class SavedView {
   };
 }
 
-/// A project file the sync provider duplicated (SPEC §2.5). [file] is the untouched extra copy.
+/// A file the sync provider duplicated (SPEC §2.5). [file] is the extra copy, always left untouched.
 class SyncConflict {
-  const SyncConflict({required this.file, required this.projectName});
+  const SyncConflict({
+    required this.file,
+    required this.projectName,
+    this.mainFileMissing = false,
+  });
   final String file;
+
+  /// The project's name, or "Labels" / "Saved Views" for copies of labels.json / views.json.
   final String projectName;
+
+  /// The canonical file doesn't exist, so this copy's contents are shown; the first edit recreates the canonical
+  /// file and the copy stays untouched.
+  final bool mainFileMissing;
 }
 
 /// A task together with the project that owns it.
@@ -713,6 +874,8 @@ class Workspace {
     List<SavedView> views = const [],
     this.viewsReadable = true,
     List<SyncConflict> conflicts = const [],
+    this.readOnly = false,
+    this.hiddenEntryCount = 0,
   }) : projects = List.unmodifiable(projects),
        labels = List.unmodifiable(labels),
        views = List.unmodifiable(views),
@@ -731,6 +894,13 @@ class Workspace {
   final List<SavedView> views;
   final bool viewsReadable;
   final List<SyncConflict> conflicts;
+
+  /// The folder was written by a newer Tasklet format (or its marker is unreadable right now): show everything,
+  /// save nothing.
+  final bool readOnly;
+
+  /// Tasks, labels and views hidden because they come from a newer version or are damaged (preserved on disk).
+  final int hiddenEntryCount;
 
   /// Real projects plus the No-Project bucket.
   Iterable<Project> get allProjects sync* {
@@ -788,5 +958,7 @@ class Workspace {
     views: views ?? this.views,
     viewsReadable: viewsReadable,
     conflicts: conflicts ?? this.conflicts,
+    readOnly: readOnly,
+    hiddenEntryCount: hiddenEntryCount,
   );
 }
