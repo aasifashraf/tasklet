@@ -76,7 +76,7 @@ class _SidebarState extends ConsumerState<Sidebar> {
                 if (pinned.isNotEmpty)
                   _Section(
                     id: 'views',
-                    label: 'Saved Views',
+                    label: 'Quick Filters',
                     child: _Reorderable<SavedView>(
                       items: pinned,
                       keyOf: (v) => 'view:${v.id}',
@@ -367,7 +367,7 @@ class _SidebarState extends ConsumerState<Sidebar> {
       ),
       const Divider(),
       menuItem(
-        'Delete View…',
+        'Delete Quick Filter…',
         danger: true,
         onPressed: () => confirmDeleteView(context, ref, v),
       ),
@@ -425,8 +425,7 @@ Future<void> confirmDeleteView(
   final ok = await confirmDestructive(
     context,
     title: "Delete '${v.name}'?",
-    message:
-        'Only the view and its filters are removed. No tasks are affected.',
+    message: 'Only the quick filter is removed. No tasks are affected.',
   );
   if (!ok || !context.mounted) return;
   if (GoRouterState.of(context).uri.path == '/views/${v.id}') {

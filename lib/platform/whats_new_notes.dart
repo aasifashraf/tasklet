@@ -44,8 +44,8 @@ const currentRelease = ReleaseNotes(
     ),
     ReleaseFeature(
       Icons.layers_outlined,
-      'Saved views',
-      'Save any combination of filters as a view and pin it to the sidebar.',
+      'Quick filters',
+      'Save any combination of filters and open it in one click from the sidebar.',
     ),
     ReleaseFeature(
       Icons.description_outlined,

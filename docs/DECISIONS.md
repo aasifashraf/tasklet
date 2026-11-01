@@ -89,8 +89,9 @@ path, and confirming its "replace existing file?" prompt would destroy whatever 
 v1 ships as a non-sandboxed, notarized app (like most sync-folder tools), so Tasklet can keep using any folder the user
 picked across launches without security-scoped bookmarks. An App Store build would need the sandbox plus bookmarks.
 
-## D11. "Saved Views" label
+## D11. "Quick Filters" label
 
 The spec calls saved filter sets "Views". With a Board/List view switch on every board, plain "Views" read as
-ambiguous, so the sidebar item, its section, the page title and Settings → Sidebar say **Saved Views**. Routes, data
-files and code names are unchanged.
+ambiguous, and "Saved Views" still didn't say what the page does. The app calls them **Quick Filters** everywhere a
+user reads it: the sidebar item and section, the page, menus, What's New and Settings → Sidebar. Routes (`/views`),
+`views.json`, its fields and code names (`SavedView`) are unchanged, so existing data folders keep working.

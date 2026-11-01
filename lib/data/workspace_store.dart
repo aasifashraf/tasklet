@@ -377,7 +377,7 @@ class WorkspaceStore {
         result.add(SyncConflict(file: entity.path, projectName: 'Labels'));
       }
       if (lower.startsWith('views')) {
-        result.add(SyncConflict(file: entity.path, projectName: 'Saved Views'));
+        result.add(SyncConflict(file: entity.path, projectName: 'Quick Filters'));
       }
     }
     return result;

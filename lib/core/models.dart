@@ -845,7 +845,7 @@ class SyncConflict {
   });
   final String file;
 
-  /// The project's name, or "Labels" / "Saved Views" for copies of labels.json / views.json.
+  /// The project's name, or "Labels" / "Quick Filters" for copies of labels.json / views.json.
   final String projectName;
 
   /// The canonical file doesn't exist, so this copy's contents are shown; the first edit recreates the canonical

@@ -69,10 +69,10 @@ class ViewBoardPage extends ConsumerWidget {
     if (ws == null) return const SizedBox.shrink();
     if (view == null) {
       return const PageScaffold(
-        title: 'View',
+        title: 'Quick Filter',
         body: EmptyState(
           icon: Icons.search_off,
-          title: 'View not found',
+          title: 'Quick filter not found',
           message: 'It may have been deleted, or views.json hasn\'t finished syncing yet.',
         ),
       );

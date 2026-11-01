@@ -21,7 +21,7 @@
 ## What is Tasklet?
 
 Tasklet is a single-player task tracker inspired by the speed and look of tools like Linear, but intentionally
-simpler: no teams, no assignees, no accounts. Everything you create (tasks, projects, labels and saved views) is stored
+simpler: no teams, no assignees, no accounts. Everything you create (tasks, projects, labels and quick filters) is stored
 as plain JSON files in a folder on your computer.
 
 Put that folder inside OneDrive, Dropbox, Google Drive, iCloud Drive or Syncthing, and your tasks follow you between
@@ -38,8 +38,8 @@ planned.
 - **Tasks without a project** are allowed and get IDs like `TSK-3`.
 - **Labels** for the whole workspace or for one project, each with one of eight colors.
 - **Favorites** pinned at the top of the sidebar, and an **archive** for finished projects.
-- **Saved views**: save any combination of filters as a view and pin it to the sidebar. A view's filters and display
-  settings are stored in your data folder, so it looks the same on every computer.
+- **Quick filters**: save any combination of filters and open it in one click, optionally pinned to the sidebar. A
+  quick filter's filters and display settings are stored in your data folder, so it looks the same on every computer.
 
 ### Work
 - **Board** with four columns (Backlog, Todo, In Progress, Done). Drag cards between columns to change status, or
@@ -120,7 +120,7 @@ On macOS, use ⌘ instead of Ctrl.
 <your folder>/
   tasklet-workspace.json     marker file and format version
   labels.json                workspace labels
-  views.json                 saved views
+  views.json                 quick filters
   projects/
     <project-id>.json        one file per project, including its tasks
 ```

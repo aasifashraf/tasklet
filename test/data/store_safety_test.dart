@@ -166,7 +166,7 @@ void main() {
       await writeRaw('views-DESKTOP-1.json', <Object?>[]);
       await writeRaw('notes.json', <Object?>[]);
       final names = (await store().read()).conflicts.map((c) => c.projectName);
-      expect(names, unorderedEquals(['Labels', 'Saved Views']));
+      expect(names, unorderedEquals(['Labels', 'Quick Filters']));
     });
   });
 

@@ -52,12 +52,12 @@ class _ViewsPageState extends ConsumerState<ViewsPage> {
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
     return PageScaffold(
-      title: 'Saved Views',
+      title: 'Quick Filters',
       actions: [
         TextButton.icon(
           onPressed: editable ? _startCreate : null,
           icon: const Icon(Icons.add, size: 15),
-          label: const Text('New View'),
+          label: const Text('New Quick Filter'),
         ),
       ],
       body: Column(
@@ -66,27 +66,27 @@ class _ViewsPageState extends ConsumerState<ViewsPage> {
             const NoticeBanner(
               icon: Icons.sync_problem_outlined,
               message:
-                  "views.json can't be read right now. It may still be syncing or be damaged. Views can't be "
+                  "views.json can't be read right now. It may still be syncing or be damaged. Quick filters can't be "
                   'created or changed until it can be read again.',
             ),
           Expanded(
             child: views.isEmpty && !_creating
                 ? EmptyState(
                     icon: Icons.layers_outlined,
-                    title: 'No saved views yet',
+                    title: 'No quick filters yet',
                     message:
-                        'A view is a saved set of filters across all your projects, like "Urgent this week". '
-                        'Create one, then set its filters.',
+                        'A quick filter shows tasks from all your projects that match a set of filters, like '
+                        '"Urgent this week". Create one, then set its filters.',
                     action: FilledButton.icon(
                       onPressed: editable ? _startCreate : null,
                       icon: const Icon(Icons.add, size: 15),
-                      label: const Text('New View'),
+                      label: const Text('New Quick Filter'),
                     ),
                   )
                 : ListView(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                     children: [
-                      ListHeading('Saved Views', views.length),
+                      ListHeading('Quick Filters', views.length),
                       if (_creating)
                         ListRowShell(
                           leading: TapMenu(
@@ -103,7 +103,7 @@ class _ViewsPageState extends ConsumerState<ViewsPage> {
                           ),
                           title: InlineEditField(
                             initial: '',
-                            hint: 'View name',
+                            hint: 'Quick filter name',
                             onCommit: (name) async {
                               setState(() => _creating = false);
                               final view = await _controller.createView(
@@ -199,7 +199,7 @@ class _ViewsPageState extends ConsumerState<ViewsPage> {
                 ),
                 const Divider(),
                 menuItem(
-                  'Delete View…',
+                  'Delete Quick Filter…',
                   danger: true,
                   onPressed: () => confirmDeleteView(context, ref, v),
                 ),
