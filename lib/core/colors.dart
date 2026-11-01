@@ -1,0 +1,35 @@
+/// The 8 named colors shared by projects, labels, and views (SPEC §8.2).
+///
+/// `neutral` is a deliberate "no color" choice and is never auto-assigned.
+enum TaskletColor {
+  blue,
+  purple,
+  green,
+  orange,
+  red,
+  yellow,
+  magenta,
+  neutral;
+
+  static TaskletColor fromJson(Object? value) {
+    for (final c in values) {
+      if (c.name == value) return c;
+    }
+    throw FormatException('Unknown color: $value');
+  }
+
+  String toJson() => name;
+
+  /// Colors eligible for automatic assignment (everything except neutral), in rotation order.
+  static const List<TaskletColor> rotation = [blue, purple, green, orange, red, yellow, magenta];
+
+  /// The first rotation color not in [used]; cycles from the start when all are used.
+  static TaskletColor nextUnused(Iterable<TaskletColor> used) {
+    final counts = {for (final c in rotation) c: 0};
+    for (final c in used) {
+      if (counts.containsKey(c)) counts[c] = counts[c]! + 1;
+    }
+    final fewest = counts.values.reduce((a, b) => a < b ? a : b);
+    return rotation.firstWhere((c) => counts[c] == fewest);
+  }
+}
