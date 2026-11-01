@@ -6,7 +6,7 @@ milestone's behavior working. Section numbers refer to [SPEC.md](SPEC.md).
 ## v1 — Windows + macOS
 
 - [x] **0. Repo & tooling** — scaffold, MIT license, docs, lint config, CI, project skills
-- [ ] **1. Core + storage** — models with unknown-field round-trip, project keys (§2.4), dates, sorting (§5.3),
+- [x] **1. Core + storage** — models with unknown-field round-trip, project keys (§2.4), dates, sorting (§5.3),
       filters (§6), ordering (§5.1); workspace store with atomic writes, unreadable/conflict/missing-folder rules (§2.5),
       lazy No-Project (§2.3); save queue; folder watcher; device prefs
 - [ ] **2. Shell** — onboarding (§10), loading/error states (§8.7), sidebar (§3), routing, theme (§8)
