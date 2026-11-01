@@ -16,7 +16,7 @@ String baseKeyFor(String name) {
   return letters.isEmpty ? 'PRJ' : letters;
 }
 
-/// [base] if free, otherwise [base]1, [base]2, … — the first not in [taken]. `TSK` is always taken.
+/// [base] if free, otherwise [base]1, [base]2, …: the first not in [taken]. `TSK` is always taken.
 String nextFreeKey(String base, Set<String> taken) {
   bool isTaken(String k) => k == noProjectKey || taken.contains(k);
   if (!isTaken(base)) return base;

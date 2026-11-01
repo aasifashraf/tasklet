@@ -1,11 +1,11 @@
-# Tasklet — Product & Technical Specification
+# Tasklet, Product & Technical Specification
 
 > Derived from the "Per" product spec. Naming substitutions applied throughout:
 > app name **Per → Tasklet**, marker file **`per-workspace.json` → `tasklet-workspace.json`**,
 > No-Project reserved key **`PER` → `TSK`**. Behavior is otherwise unchanged.
 >
 > v1 targets **Windows and macOS** from one Flutter codebase; iOS/Android follow in phase 2.
-> Every behavioral requirement below is what matters — if Flutter can't express something exactly, find the closest
+> Every behavioral requirement below is what matters, if Flutter can't express something exactly, find the closest
 > idiomatic platform equivalent rather than skipping it. The sections interlock (sorting rules affect both board and
 > list; project-key rules affect task IDs everywhere). Treat this as a precise spec, not inspiration.
 
@@ -22,16 +22,16 @@ Design principles:
 
 - **Fast and keyboard-first**, like Linear: quick-create, quick shortcuts, inline editing everywhere, no modal-heavy
   workflows for routine actions.
-- **Calm, minimal, information-dense UI** — small text (12–13px body), compact rows, muted secondary/tertiary text,
+- **Calm, minimal, information-dense UI**: small text (12–13px body), compact rows, muted secondary/tertiary text,
   no heavy borders or shadows, whitespace via padding rather than large fonts.
-- **Nothing is ever truly destructive without a way back** — deletes are either reversible (Undo toast) or need explicit
+- **Nothing is ever truly destructive without a way back**: deletes are either reversible (Undo toast) or need explicit
   confirmation, never both unnecessarily.
-- **The app teaches itself** — every empty state explains what to do next; no onboarding tour.
+- **The app teaches itself**: every empty state explains what to do next; no onboarding tour.
 
 ## 2. Data model
 
 All data is plain JSON files in a folder the user chooses (not a database, not a cloud account). This is the single most
-important architectural decision — it's what lets the folder live in a synced drive.
+important architectural decision, it's what lets the folder live in a synced drive.
 
 ### 2.1 Folder layout
 
@@ -84,11 +84,11 @@ concurrent edits are less likely to corrupt unrelated data.
 | createdAt / updatedAt | ISO 8601 | |
 | tasks | Task[] | |
 
-**Label** — `id` (uuid), `name` (max 40 chars, case-insensitive-unique within its scope), `color` (one of 8).
+**Label**: `id` (uuid), `name` (max 40 chars, case-insensitive-unique within its scope), `color` (one of 8).
 Labels are either workspace-wide (`labels.json`, usable by any task) or project-owned (inside the project file, usable
 only by that project's tasks). A task's `labelIds` may reference either kind interchangeably.
 
-**SavedView** — a named, reusable filtered board across every project:
+**SavedView**: a named, reusable filtered board across every project:
 `id`, `name`, `color`, `filters: { status[], priorities[], projects[], labels[], due[] }` (same shape as board filters,
 §6), `display: ViewDisplay | null` (null = defaults, §5), `inSidebar: bool`, `sidebarOrder: float`,
 `createdAt / updatedAt`.
@@ -104,7 +104,7 @@ Tasks don't require a project. A task created without one is filed into a built-
 - Fixed id (reserved constant, not a real uuid), fixed key **`TSK`**, fixed name "No Project", neutral color.
 - Behaves like a project for task IDs (TSK-1, TSK-2, …) but never appears in the sidebar project list, the Projects page,
   or any archive/delete/rename UI. It can't be renamed, archived, or deleted.
-- Its file is written only the first time a task needs it (lazy creation) — no empty file up front.
+- Its file is written only the first time a task needs it (lazy creation), no empty file up front.
 - Its key `TSK` is reserved from the start (even before the file exists) so no real project's auto key can collide.
 
 ### 2.4 Project keys & task IDs (exact algorithm)
@@ -113,9 +113,9 @@ Tasks don't require a project. A task created without one is filed into a built-
   yields nothing, fall back to `PRJ`.
 - **Uniqueness**: if the base key is taken, append 1, 2, 3, … until free (WEB, WEB1, WEB2, …).
 - **One-time and sticky**: computed once (on creation, or the first time a legacy file is read) and kept forever, even if
-  the project is renamed — task IDs must stay valid wherever they were pasted.
+  the project is renamed, task IDs must stay valid wherever they were pasted.
 - **Resolution order** when multiple projects claim the same key (e.g. created offline on two machines): by `createdAt`
-  ascending — the oldest keeps the key, newer ones get the next free suffix. Recompute this every time the whole
+  ascending, the oldest keeps the key, newer ones get the next free suffix. Recompute this every time the whole
   workspace is read so conflicts self-heal once synced.
 - Task numbers (`project.nextNumber`) are never reused, even after deletion.
 - A task's visible ID is always `${project.key}-${task.number}`.
@@ -124,19 +124,19 @@ Tasks don't require a project. A task created without one is filed into a built-
 
 The folder may be inside a syncing cloud drive, which can partially write files or produce duplicate copies.
 
-- **Atomic writes**: write to a temp file, then rename over the real file — never write in place.
+- **Atomic writes**: write to a temp file, then rename over the real file, never write in place.
 - **Unreadable files are left alone**: if a file exists but fails to parse right now, skip it silently in that read
   rather than treating it as absent (which could recreate/lose data on the next save). Surface as a non-blocking state
   (e.g. `labelsReadable: false`), never an app-blocking error.
 - **Sync conflict copies**: if the provider leaves two files for one project (`abc123.json` and `abc123 2.json`, same id
   inside), only ever read/write the canonical `<id>.json`; leave the copy untouched on disk and report it once per app
-  session as a dismissible informative notice — "this project has a second copy from syncing, main version shown, extra
-  copy left at X, open folder to compare" — with a button to reveal it in the file explorer.
+  session as a dismissible informative notice, "this project has a second copy from syncing, main version shown, extra
+  copy left at X, open folder to compare", with a button to reveal it in the file explorer.
 - **Forward-compatible fields**: preserve unrecognized JSON fields on tasks/projects/views and write them back unchanged.
 - **Missing data folder**: if the chosen folder no longer exists, show a clear "can't find your folder" error screen with
-  a way to re-pick it — never treat it as an empty workspace and never auto-recreate it.
+  a way to re-pick it, never treat it as an empty workspace and never auto-recreate it.
 - **Undo-safety for deletes**: deleted tasks go into an in-memory "recently deleted" cache (cap ~50, oldest evicted) so
-  Undo restores the exact original id/number/fields. Not persisted — after restart, deletions are final.
+  Undo restores the exact original id/number/fields. Not persisted, after restart, deletions are final.
 
 ## 3. App shell & navigation
 
@@ -153,15 +153,15 @@ Two-pane split: **left sidebar** (resizable ~190–300px, default 220px, remembe
 
 ### 3.3 Sidebar structure (top to bottom)
 
-1. **Top toolbar row**: "New Task" button (compose icon) — creates in the project being viewed, or with no project on a
+1. **Top toolbar row**: "New Task" button (compose icon), creates in the project being viewed, or with no project on a
    non-project page.
 2. **Primary navigation** (in order): Dashboard · Today (count badge) · All Tasks (count badge) · Projects · Views ·
    Labels · Reports (hidden by default, §11.2).
-3. **Views section** (only if ≥1 view pinned) — collapsible; pinned saved views with colored stacked-layers icon.
-4. **Favorites section** (only if ≥1 favorited project) — collapsible; colored cube icons. A favorited project appears
+3. **Views section** (only if ≥1 view pinned), collapsible; pinned saved views with colored stacked-layers icon.
+4. **Favorites section** (only if ≥1 favorited project), collapsible; colored cube icons. A favorited project appears
    only here, not also under Projects.
-5. **Projects section** (only if ≥1 non-archived, non-favorited project) — collapsible, drag-reorderable.
-6. **Archived section** (only if ≥1 archived project) — collapsible, collapsed by default.
+5. **Projects section** (only if ≥1 non-archived, non-favorited project), collapsible, drag-reorderable.
+6. **Archived section** (only if ≥1 archived project), collapsible, collapsed by default.
 
 Empty sections are omitted entirely. Nav items, Favorites, and Projects reorder by drag within their section; order
 persists.
@@ -193,14 +193,14 @@ via a toggle per row. Reports defaults to hidden. Changes apply live (no restart
   the app open overnight rolls over.
 - Zero tasks in current filter → empty state ("No tasks yet" / "This project has no tasks").
 - Otherwise four stacked sections, each rendered only if it has content:
-  - **Glance strip** — 4 big numbers: Overdue (red if > 0), Due today (orange if > 0), Due this week, Done this week.
+  - **Glance strip**: 4 big numbers: Overdue (red if > 0), Due today (orange if > 0), Due this week, Done this week.
     "This week" = today + next 6 days. "Done this week" = completed within the last 7 days.
-  - **Up Next** — up to 6 open tasks overdue or due within the next 7 days, sorted by due date asc (needs a due date),
+  - **Up Next**: up to 6 open tasks overdue or due within the next 7 days, sorted by due date asc (needs a due date),
     tie-break priority (urgent→low, none last), then manual order. Row: status icon, ID, title, project name+icon (only
     when filter = All Projects), colored due pill (red overdue, orange today).
-  - **Overview** — one "Status" card: thin segmented progress bar (Backlog/Todo/In Progress/Done, color-coded) + an
+  - **Overview**: one "Status" card: thin segmented progress bar (Backlog/Todo/In Progress/Done, color-coded) + an
     icon+label+count+percentage line per status.
-  - **Recently Completed** — up to 5 tasks completed in the last 7 days, most recent first; same rows, showing completed
+  - **Recently Completed**: up to 5 tasks completed in the last 7 days, most recent first; same rows, showing completed
     relative date.
 - Every Up Next / Recently Completed row opens the detail panel on click and has the full card context menu (§7.3).
 
@@ -208,7 +208,7 @@ via a toggle per row. Reports defaults to hidden. Changes apply live (no restart
 
 - A flat list (no board) grouped by status in workflow order, of every task matching any of three toggleable rules
   (via a "Filter" toolbar button, persisted): **Due today**, **Starts today**, **Overdue** (due in the past, not done).
-- At least one rule must stay on — the UI prevents disabling the last.
+- At least one rule must stay on, the UI prevents disabling the last.
 - Updates live at midnight (timer).
 - Default display hides Priority and Start Date; everything else (ID, status, due date, labels, project) shown and
   configurable (§5.2).
@@ -233,9 +233,9 @@ the Project filter/column hidden and labels scoped to this project's labels + wo
 - Row: [color/icon → 8-color picker] [name, double-click to rename in place] … [progress bar + %] [⋯ menu].
 - Progress color: 0% empty gray track; 1–49% neutral gray fill; 50–99% accent fill; 100% green fill + green % text.
 - ⋯ / right-click: Add/Remove Favorite, Rename, Archive/Unarchive, Delete Project… (native confirm: "Delete 'X'? The
-  project and its N tasks will be moved to Trash/Recycle Bin." — Delete/Cancel, Cancel default).
+  project and its N tasks will be moved to Trash/Recycle Bin.", Delete/Cancel, Cancel default).
 - Clicking elsewhere on the row opens the board.
-- Create: "+" inserts an inline editable row at the top (not a modal) — colored icon (random start color, clickable) + text
+- Create: "+" inserts an inline editable row at the top (not a modal), colored icon (random start color, clickable) + text
   field; typing shows a live preview of the task-ID prefix ("Task IDs: WEB-1"); Enter commits, Escape cancels, clicking
   away commits if non-empty/changed else cancels.
 - Rename works the same in place (double-click or menu).
@@ -267,10 +267,10 @@ status → it; exactly one priority → it; any labels → all of them; due filt
   strips the label id from every task.
 - Workspace labels locked (dimmed, no create/edit/delete) while labels.json can't be read.
 
-### 4.9 Reports (`/reports`) — hidden by default
+### 4.9 Reports (`/reports`), hidden by default
 
 A filter builder producing a copyable, AI-ready prompt with simplified task data + instructions, to paste into any LLM.
-Core differentiator — reproduce exactly.
+Core differentiator, reproduce exactly.
 
 **UI**: one card of stacked rows `[label] [value chip → dropdown]`:
 
@@ -278,16 +278,16 @@ Core differentiator — reproduce exactly.
   date pickers). Weeks respect the OS first-day-of-week. "All Time" spans year 1 → 9999 internally but is reported as the
   actual earliest-task-to-today span.
 - **Projects** multi-select: All Projects (default) / No Project / each active project / (when "Include archived" is on) an
-  "Archived" sub-section. Toggle "Include archived" — turning it off drops selected archived projects.
+  "Archived" sub-section. Toggle "Include archived", turning it off drops selected archived projects.
 - **Labels** multi-select scoped to the Projects filter: workspace labels always; project labels only for included
   projects (All Projects → every active project's, or every project's with archived on; specific projects → theirs;
   "No Project" alone → workspace only). Grouped: "Workspace" first, then one heading per included project, alphabetical
   within groups, skip projects with zero labels. Changing Projects drops out-of-scope selected labels.
 - **Status** multi-select (4). **Priority** multi-select (5).
-- **Tasks** — live count ("24 tasks will be included" / "No tasks match. Try a wider date range or fewer filters.") + a Copy
+- **Tasks**: live count ("24 tasks will be included" / "No tasks match. Try a wider date range or fewer filters.") + a Copy
   button with dropdown: Report Prompt, Summary Prompt, JSON Only.
 
-**In range** — a task qualifies if ANY overlaps the range: it was open at some point (created on/before range end, and not
+**In range**: a task qualifies if ANY overlaps the range: it was open at some point (created on/before range end, and not
 completed or completed on/after range start); OR completed within the range; OR start date in range; OR due date in range.
 
 **Exported JSON** is simplified for an LLM that's never seen the app: no raw UUIDs; projects/labels/statuses/priorities by
@@ -340,7 +340,7 @@ prompt says so).
    - **Summary Prompt**: one short visual, 1–2 sentences on overall progress, 4–7 bullets on what matters most (notable
      completions, in-flight work, overdue/at-risk, standout projects), one sentence on the trend if a timeline exists, a
      note on post-period completions if any; under 200 words, no headings/tables.
-   - **Report Prompt**: full Markdown report — title, visuals, numbered sections: Overview; Key numbers table;
+   - **Report Prompt**: full Markdown report, title, visuals, numbered sections: Overview; Key numbers table;
      (Month-by-month or Week-by-week breakdown, with a mini weekly breakdown for busy months, if timeline); Completed in
      the period (grouped by project if >1); Still open at period end; Risks & blockers (today's overdue/urgent items and
      why they matter); By project (if >1); By label (if labels used); Next steps (3–6 concrete recommendations). Empty
@@ -390,7 +390,7 @@ Copying shows a toast naming what was copied and how many tasks it covers.
 ### 5.3 Display options ("sliders" toolbar button)
 
 - **Order**: Manual / Priority / Due Date / Updated / Newest.
-- **Direction**: Asc / Desc — disabled for Manual. Defaults when picked: Priority asc (urgent first), Due asc (soonest),
+- **Direction**: Asc / Desc, disabled for Manual. Defaults when picked: Priority asc (urgent first), Due asc (soonest),
   Updated desc, Newest desc.
 - **Sections**: "Hide Empty Sections" (board columns and list sections).
 - **Properties**: Task ID, Status Icon, Priority, Start Date, Due Date, Labels, Project (Project only on cross-project
@@ -403,14 +403,14 @@ Copying shows a toast naming what was copied and how many tasks it covers.
 - Manual: `sortOrder` asc, tie `createdAt` desc.
 - Priority: rank Urgent(1) < High(2) < Medium(3) < Low(4); None always sorts last regardless of direction (the direction
   applies to the ranks of prioritized tasks only). Tie `sortOrder`. *(The source spec suggested "rank None as 5, then
-  apply the direction sign", which would float None to the top when descending and contradicts "always last" — the
+  apply the direction sign", which would float None to the top when descending and contradicts "always last", the
   explicit "always last" rule wins.)*
 - Due Date: `dueDate`, falling back to `startDate`; tasks with neither always sink to the bottom regardless of
   direction. Tie priority rank, then `sortOrder`.
 - Updated / Newest: `updatedAt` / `createdAt` with direction applied directly; tie `sortOrder`.
 - Every comparator fully deterministic (no two tasks ever compare equal).
 
-Display options and layout persist per board: "All Tasks", each project, "Today" (own defaults — list layout, no
+Display options and layout persist per board: "All Tasks", each project, "Today" (own defaults, list layout, no
 priority/start-date columns), and each saved View (synced via the view, §4.7). Filters persist only for the session,
 per board, except saved Views (filters saved to the view; search still session-only).
 
@@ -418,13 +418,13 @@ per board, except saved Views (filters saved to the view; search still session-o
 
 "Filter" button menu with submenus:
 
-- **Status** — multi-select (4).
-- **Priority** — multi-select (5), divider after "None".
-- **Project** (cross-project boards only) — "All Projects" (default/reset), OR "No Project" alone, OR one or more real
+- **Status**: multi-select (4).
+- **Priority**: multi-select (5), divider after "None".
+- **Project** (cross-project boards only), "All Projects" (default/reset), OR "No Project" alone, OR one or more real
   projects. Picking a real project clears "No Project" and vice versa (not independent checkboxes).
-- **Label** — "No Label" (zero labels) plus every available label (project-scoped first, then workspace, visually
+- **Label**: "No Label" (zero labels) plus every available label (project-scoped first, then workspace, visually
   separated); on cross-project boards project labels are suffixed with the project name.
-- **Due Date** — Overdue (past due AND not done), Due Today, Due in Next 7 Days (today + 6, inclusive), No Due Date.
+- **Due Date**: Overdue (past due AND not done), Due Today, Due in Next 7 Days (today + 6, inclusive), No Due Date.
 - "Clear Filters" at bottom, disabled when nothing active.
 
 Logic: OR within a category, AND across categories; an empty category doesn't filter.
@@ -448,7 +448,7 @@ open search there.
   empty). Ctrl+Enter submits.
 - Changing project drops labels invalid for the new project.
 - Closing with typed text (Escape, ✕, click outside) → native confirm "Discard this task? / What you've typed will be
-  lost." — Discard / Keep Editing (default).
+  lost.", Discard / Keep Editing (default).
 - Project list: "No Project" at top, every active project, plus the archived project whose board opened the dialog.
 
 ### 7.2 Task detail panel (right-side sheet, not a dialog)
@@ -465,31 +465,28 @@ open search there.
 - Opening another task replaces the panel's content (no stacking).
 - Closing returns focus to the originating card/row.
 
-### 7.3 Context menu (cards, list rows, Dashboard rows — identical)
+### 7.3 Context menu (cards, list rows, Dashboard rows, identical)
 
 1. Open
-2. —
-3. Status ▸ (4, checkable)
+2., 3. Status ▸ (4, checkable)
 4. Priority ▸ (5, checkable, divider after None)
 5. Due Date ▸ Today / Tomorrow / Next Week (always next Monday, independent of the OS first-day-of-week), each with a
-   muted weekday/date hint and a checkmark if current; — ; Remove Due Date (disabled if none)
+   muted weekday/date hint and a checkmark if current;, ; Remove Due Date (disabled if none)
 6. Labels ▸ every available label, checkable (disabled if none available)
 7. Move to Project ▸ "No Project", every active project (+ the task's own project even if archived), checkable
-8. —
-9. Duplicate — same project/status/priority/dates/labels, not completion/history, lands at the top of its status; Undo
+8., 9. Duplicate, same project/status/priority/dates/labels, not completion/history, lands at the top of its status; Undo
    toast "Duplicated as KEY-N"
-10. Copy ID — copies "WEB-12", confirmation toast
-11. —
-12. Delete — immediate, shows its shortcut hint, red
+10. Copy ID, copies "WEB-12", confirmation toast
+11., 12. Delete, immediate, shows its shortcut hint, red
 
 Actions not visually obvious from the trigger point (status, priority, due, label toggle, move) show a brief Undo toast
-("WEB-12 moved to Done", "WEB-12 due next week", "Added label Bug") whose Undo restores the exact prior state — undoing
+("WEB-12 moved to Done", "WEB-12 due next week", "Added label Bug") whose Undo restores the exact prior state, undoing
 a move to Done restores the previous `completedAt` if any; undoing a project move restores the original number in the
 original project if still free. Only one Undo toast at a time (new replaces old).
 
 ### 7.4 Deleting tasks
 
-No confirmation, ever: instant delete + 8-second "Deleted KEY-N — Undo" toast, from the context menu, panel trash icon,
+No confirmation, ever: instant delete + 8-second "Deleted KEY-N, Undo" toast, from the context menu, panel trash icon,
 keyboard shortcut, or menu bar Delete. (Projects, labels, and views DO confirm.)
 
 ## 8. Visual design system
@@ -500,7 +497,7 @@ natural), preserving:
 ### 8.1 Typography & density
 
 Body 12px; section headers/titles ~13px semibold; page titles ~13–14px semibold; meta (counts, dates, IDs) 11–12px muted.
-List rows ~36–40px; generous horizontal padding (8–12px). Three text tones — primary, secondary (~60%), tertiary (~40%):
+List rows ~36–40px; generous horizontal padding (8–12px). Three text tones, primary, secondary (~60%), tertiary (~40%):
 unselected sidebar = secondary, selected = primary, section headers = secondary, counts/meta = tertiary.
 
 ### 8.2 Palette
@@ -545,7 +542,7 @@ the origin slot shows a dashed-outline placeholder.
 - Relative labels (Today/Yesterday/Tomorrow), overdue/today color cues, Today page, Dashboard greeting/date, and any
   due-date-based sort/filter re-evaluate on a ~30s timer and immediately on window focus / OS wake, so midnight flips
   everything without restart.
-- Focus regain / wake re-reads the data folder — skipped while any save from this instance is in flight. Track "N saves in
+- Focus regain / wake re-reads the data folder, skipped while any save from this instance is in flight. Track "N saves in
   flight"; refresh is a no-op while N > 0; only the last outstanding save's result is applied.
 - Watch the folder for external changes and refresh (debounced a few hundred ms), ignoring events caused by the app's own
   recent writes.
@@ -600,7 +597,7 @@ Standard menu bar (File/Edit/View/Go/Window/Help) with accelerators (Ctrl on Win
 | Go to Dashboard…Reports (sidebar order) | Ctrl+1 … Ctrl+7 |
 
 - Ctrl+N while the New Task dialog is open is a no-op.
-- Delete fires only when a card/row has focus or the detail panel is open — never while typing in a field or when another
+- Delete fires only when a card/row has focus or the detail panel is open, never while typing in a field or when another
   dialog/menu is open.
 - Commands triggered from outside the main window (notification click, Settings' "Show Release Notes") bring the main
   window to front, creating it if needed; if freshly created, queue the command until it finishes loading.
@@ -620,13 +617,13 @@ Standard menu bar (File/Edit/View/Go/Window/Help) with accelerators (Ctrl on Win
 ## 14. Non-goals
 
 No accounts/login/server/telemetry. No collaboration (assignees, comments, mentions). No sub-tasks, recurring tasks, or
-calendar view. No in-app AI calls (Reports only generates text). No built-in network sync — sync is purely the user's
+calendar view. No in-app AI calls (Reports only generates text). No built-in network sync, sync is purely the user's
 third-party folder sync.
 
 ## 15. Implementation notes (Flutter)
 
 - Storage: native folder dialogs; `dart:io` with temp-file-then-rename; filesystem watcher with polling fallback.
-- State: any mature solution — the "N saves in flight, last response wins" discipline is what matters.
+- State: any mature solution, the "N saves in flight, last response wins" discipline is what matters.
 - Drag & drop / animations: custom pointer handling + AnimationControllers/Transforms for lift/tilt/ghost/FLIP.
 - Notifications: must fire while the main window is minimized/closed, with click routing.
 - Virtualized lists for columns and list sections.

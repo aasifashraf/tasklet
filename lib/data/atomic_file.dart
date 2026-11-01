@@ -6,7 +6,7 @@ import 'package:path/path.dart' as p;
 
 const _encoder = JsonEncoder.withIndent('  ');
 
-/// Pretty-printed JSON with a trailing newline — friendly to diff tools and sync clients.
+/// Pretty-printed JSON with a trailing newline, friendly to diff tools and sync clients.
 String encodeJson(Object? value) => '${_encoder.convert(value)}\n';
 
 final _random = Random();

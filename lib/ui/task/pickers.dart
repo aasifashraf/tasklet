@@ -374,7 +374,7 @@ class LabelsPicker extends StatelessWidget {
   }
 }
 
-/// Checkable label items (project labels first, then workspace — SPEC §6). Stays open while toggling.
+/// Checkable label items (project labels first, then workspace; SPEC §6). Stays open while toggling.
 List<Widget> labelMenuItems(
   List<(Label, Project?)> available,
   List<String> selected,
@@ -487,7 +487,7 @@ List<Widget> projectMenuItems(
 ];
 
 /// Projects a task can be filed into: "No Project" first, then active projects, plus [alsoInclude] (an archived
-/// project the task already belongs to or whose board opened the dialog — SPEC §7.1, §7.3).
+/// project the task already belongs to or whose board opened the dialog; SPEC §7.1, §7.3).
 List<Project> projectOptions(Workspace ws, {String? alsoInclude}) {
   final active =
       ws.projects.where((p) => !p.archived || p.id == alsoInclude).toList()

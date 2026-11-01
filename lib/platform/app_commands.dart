@@ -9,7 +9,7 @@ import '../ui/whats_new.dart';
 import 'notifications.dart';
 import 'windows.dart';
 
-/// Handles commands that arrive from outside the main window — notification clicks and the Settings window —
+/// Handles commands that arrive from outside the main window (notification clicks and the Settings window),
 /// bringing the main window to the front first (SPEC §12). The main window is never destroyed while Tasklet runs
 /// (closing hides it), so commands always have a window to land in.
 class AppCommands {

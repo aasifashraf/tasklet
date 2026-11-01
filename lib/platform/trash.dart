@@ -8,7 +8,7 @@ import 'package:win32/win32.dart' as win32;
 
 const _channel = MethodChannel('tasklet/native');
 
-/// Moves [path] to the Recycle Bin (Windows) or Trash (macOS). Returns false — without deleting anything — when
+/// Moves [path] to the Recycle Bin (Windows) or Trash (macOS). Returns false (without deleting anything) when
 /// the file's volume can't hold it there, so the caller can fall back to a recoverable location.
 Future<bool> moveToOsTrash(String path) async {
   if (Platform.isWindows) return _recycleWindows(path);

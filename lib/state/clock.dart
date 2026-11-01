@@ -7,7 +7,7 @@ import '../core/local_date.dart';
 
 /// The current time, re-evaluated every 30 seconds and whenever the app resumes (SPEC §9), so relative dates,
 /// overdue cues, Today and the Dashboard roll over at midnight without a restart. Never call `DateTime.now()` in
-/// widgets — watch this (or [todayProvider]) instead.
+/// widgets; watch this (or [todayProvider]) instead.
 class NowNotifier extends Notifier<DateTime> {
   @override
   DateTime build() {

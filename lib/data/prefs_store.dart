@@ -9,7 +9,7 @@ import 'save_queue.dart';
 
 /// Device-local settings in one JSON file (theme, name, sidebar, reminders, per-board display, …).
 ///
-/// Shared by the main and Settings windows, which run in separate engines — so instead of an in-memory cache per
+/// Shared by the main and Settings windows, which run in separate engines, so instead of an in-memory cache per
 /// engine (shared_preferences), each window watches this file and reloads when the other one writes it.
 class PrefsStore {
   PrefsStore._(this.path, this._values, this._queue);
@@ -20,7 +20,7 @@ class PrefsStore {
   final _controller = StreamController<void>.broadcast();
   StreamSubscription<WatchEvent>? _watch;
 
-  /// Opens [path]. A missing or corrupt file starts empty — device prefs are recoverable, unlike workspace data.
+  /// Opens [path]. A missing or corrupt file starts empty: device prefs are recoverable, unlike workspace data.
   static Future<PrefsStore> open(String path) async =>
       PrefsStore._(path, await _load(path), SaveQueue());
 
@@ -35,7 +35,7 @@ class PrefsStore {
     }
   }
 
-  /// Emits after values change — from [set] or from another window writing the file.
+  /// Emits after values change, from [set] or from another window writing the file.
   Stream<void> get changes => _controller.stream;
 
   /// A snapshot of every value.

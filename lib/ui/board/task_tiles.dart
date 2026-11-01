@@ -14,7 +14,7 @@ import '../task/task_menu.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
-/// The task whose card/row has keyboard focus (for the Delete shortcut — SPEC §12).
+/// The task whose card/row has keyboard focus (for the Delete shortcut, SPEC §12).
 class FocusedTask extends Notifier<TaskRef?> {
   @override
   TaskRef? build() => null;

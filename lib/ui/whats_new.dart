@@ -34,7 +34,7 @@ Future<void> _show(
 ) async {
   if (_open) return;
   _open = true;
-  // Nothing should scroll into view when focus returns after closing (keeps the sidebar still — SPEC §13).
+  // Nothing should scroll into view when focus returns after closing (keeps the sidebar still, SPEC §13).
   FocusManager.instance.primaryFocus?.unfocus();
   try {
     await showDialog<void>(

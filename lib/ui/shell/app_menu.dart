@@ -80,7 +80,7 @@ List<CommandGroup> buildCommands(BuildContext context, WidgetRef ref) {
     );
   }
 
-  /// Delete only acts on a focused card/row or the open panel — never while typing (SPEC §12).
+  /// Delete only acts on a focused card/row or the open panel, never while typing (SPEC §12).
   void deleteTask() {
     if (_typingInTextField() || readOnly) return;
     final target = ref.read(openTaskProvider) ?? ref.read(focusedTaskProvider);

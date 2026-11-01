@@ -12,7 +12,7 @@ class Notifications {
 
   static const _windowsGuid = '6f1c2b0e-3c1d-4d6b-9a52-7e0d3c9b1a41';
 
-  /// Initializes the plugin. [onTap] receives the payload of a clicked notification — also when the click
+  /// Initializes the plugin. [onTap] receives the payload of a clicked notification, also when the click
   /// launched the app.
   static Future<void> init(void Function(String? payload) onTap) async {
     if (_ready || !(Platform.isWindows || Platform.isMacOS)) return;

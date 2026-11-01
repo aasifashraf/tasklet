@@ -294,8 +294,8 @@ class WorkspaceStore {
     );
   }
 
-  /// Deletes a project (SPEC §4.5): its file — and any sync conflict copies of it, so it doesn't reappear from
-  /// one — go to the OS Recycle Bin/Trash, or to `<folder>/.trash/` on volumes without one. Never a permanent
+  /// Deletes a project (SPEC §4.5): its file (and any sync conflict copies of it, so it doesn't reappear from
+  /// one) goes to the OS Recycle Bin/Trash, or to `<folder>/.trash/` on volumes without one. Never a permanent
   /// delete. Runs after any queued save of the same project.
   Future<void> deleteProject(
     Project project, {
@@ -343,7 +343,7 @@ class WorkspaceStore {
   static String _key(String path) => p.canonicalize(path);
 
   /// A missing marker is a fresh or legacy folder (writable). An unreadable marker might be mid-sync, and a newer
-  /// format version can't be written safely — both make this read read-only.
+  /// format version can't be written safely. Both make this read read-only.
   Future<bool> _markerIsNewerOrUnreadable() async {
     final marker = File(_markerPath);
     try {

@@ -50,7 +50,7 @@ final class FailedState extends WorkspaceState {
 
 /// Owns the open data folder: loading, refreshing, and every mutation (SPEC §2, §9).
 ///
-/// Mutations are optimistic — state updates first, then the file is saved through the store's save queue.
+/// Mutations are optimistic: state updates first, then the file is saved through the store's save queue.
 /// External refreshes (watcher, window focus) are skipped while any save is in flight and run once it drains, so a
 /// stale read can never clobber an edit that is still being written.
 class WorkspaceController extends Notifier<WorkspaceState> {

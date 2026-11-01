@@ -54,7 +54,7 @@ class DismissedNotices extends Notifier<Set<String>> {
 final dismissedNoticesProvider =
     NotifierProvider<DismissedNotices, Set<String>>(DismissedNotices.new);
 
-/// Whether a modal (New Task dialog, menu, other dialog) is open — keyboard shortcuts stand down (SPEC §12).
+/// Whether a modal (New Task dialog, menu, other dialog) is open; keyboard shortcuts stand down (SPEC §12).
 class ModalDepth extends Notifier<int> {
   @override
   int build() => 0;
@@ -64,7 +64,7 @@ class ModalDepth extends Notifier<int> {
 
 final modalDepthProvider = NotifierProvider<ModalDepth, int>(ModalDepth.new);
 
-/// Whether the New Task dialog is open (Ctrl+N is a no-op then — SPEC §12).
+/// Whether the New Task dialog is open (Ctrl+N is a no-op then, SPEC §12).
 class NewTaskOpen extends Notifier<bool> {
   @override
   bool build() => false;

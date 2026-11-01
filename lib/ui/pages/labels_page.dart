@@ -96,7 +96,7 @@ class _LabelsPageState extends ConsumerState<LabelsPage> {
             const NoticeBanner(
               icon: Icons.sync_problem_outlined,
               message:
-                  "labels.json can't be read right now — it may still be syncing or be damaged. Workspace labels "
+                  "labels.json can't be read right now. It may still be syncing or be damaged. Workspace labels "
                   "can't be changed until it can be read again.",
             ),
           Expanded(
@@ -105,7 +105,7 @@ class _LabelsPageState extends ConsumerState<LabelsPage> {
                     icon: Icons.label_outline_rounded,
                     title: 'No labels yet',
                     message: scopeProject == null
-                        ? 'Workspace labels can be used on tasks in any project — like Bug, Idea, or Waiting.'
+                        ? 'Workspace labels can be used on tasks in any project, like Bug, Idea, or Waiting.'
                         : 'Labels created here can only be used on tasks in ${scopeProject.name}.',
                     action: FilledButton.icon(
                       onPressed: locked

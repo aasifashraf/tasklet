@@ -11,7 +11,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'pickers.dart';
 
-/// The task context menu — identical on cards, list rows and Dashboard rows, in this exact order (SPEC §7.3).
+/// The task context menu: identical on cards, list rows and Dashboard rows, in this exact order (SPEC §7.3).
 List<Widget> taskMenuChildren(
   BuildContext context,
   WidgetRef ref,

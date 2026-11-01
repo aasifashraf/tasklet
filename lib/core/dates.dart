@@ -4,7 +4,7 @@ import 'local_date.dart';
 
 LocalDate tomorrowOf(LocalDate today) => today.addDays(1);
 
-/// The next Monday strictly after [today] — the start of next work week (SPEC §7.3).
+/// The next Monday strictly after [today], the start of next work week (SPEC §7.3).
 /// Independent of the OS first-day-of-week, so it never lands on a weekend.
 LocalDate nextMondayAfter(LocalDate today) => today.addDays(8 - today.weekday);
 

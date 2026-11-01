@@ -85,7 +85,7 @@ ReminderDigest? buildDigest(
 
 /// Whether today's reminder should go out now: once per calendar day, at or after the configured time, catching up
 /// if the app wasn't running then. Turning reminders on (or moving the time) to an already-passed time marks today as
-/// sent, so it waits until tomorrow — see [markSentIfTimePassed].
+/// sent, so it waits until tomorrow (see [markSentIfTimePassed]).
 bool reminderIsDue({
   required DateTime now,
   required int hour,

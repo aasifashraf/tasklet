@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.1 — November 2026
+## 1.0.1, November 2026
 
 First public release (Windows).
 

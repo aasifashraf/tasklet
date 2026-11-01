@@ -13,26 +13,25 @@ block all edits to it.
 unchanged.
 
 - Unknown *fields* are kept in `extra` (already required by SPEC §2.5).
-- A *list entry* (task, project label, workspace label, saved view) that doesn't parse — or repeats an id already
-  seen — is kept verbatim as an opaque entry, hidden from the UI, counted in `Workspace.hiddenEntryCount`, and written
+- A *list entry* (task, project label, workspace label, saved view) that doesn't parse, or repeats an id already
+  seen, is kept verbatim as an opaque entry, hidden from the UI, counted in `Workspace.hiddenEntryCount`, and written
   back unchanged on every save. Its task number still counts toward `nextNumber`, so numbers are never reused.
 - An unknown *color* displays as neutral and is written back until the user picks a color.
-- Only damage to the file itself (invalid JSON, or a project missing its id/name/createdAt) makes a file unreadable —
-  and unreadable files are never overwritten.
+- Only damage to the file itself (invalid JSON, or a project missing its id/name/createdAt) makes a file unreadable, and unreadable files are never overwritten.
 
 The UI will show a non-blocking notice when `hiddenEntryCount > 0` ("Some items were created by a newer version of
-Tasklet — update to see them").
+Tasklet, update to see them").
 
 ## D2. Format version: newer format = read-only
 
 `tasklet-workspace.json` stores `formatVersion` (currently 1). It is bumped only for changes older versions can't
-safely write; additive changes rely on D1. If the marker says a newer version — or can't be read right now (likely
-mid-sync) — the workspace opens **read-only** for that read: everything is shown, nothing is saved (including key
+safely write; additive changes rely on D1. If the marker says a newer version, or can't be read right now (likely
+mid-sync), the workspace opens **read-only** for that read: everything is shown, nothing is saved (including key
 self-healing). A missing marker means a fresh or legacy folder and is writable.
 
 ## D3. Sync conflict copies
 
-Providers name copies differently — Dropbox `name (Ada's conflicted copy 2026-10-01).json`, OneDrive
+Providers name copies differently, Dropbox `name (Ada's conflicted copy 2026-10-01).json`, OneDrive
 `name-DEVICE.json`, Google Drive `name (1).json`, iCloud `name 2.json`, Syncthing
 `name.sync-conflict-20261001-101010-ABCDEFG.json`, Synology `name_Conflict...`. Tasklet doesn't parse names: a project
 file is canonical only if its file name equals the id inside it; every other parsable file with that id is a copy.
@@ -53,13 +52,13 @@ SPEC §4.5 promises the file goes to the Recycle Bin/Trash. Windows only has a R
   without a Trash).
 - Otherwise the file is moved to `<data folder>/.trash/` (never read by Tasklet, syncs like the rest, recoverable by
   hand). Deletion is never permanent.
-- The project's conflict copies are trashed with it — otherwise it would reappear from a copy (D3).
+- The project's conflict copies are trashed with it, otherwise it would reappear from a copy (D3).
 - After deletion the store refuses to write that project again in the session, so a late save can't resurrect it.
 
 ## D5. Project ids are file names
 
 Ids must match `[A-Za-z0-9_-]{1,64}` and must not be a Windows reserved device name (`CON`, `PRN`, `AUX`, `NUL`,
-`COM0–9`, `LPT0–9`, any case — these are invalid even with an extension). Files with other ids are treated as unreadable
+`COM0–9`, `LPT0–9`, any case, these are invalid even with an extension). Files with other ids are treated as unreadable
 and never written. New ids are lowercase UUID v4.
 
 ## D6. Priority sort with "None"

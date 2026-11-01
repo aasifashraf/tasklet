@@ -40,7 +40,7 @@ const currentRelease = ReleaseNotes(
     ReleaseFeature(
       Icons.wb_sunny_outlined,
       'Today and Dashboard',
-      "See what's due, starting, or overdue — and what you finished this week.",
+      "See what's due, starting, or overdue, and what you finished this week.",
     ),
     ReleaseFeature(
       Icons.layers_outlined,
@@ -50,7 +50,7 @@ const currentRelease = ReleaseNotes(
     ReleaseFeature(
       Icons.description_outlined,
       'Reports for any AI',
-      'Turn on Reports in Settings → Sidebar to copy a ready-made progress report prompt.',
+      'Turn on Reports in Settings → Sidebar, then export a ready-made progress report, with optional Mermaid charts, for any AI assistant.',
     ),
   ],
   fixes: ['First release.'],

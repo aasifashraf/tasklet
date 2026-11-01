@@ -337,7 +337,7 @@ class _FilterButton extends ConsumerWidget {
           if (board.availableLabels.isNotEmpty) const Divider(),
           for (final (l, p) in projectLabels)
             _LiveCheck(
-              label: kind.crossProject ? '${l.name} — ${p!.name}' : l.name,
+              label: kind.crossProject ? '${l.name} (${p!.name})' : l.name,
               leading: ColorDot(color: t.named(l.color)),
               isChecked: (r) => watched(r).labels.contains(l.id),
               onToggle: (r) => update(
@@ -439,7 +439,9 @@ class _LayoutToggle extends ConsumerWidget {
     final isBoard = layout == BoardLayout.board;
     return IconBtn(
       icon: isBoard ? Icons.view_kanban_outlined : Icons.view_list_rounded,
-      tooltip: isBoard ? 'Board — click for List' : 'List — click for Board',
+      tooltip: isBoard
+          ? 'Board view. Click for List'
+          : 'List view. Click for Board',
       onPressed: () => set(isBoard ? BoardLayout.list : BoardLayout.board),
     );
   }

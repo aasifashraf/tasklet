@@ -172,7 +172,7 @@ class TaskActions {
     _toast.show('Copied ${e.displayId}');
   }
 
-  /// Deletes immediately — never asks (SPEC §7.4) — with an 8-second Undo that restores the exact task.
+  /// Deletes immediately and never asks (SPEC §7.4), with an 8-second Undo that restores the exact task.
   Future<void> delete(ProjectTask e) async {
     final open = _ref.read(openTaskProvider);
     if (open?.taskId == e.task.id) _ref.read(openTaskProvider.notifier).close();

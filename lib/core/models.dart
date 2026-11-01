@@ -7,7 +7,7 @@ import 'local_date.dart';
 // - unrecognized fields are kept in `extra` and written back unchanged;
 // - a list entry this version can't understand (e.g. a task with a status added by a newer Tasklet, or a
 //   hand-edited task with a broken field) is kept verbatim as "opaque", hidden from the UI, and written back
-//   unchanged — one odd entry never hides the rest of its project;
+//   unchanged, so one odd entry never hides the rest of its project;
 // - an unknown color shows as neutral but its original value is written back until the user picks a color.
 // Only damage to the file itself (invalid JSON, missing project id/name/createdAt) makes a whole file unreadable.
 
@@ -712,7 +712,7 @@ class ViewDisplay {
     extra: extra,
   );
 
-  /// Same visible settings as [other] (ignores `extra`) — used for "Reset to Default" enablement.
+  /// Same visible settings as [other] (ignores `extra`), used for "Reset to Default" enablement.
   bool sameAs(ViewDisplay other) =>
       order == other.order &&
       direction == other.direction &&
