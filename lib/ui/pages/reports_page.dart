@@ -12,6 +12,7 @@ import '../../state/clock.dart';
 import '../../state/toast.dart';
 import '../../state/workspace.dart';
 import '../glyphs.dart';
+import '../task/pickers.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'list_parts.dart';
@@ -119,6 +120,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                               _customFrom ?? today,
                               today,
                               (d) => setState(() => _customFrom = d),
+                              latest: _customTo ?? today,
                             ),
                             Text('→', style: TextStyles.meta(context)),
                             _dateChip(
@@ -126,6 +128,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                               _customTo ?? today,
                               today,
                               (d) => setState(() => _customTo = d),
+                              earliest: _customFrom ?? today,
                             ),
                           ] else if (_preset != PeriodPreset.allTime)
                             Text(
@@ -197,8 +200,10 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     BuildContext context,
     LocalDate date,
     LocalDate today,
-    ValueChanged<LocalDate> onPick,
-  ) => PropChip(
+    ValueChanged<LocalDate> onPick, {
+    LocalDate? earliest,
+    LocalDate? latest,
+  }) => PropChip(
     icon: Icon(
       Icons.calendar_today_outlined,
       size: 12,
@@ -206,13 +211,13 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     ),
     label: shortDate(date, today),
     onTap: () async {
-      final picked = await showDatePicker(
-        context: context,
-        initialDate: date.toLocalDateTime(),
-        firstDate: DateTime(2000),
-        lastDate: DateTime(2100),
+      final picked = await pickCalendarDate(
+        context,
+        initial: date,
+        earliest: earliest,
+        latest: latest,
       );
-      if (picked != null) onPick(LocalDate.fromDateTime(picked));
+      if (picked != null) onPick(picked);
     },
   );
 

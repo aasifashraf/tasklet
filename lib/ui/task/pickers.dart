@@ -193,14 +193,31 @@ List<Widget> quickDateItems(
   ];
 }
 
+/// Opens the calendar limited to [earliest]..[latest] (either may be null). Every calendar in the app goes through
+/// this so a range's start can never be picked after its end (or the end before the start).
+Future<LocalDate?> pickCalendarDate(
+  BuildContext context, {
+  required LocalDate initial,
+  LocalDate? earliest,
+  LocalDate? latest,
+}) async {
+  var first = earliest ?? LocalDate(2000, 1, 1);
+  var last = latest ?? LocalDate(2100, 12, 31);
+  if (first.isAfter(last)) (first, last) = (last, first);
+  final start = initial.isBefore(first)
+      ? first
+      : (initial.isAfter(last) ? last : initial);
+  final picked = await showDatePicker(
+    context: context,
+    initialDate: start.toLocalDateTime(),
+    firstDate: first.toLocalDateTime(),
+    lastDate: last.toLocalDateTime(),
+  );
+  return picked == null ? null : LocalDate.fromDateTime(picked);
+}
+
 /// A start- or due-date chip with quick picks, a calendar, and remove.
 class DatePickerChip extends ConsumerWidget {
-  LocalDate _clamp(LocalDate d) {
-    if (earliest != null && d.isBefore(earliest!)) return earliest!;
-    if (latest != null && d.isAfter(latest!)) return latest!;
-    return d;
-  }
-
   const DatePickerChip({
     super.key,
     required this.date,
@@ -242,13 +259,13 @@ class DatePickerChip extends ConsumerWidget {
           'Pick a Date…',
           leading: const Icon(Icons.calendar_month_outlined, size: 14),
           onPressed: () async {
-            final picked = await showDatePicker(
-              context: context,
-              initialDate: _clamp(date ?? today).toLocalDateTime(),
-              firstDate: earliest?.toLocalDateTime() ?? DateTime(2000),
-              lastDate: latest?.toLocalDateTime() ?? DateTime(2100),
+            final picked = await pickCalendarDate(
+              context,
+              initial: date ?? today,
+              earliest: earliest,
+              latest: latest,
             );
-            if (picked != null) onPick(LocalDate.fromDateTime(picked), null);
+            if (picked != null) onPick(picked, null);
           },
         ),
         menuItem(
