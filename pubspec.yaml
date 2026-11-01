@@ -29,6 +29,7 @@ environment:
 # versions available, run `flutter pub outdated`.
 dependencies:
   desktop_multi_window: ^0.3.1
+  ffi: ^2.2.0
   file_picker: ^13.3.0
   flutter:
     sdk: flutter
@@ -43,6 +44,7 @@ dependencies:
   url_launcher: ^6.3.3
   uuid: ^4.6.0
   watcher: ^1.2.1
+  win32: ^6.4.0
   window_manager: ^0.5.2
 
   # The following adds the Cupertino Icons font to your application.

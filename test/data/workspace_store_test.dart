@@ -36,7 +36,9 @@ void main() {
 
   test('initialize writes the marker and projects dir, no demo data', () async {
     await WorkspaceStore.initialize(folder);
-    final marker = jsonDecode(await File(p.join(folder, 'tasklet-workspace.json')).readAsString());
+    final marker = jsonDecode(
+      await File(p.join(folder, 'tasklet-workspace.json')).readAsString(),
+    );
     expect(marker, {'app': 'tasklet', 'formatVersion': 1});
     expect(await Directory(projectsDir()).list().isEmpty, isTrue);
     final ws = await WorkspaceStore(folder).read();
@@ -47,8 +49,14 @@ void main() {
 
   test('missing folder is an error, never recreated', () async {
     final missing = p.join(folder, 'gone');
-    await expectLater(WorkspaceStore(missing).read(), throwsA(isA<WorkspaceFolderMissing>()));
-    await expectLater(WorkspaceStore.initialize(missing), throwsA(isA<WorkspaceFolderMissing>()));
+    await expectLater(
+      WorkspaceStore(missing).read(),
+      throwsA(isA<WorkspaceFolderMissing>()),
+    );
+    await expectLater(
+      WorkspaceStore.initialize(missing),
+      throwsA(isA<WorkspaceFolderMissing>()),
+    );
     expect(await Directory(missing).exists(), isFalse);
   });
 
@@ -56,7 +64,10 @@ void main() {
     final store = await opened();
     final pr = project('p1', name: 'Website', key: 'WEB', tasks: [task('t1')]);
     await store.writeProject(pr);
-    final files = await Directory(projectsDir()).list().map((e) => p.basename(e.path)).toList();
+    final files = await Directory(projectsDir())
+        .list()
+        .map((e) => p.basename(e.path))
+        .toList();
     expect(files, ['p1.json']);
     final ws = await store.read();
     expect(ws.projects.single.toJson(), pr.toJson());
@@ -71,15 +82,24 @@ void main() {
   });
 
   test('unknown fields survive a read-modify-write cycle on disk', () async {
-    final json = project('p1', key: 'WEB', tasks: [task('t1')]).toJson()..['futureProjectField'] = 'keep';
-    (json['tasks']! as List<Object?>)[0] = {...(json['tasks']! as List<Object?>)[0]! as Map<String, Object?>, 'x': 1};
+    final json = project('p1', key: 'WEB', tasks: [task('t1')]).toJson()
+      ..['futureProjectField'] = 'keep';
+    (json['tasks']! as List<Object?>)[0] = {
+      ...(json['tasks']! as List<Object?>)[0]! as Map<String, Object?>,
+      'x': 1,
+    };
     await writeRaw('projects/p1.json', json);
     final store = await opened();
     final ws = await store.read();
     await store.writeProject(ws.projects.single.copyWith(name: 'Renamed'));
-    final saved = jsonDecode(await File(p.join(projectsDir(), 'p1.json')).readAsString()) as Map<String, Object?>;
+    final saved = jsonDecode(
+      await File(p.join(projectsDir(), 'p1.json')).readAsString(),
+    ) as Map<String, Object?>;
     expect(saved['futureProjectField'], 'keep');
-    expect(((saved['tasks']! as List<Object?>)[0]! as Map<String, Object?>)['x'], 1);
+    expect(
+      ((saved['tasks']! as List<Object?>)[0]! as Map<String, Object?>)['x'],
+      1,
+    );
     expect(saved['name'], 'Renamed');
   });
 
@@ -88,18 +108,29 @@ void main() {
     final store = await opened();
     final ws = await store.read();
     expect(ws.projects, isEmpty);
-    await expectLater(store.writeProject(project('p1', key: 'WEB')), throwsA(isA<UnsafeWriteException>()));
-    expect(await File(p.join(projectsDir(), 'p1.json')).readAsString(), '{"id": "p1", "name": ');
+    await expectLater(
+      store.writeProject(project('p1', key: 'WEB')),
+      throwsA(isA<UnsafeWriteException>()),
+    );
+    expect(
+      await File(p.join(projectsDir(), 'p1.json')).readAsString(),
+      '{"id": "p1", "name": ',
+    );
   });
 
-  test('an unreadable No-Project file blocks lazily creating a new one', () async {
-    await writeRaw('projects/$noProjectId.json', 'garbage');
-    final store = await opened();
-    final ws = await store.read();
-    expect(ws.noProjectOnDisk, isFalse);
-    final withTask = ws.noProject.copyWith(tasks: [task('t1')]);
-    await expectLater(store.writeProject(withTask), throwsA(isA<UnsafeWriteException>()));
-  });
+  test(
+    'an unreadable No-Project file blocks lazily creating a new one',
+    () async {
+      await writeRaw('projects/$noProjectId.json', 'garbage');
+      final store = await opened();
+      final ws = await store.read();
+      final withTask = ws.noProject.copyWith(tasks: [task('t1')]);
+      await expectLater(
+        store.writeProject(withTask),
+        throwsA(isA<UnsafeWriteException>()),
+      );
+    },
+  );
 
   test('No-Project file is created lazily, only once it has a task', () async {
     final store = await opened();
@@ -110,11 +141,17 @@ void main() {
     final again = await store.read();
     expect(again.noProjectOnDisk, isTrue);
     expect(again.noProject.tasks.single.id, 't1');
-    expect(again.projects, isEmpty, reason: 'No Project never appears as a real project');
+    expect(
+      again.projects,
+      isEmpty,
+      reason: 'No Project never appears as a real project',
+    );
   });
 
   test('No-Project identity is fixed even if the file was edited', () async {
-    final np = Project.noProject(t0).copyWith(name: 'Hacked', key: 'XYZ', archived: true, tasks: [task('t1')]);
+    final np = Project.noProject(
+      t0,
+    ).copyWith(name: 'Hacked', key: 'XYZ', archived: true, tasks: [task('t1')]);
     await writeRaw('projects/$noProjectId.json', np.toJson());
     final ws = await (await opened()).read();
     expect(ws.noProject.name, 'No Project');
@@ -127,7 +164,8 @@ void main() {
     await writeRaw('projects/p1.json', pr.toJson());
     final copyJson = pr.copyWith(name: 'Website (other machine)').toJson();
     await writeRaw('projects/p1 2.json', copyJson);
-    final copyBytes = await File(p.join(projectsDir(), 'p1 2.json')).readAsString();
+    final copyBytes = await File(p.join(projectsDir(), 'p1 2.json'))
+        .readAsString();
 
     final store = await opened();
     final ws = await store.read();
@@ -136,25 +174,48 @@ void main() {
     expect(p.basename(ws.conflicts.single.file), 'p1 2.json');
 
     await store.writeProject(ws.projects.single.copyWith(name: 'Edited'));
-    expect(await File(p.join(projectsDir(), 'p1 2.json')).readAsString(), copyBytes);
+    expect(
+      await File(p.join(projectsDir(), 'p1 2.json')).readAsString(),
+      copyBytes,
+    );
   });
 
   test('project keys self-heal by createdAt and are persisted', () async {
-    await writeRaw('projects/a.json', project('a', name: 'Web A', key: 'WEB', created: at(5)).toJson());
-    await writeRaw('projects/b.json', project('b', name: 'Web B', key: 'WEB', created: at(0)).toJson());
-    await writeRaw('projects/c.json', project('c', name: 'Legacy', key: '').toJson());
+    await writeRaw(
+      'projects/a.json',
+      project('a', name: 'Web A', key: 'WEB', created: at(5)).toJson(),
+    );
+    await writeRaw(
+      'projects/b.json',
+      project('b', name: 'Web B', key: 'WEB', created: at(0)).toJson(),
+    );
+    await writeRaw(
+      'projects/c.json',
+      project('c', name: 'Legacy', key: '').toJson(),
+    );
     final store = await opened();
     final ws = await store.read();
-    expect({for (final pr in ws.projects) pr.id: pr.key}, {'a': 'WEB1', 'b': 'WEB', 'c': 'LEG'});
-    final onDisk = jsonDecode(await File(p.join(projectsDir(), 'a.json')).readAsString()) as Map<String, Object?>;
+    expect(
+      {for (final pr in ws.projects) pr.id: pr.key},
+      {'a': 'WEB1', 'b': 'WEB', 'c': 'LEG'},
+    );
+    final onDisk = jsonDecode(
+      await File(p.join(projectsDir(), 'a.json')).readAsString(),
+    ) as Map<String, Object?>;
     expect(onDisk['key'], 'WEB1');
   });
 
   test('project ids that are not safe file names are rejected', () async {
-    await writeRaw('projects/evil.json', project('../evil', key: 'EVI').toJson());
+    await writeRaw(
+      'projects/evil.json',
+      project('../evil', key: 'EVI').toJson(),
+    );
     final store = await opened();
     expect((await store.read()).projects, isEmpty);
-    await expectLater(store.writeProject(project('../x', key: 'X')), throwsA(isA<UnsafeWriteException>()));
+    await expectLater(
+      store.writeProject(project('../x', key: 'X')),
+      throwsA(isA<UnsafeWriteException>()),
+    );
   });
 
   group('labels.json and views.json', () {
@@ -168,8 +229,12 @@ void main() {
     test('round-trip', () async {
       final store = await opened();
       await store.read();
-      await store.writeLabels([Label(id: 'l1', name: 'Bug', color: TaskletColor.red)]);
-      await store.writeViews([SavedView(id: 'v1', name: 'Mine', createdAt: t0, updatedAt: t0)]);
+      await store.writeLabels([
+        Label(id: 'l1', name: 'Bug', color: TaskletColor.red),
+      ]);
+      await store.writeViews([
+        SavedView(id: 'v1', name: 'Mine', createdAt: t0, updatedAt: t0),
+      ]);
       final ws = await store.read();
       expect(ws.labels.single.name, 'Bug');
       expect(ws.views.single.name, 'Mine');
@@ -182,7 +247,10 @@ void main() {
       expect(ws.labelsReadable, isFalse);
       expect(ws.viewsReadable, isTrue);
       expect(() => store.writeLabels([]), throwsA(isA<UnsafeWriteException>()));
-      expect(await File(p.join(folder, 'labels.json')).readAsString(), '[{"id": "l1"');
+      expect(
+        await File(p.join(folder, 'labels.json')).readAsString(),
+        '[{"id": "l1"',
+      );
     });
 
     test('unreadable views.json is flagged and writes are refused', () async {
@@ -196,7 +264,10 @@ void main() {
   test('writes to the same file land in submission order', () async {
     final store = await opened();
     final base = project('p1', key: 'WEB');
-    await Future.wait([for (var i = 0; i < 10; i++) store.writeProject(base.copyWith(name: 'v$i'))]);
+    await Future.wait([
+      for (var i = 0; i < 10; i++)
+        store.writeProject(base.copyWith(name: 'v$i')),
+    ]);
     final ws = await store.read();
     expect(ws.projects.single.name, 'v9');
     expect(store.queue.inFlight, 0);
