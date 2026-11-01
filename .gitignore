@@ -49,3 +49,6 @@ app.*.map.json
 
 # IDE
 *.iml
+
+# Packaged builds
+/dist/
