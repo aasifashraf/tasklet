@@ -75,6 +75,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/tray_icon.ico
+    - assets/branding/tasklet-icon-256.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:
