@@ -71,3 +71,21 @@ which would put None first when descending. The explicit rule wins: None is alwa
 
 Standard `dart format` (80 columns, the Dart default) and `flutter_lints` plus a few strict rules. No custom page
 width, so contributors need no special editor setup and diffs fit side by side.
+
+## D8. Confirmation dialogs
+
+SPEC §4.5/§4.6/§4.8 ask for native confirms with **Cancel as the default button**. The native alert APIs available to
+Flutter on Windows don't let us choose the default button for custom labels ("Delete" / "Cancel"), so confirms are a
+small in-app dialog styled like a system alert: Cancel has initial focus, Enter/Space activate it, Escape cancels,
+and the destructive button is red. Task deletion never confirms (SPEC §7.4).
+
+## D9. Creating a new data folder
+
+"Create New Folder…" (SPEC §10) uses the native folder picker to choose *where*, then a small name prompt (default
+"Tasklet") that refuses names already in use. A native save-file dialog was rejected: it writes a file at the chosen
+path, and confirming its "replace existing file?" prompt would destroy whatever file had that name.
+
+## D10. macOS sandbox
+
+v1 ships as a non-sandboxed, notarized app (like most sync-folder tools), so Tasklet can keep using any folder the user
+picked across launches without security-scoped bookmarks. An App Store build would need the sandbox plus bookmarks.

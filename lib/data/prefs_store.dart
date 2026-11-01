@@ -38,6 +38,9 @@ class PrefsStore {
   /// Emits after values change — from [set] or from another window writing the file.
   Stream<void> get changes => _controller.stream;
 
+  /// A snapshot of every value.
+  Map<String, Object?> get values => Map.unmodifiable(_values);
+
   T? get<T>(String key) {
     final value = _values[key];
     return value is T ? value : null;
