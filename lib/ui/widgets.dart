@@ -588,7 +588,6 @@ class SegmentedIconSwitch<T> extends StatelessWidget {
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     return Container(
       height: _height,
-      width: _segment * options.length + 4,
       padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         border: Border.all(color: t.border),
@@ -613,6 +612,7 @@ class SegmentedIconSwitch<T> extends StatelessWidget {
             ),
           ),
           Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               for (final o in options)
                 Tooltip(

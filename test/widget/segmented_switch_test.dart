@@ -37,10 +37,10 @@ void main() {
       ),
     );
 
-    // One bordered container holding both options.
+    // One bordered pill holding both options: 2 × 30px segments + 2px padding and 1px border per side.
     expect(
       tester.getSize(find.byType(SegmentedIconSwitch<BoardLayout>)),
-      const Size(64, 26),
+      const Size(66, 26),
     );
     final highlight = find.byType(AnimatedPositioned);
     final boardLeft = tester.getTopLeft(highlight).dx;
