@@ -3,6 +3,33 @@
 #include <optional>
 
 #include "flutter/generated_plugin_registrant.h"
+#include "desktop_multi_window/desktop_multi_window_plugin.h"
+
+namespace {
+
+// Tasklet's only secondary window is Settings: a fixed 520x440 window (SPEC §11).
+void ConfigureSettingsWindow(flutter::FlutterViewController* controller) {
+  HWND root = ::GetAncestor(controller->view()->GetNativeWindow(), GA_ROOT);
+  if (!root) return;
+  LONG style = ::GetWindowLong(root, GWL_STYLE);
+  style &= ~(WS_THICKFRAME | WS_MAXIMIZEBOX | WS_MINIMIZEBOX);
+  ::SetWindowLong(root, GWL_STYLE, style);
+  const UINT dpi = ::GetDpiForWindow(root);
+  RECT rect{0, 0, ::MulDiv(520, dpi, 96), ::MulDiv(440, dpi, 96)};
+  ::AdjustWindowRectExForDpi(&rect, style, FALSE,
+                             ::GetWindowLong(root, GWL_EXSTYLE), dpi);
+  const int width = rect.right - rect.left;
+  const int height = rect.bottom - rect.top;
+  MONITORINFO info{sizeof(MONITORINFO)};
+  ::GetMonitorInfo(::MonitorFromWindow(root, MONITOR_DEFAULTTONEAREST), &info);
+  const int x = info.rcWork.left + (info.rcWork.right - info.rcWork.left - width) / 2;
+  const int y = info.rcWork.top + (info.rcWork.bottom - info.rcWork.top - height) / 2;
+  ::SetWindowPos(root, nullptr, x, y, width, height,
+                 SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+  ::SetWindowText(root, L"Tasklet Settings");
+}
+
+}  // namespace
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
     : project_(project) {}
@@ -25,6 +52,13 @@ bool FlutterWindow::OnCreate() {
     return false;
   }
   RegisterPlugins(flutter_controller_->engine());
+  // Each extra window has its own engine; register plugins there too.
+  DesktopMultiWindowSetWindowCreatedCallback([](void* controller) {
+    auto* view_controller =
+        reinterpret_cast<flutter::FlutterViewController*>(controller);
+    RegisterPlugins(view_controller->engine());
+    ConfigureSettingsWindow(view_controller);
+  });
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {

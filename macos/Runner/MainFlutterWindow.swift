@@ -1,5 +1,6 @@
 import Cocoa
 import FlutterMacOS
+import desktop_multi_window
 
 class MainFlutterWindow: NSWindow {
   override func awakeFromNib() {
@@ -10,6 +11,19 @@ class MainFlutterWindow: NSWindow {
 
     RegisterGeneratedPlugins(registry: flutterViewController)
     registerNativeChannel(messenger: flutterViewController.engine.binaryMessenger)
+    // Each extra window has its own engine; register plugins there too. The only extra window is Settings:
+    // a fixed 520x440 window (SPEC §11).
+    FlutterMultiWindowPlugin.setOnWindowCreatedCallback { controller in
+      RegisterGeneratedPlugins(registry: controller)
+      DispatchQueue.main.async {
+        guard let window = controller.view.window else { return }
+        window.styleMask.remove(.resizable)
+        window.styleMask.remove(.miniaturizable)
+        window.setContentSize(NSSize(width: 520, height: 440))
+        window.title = "Tasklet Settings"
+        window.center()
+      }
+    }
 
     super.awakeFromNib()
   }

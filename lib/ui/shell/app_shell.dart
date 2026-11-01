@@ -12,6 +12,9 @@ import '../startup.dart';
 import '../task/detail_panel.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../../platform/whats_new_notes.dart';
+import '../whats_new.dart';
+import 'app_menu.dart';
 import 'sidebar.dart';
 
 /// Chooses between onboarding, loading, error, and the main shell based on the workspace state.
@@ -45,6 +48,13 @@ class _AppShellState extends ConsumerState<AppShell> with WindowListener {
   void initState() {
     super.initState();
     windowManager.addListener(this);
+    // Show release notes once after an update brings new ones (fresh installs just get the sidebar entry).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final seen = ref.read(prefsProvider).whatsNewSeen;
+      if (mounted && seen != null && seen != currentRelease.id) {
+        showWhatsNew(context, ref);
+      }
+    });
   }
 
   @override
@@ -66,46 +76,48 @@ class _AppShellState extends ConsumerState<AppShell> with WindowListener {
     final prefs = ref.watch(prefsProvider);
     final width = _dragWidth ?? prefs.sidebarWidth;
     final openTask = ref.watch(openTaskProvider);
-    return Scaffold(
-      body: Stack(
-        children: [
-          Row(
-            children: [
-              SizedBox(width: width, child: const Sidebar()),
-              MouseRegion(
-                cursor: SystemMouseCursors.resizeColumn,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onHorizontalDragUpdate: (d) => setState(
-                    () => _dragWidth = ((_dragWidth ?? width) + d.delta.dx)
-                        .clamp(190.0, 300.0),
-                  ),
-                  onHorizontalDragEnd: (_) {
-                    ref
-                        .read(prefsProvider.notifier)
-                        .set(PrefKeys.sidebarWidth, _dragWidth);
-                    setState(() => _dragWidth = null);
-                  },
-                  child: Container(
-                    width: 5,
-                    color: t.sidebar,
-                    child: VerticalDivider(color: t.border, width: 5),
+    return AppMenu(
+      child: Scaffold(
+        body: Stack(
+          children: [
+            Row(
+              children: [
+                SizedBox(width: width, child: const Sidebar()),
+                MouseRegion(
+                  cursor: SystemMouseCursors.resizeColumn,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onHorizontalDragUpdate: (d) => setState(
+                      () => _dragWidth = ((_dragWidth ?? width) + d.delta.dx)
+                          .clamp(190.0, 300.0),
+                    ),
+                    onHorizontalDragEnd: (_) {
+                      ref
+                          .read(prefsProvider.notifier)
+                          .set(PrefKeys.sidebarWidth, _dragWidth);
+                      setState(() => _dragWidth = null);
+                    },
+                    child: Container(
+                      width: 5,
+                      color: t.sidebar,
+                      child: VerticalDivider(color: t.border, width: 5),
+                    ),
                   ),
                 ),
-              ),
-              Expanded(
-                child: Column(
-                  children: [
-                    const _Notices(),
-                    Expanded(child: widget.child),
-                  ],
+                Expanded(
+                  child: Column(
+                    children: [
+                      const _Notices(),
+                      Expanded(child: widget.child),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-          if (openTask != null) DetailPanelOverlay(taskRef: openTask),
-          const ToastHost(),
-        ],
+              ],
+            ),
+            if (openTask != null) DetailPanelOverlay(taskRef: openTask),
+            const ToastHost(),
+          ],
+        ),
       ),
     );
   }
