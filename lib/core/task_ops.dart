@@ -10,6 +10,10 @@ import 'ordering.dart';
 // Undo restores a full snapshot of the prior task, so exact completedAt/number restoration (SPEC §7.3) needs no
 // special casing beyond `moveTask(restoreNumber:)`.
 
+/// A start date may not fall after the due date (either may be unset).
+bool datesInOrder(LocalDate? start, LocalDate? due) =>
+    start == null || due == null || !start.isAfter(due);
+
 double _topOf(Project project, TaskStatus status) => sortOrderAtTop([
   for (final t in project.tasks)
     if (t.status == status) t.sortOrder,

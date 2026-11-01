@@ -335,6 +335,10 @@ class WorkspaceController extends Notifier<WorkspaceState> {
 
   // ---------------------------------------------------------------- tasks
 
+  void _datesOutOfOrder() => ref
+      .read(toastProvider.notifier)
+      .show("The start date can't be after the due date.");
+
   Future<ProjectTask> createTask({
     required String projectId,
     required String title,
@@ -345,6 +349,10 @@ class WorkspaceController extends Notifier<WorkspaceState> {
     LocalDate? dueDate,
     List<String> labelIds = const [],
   }) async {
+    if (!ops.datesInOrder(startDate, dueDate)) {
+      _datesOutOfOrder();
+      startDate = null;
+    }
     final (project, task) = ops.createTask(
       _project(projectId),
       id: newId(),
@@ -371,6 +379,12 @@ class WorkspaceController extends Notifier<WorkspaceState> {
     final current = project.taskById(taskId);
     if (current == null) return Future.value();
     var next = change(current).copyWith(updatedAt: _now);
+    // Never save a start date after the due date (data that already arrived that way from sync stays editable).
+    if (!ops.datesInOrder(next.startDate, next.dueDate) &&
+        ops.datesInOrder(current.startDate, current.dueDate)) {
+      _datesOutOfOrder();
+      return Future.value();
+    }
     if (next.status != current.status) {
       next = next.copyWith(completedAt: next.isDone ? _now : null);
     }

@@ -250,12 +250,14 @@ class _PanelBodyState extends ConsumerState<_PanelBody> {
                 DatePickerChip(
                   date: task.startDate,
                   placeholder: 'Start date',
+                  latest: task.dueDate,
                   enabled: enabled,
                   onPick: (d, _) => _actions.setStart(entry, d, toast: false),
                 ),
                 DatePickerChip(
                   date: task.dueDate,
                   placeholder: 'Due date',
+                  earliest: task.startDate,
                   enabled: enabled,
                   onPick: (d, _) => _actions.setDue(entry, d, toast: false),
                 ),

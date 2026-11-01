@@ -357,11 +357,13 @@ class _NewTaskDialogState extends ConsumerState<_NewTaskDialog> {
                       DatePickerChip(
                         date: _start,
                         placeholder: 'Start date',
+                        latest: _due,
                         onPick: (d, _) => setState(() => _start = d),
                       ),
                       DatePickerChip(
                         date: _due,
                         placeholder: 'Due date',
+                        earliest: _start,
                         onPick: (d, _) => setState(() => _due = d),
                       ),
                       LabelsPicker(

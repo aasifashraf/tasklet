@@ -184,4 +184,13 @@ void main() {
       expect(moved.number, 2);
     });
   });
+
+  test('a start date may not fall after the due date', () {
+    expect(datesInOrder(null, null), isTrue);
+    expect(datesInOrder(d('2026-10-02'), null), isTrue);
+    expect(datesInOrder(null, d('2026-10-02')), isTrue);
+    expect(datesInOrder(d('2026-10-02'), d('2026-10-02')), isTrue);
+    expect(datesInOrder(d('2026-10-01'), d('2026-10-02')), isTrue);
+    expect(datesInOrder(d('2026-10-03'), d('2026-10-02')), isFalse);
+  });
 }

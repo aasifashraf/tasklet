@@ -154,11 +154,15 @@ List<Widget> priorityMenuItems(
 ];
 
 /// Quick-pick due/start dates (SPEC §7.3): Today, Tomorrow, Next Week (always next Monday) with hints and checks.
+/// [earliest]/[latest] disable choices outside the allowed range (a due date before the start date, or a start
+/// date after the due date).
 List<Widget> quickDateItems(
   LocalDate today,
   LocalDate? current,
-  void Function(LocalDate date, String phrase) onPick,
-) {
+  void Function(LocalDate date, String phrase) onPick, {
+  LocalDate? earliest,
+  LocalDate? latest,
+}) {
   final options = [
     ('Today', today, 'today'),
     ('Tomorrow', tomorrowOf(today), 'tomorrow'),
@@ -168,7 +172,11 @@ List<Widget> quickDateItems(
     for (final (label, date, phrase) in options)
       Builder(
         builder: (context) => MenuItemButton(
-          onPressed: () => onPick(date, phrase),
+          onPressed:
+              (earliest != null && date.isBefore(earliest)) ||
+                  (latest != null && date.isAfter(latest))
+              ? null
+              : () => onPick(date, phrase),
           leadingIcon: SizedBox(
             width: 16,
             child: current == date
@@ -187,11 +195,19 @@ List<Widget> quickDateItems(
 
 /// A start- or due-date chip with quick picks, a calendar, and remove.
 class DatePickerChip extends ConsumerWidget {
+  LocalDate _clamp(LocalDate d) {
+    if (earliest != null && d.isBefore(earliest!)) return earliest!;
+    if (latest != null && d.isAfter(latest!)) return latest!;
+    return d;
+  }
+
   const DatePickerChip({
     super.key,
     required this.date,
     required this.onPick,
     required this.placeholder,
+    this.earliest,
+    this.latest,
     this.enabled = true,
   });
   final LocalDate? date;
@@ -199,6 +215,10 @@ class DatePickerChip extends ConsumerWidget {
   /// Called with the new date (null = removed) and a phrase for toasts ("next week").
   final void Function(LocalDate? date, String? phrase) onPick;
   final String placeholder;
+
+  /// Allowed range: a due date can't be before the start date and a start date can't be after the due date.
+  final LocalDate? earliest;
+  final LocalDate? latest;
   final bool enabled;
 
   @override
@@ -210,7 +230,13 @@ class DatePickerChip extends ConsumerWidget {
     return _MenuChip(
       enabled: enabled,
       menuChildren: () => [
-        ...quickDateItems(today, date, (d, phrase) => onPick(d, phrase)),
+        ...quickDateItems(
+          today,
+          date,
+          (d, phrase) => onPick(d, phrase),
+          earliest: earliest,
+          latest: latest,
+        ),
         const Divider(),
         menuItem(
           'Pick a Date…',
@@ -218,9 +244,9 @@ class DatePickerChip extends ConsumerWidget {
           onPressed: () async {
             final picked = await showDatePicker(
               context: context,
-              initialDate: (date ?? today).toLocalDateTime(),
-              firstDate: DateTime(2000),
-              lastDate: DateTime(2100),
+              initialDate: _clamp(date ?? today).toLocalDateTime(),
+              firstDate: earliest?.toLocalDateTime() ?? DateTime(2000),
+              lastDate: latest?.toLocalDateTime() ?? DateTime(2100),
             );
             if (picked != null) onPick(LocalDate.fromDateTime(picked), null);
           },

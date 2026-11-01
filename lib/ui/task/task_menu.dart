@@ -59,6 +59,7 @@ List<Widget> taskMenuChildren(
           today,
           task.dueDate,
           (d, phrase) => actions.setDue(e, d, phrase: phrase),
+          earliest: task.startDate,
         ),
         const Divider(),
         menuItem(
