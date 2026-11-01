@@ -36,7 +36,7 @@ class PageScaffold extends StatelessWidget {
           child: Row(
             children: [
               if (leading != null) ...[leading!, const SizedBox(width: 8)],
-              Flexible(
+              Expanded(
                 child: Text(
                   title,
                   style: TextStyles.pageTitle(context),
@@ -44,7 +44,6 @@ class PageScaffold extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const Spacer(),
               for (final a in actions) ...[const SizedBox(width: 6), a],
             ],
           ),
