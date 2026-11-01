@@ -108,7 +108,13 @@ class _SectionHeader extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Row(
               children: [
-                Chevron(collapsed: collapsed, size: 16, color: t.secondary),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: DisclosureTriangle(
+                    collapsed: collapsed,
+                    color: t.secondary,
+                  ),
+                ),
                 const SizedBox(width: 2),
                 StatusIcon(status),
                 const SizedBox(width: 8),

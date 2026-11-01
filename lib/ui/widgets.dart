@@ -531,13 +531,13 @@ class NoticeBanner extends StatelessWidget {
   }
 }
 
-/// A collapse chevron: points down when expanded, right when collapsed. Uses a glyph that is optically centred
-/// in its box so it lines up with the label next to it.
-class Chevron extends StatelessWidget {
-  const Chevron({
+/// A small filled disclosure triangle: ▾ when expanded, ▸ when collapsed. Painted rather than taken from an icon
+/// font, so it is exactly centred on the label beside it.
+class DisclosureTriangle extends StatelessWidget {
+  const DisclosureTriangle({
     super.key,
     required this.collapsed,
-    this.size = 14,
+    this.size = 8,
     this.color,
   });
   final bool collapsed;
@@ -547,105 +547,38 @@ class Chevron extends StatelessWidget {
   @override
   Widget build(BuildContext context) => AnimatedRotation(
     turns: collapsed ? -0.25 : 0,
-    duration: const Duration(milliseconds: 120),
-    child: Icon(
-      Icons.keyboard_arrow_down_rounded,
-      size: size,
-      color: color ?? Tokens.of(context).tertiary,
+    duration: MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : const Duration(milliseconds: 120),
+    child: CustomPaint(
+      size: Size.square(size),
+      painter: _TrianglePainter(color ?? Tokens.of(context).tertiary),
     ),
   );
 }
 
-/// One option of a [SegmentedIconSwitch].
-class SegmentOption<T> {
-  const SegmentOption(this.value, this.icon, this.tooltip);
-  final T value;
-  final IconData icon;
-  final String tooltip;
-}
-
-/// A compact segmented switch: one pill with a highlight that slides to the selected option (e.g. Board / List).
-class SegmentedIconSwitch<T> extends StatelessWidget {
-  const SegmentedIconSwitch({
-    super.key,
-    required this.options,
-    required this.selected,
-    required this.onChanged,
-  });
-  final List<SegmentOption<T>> options;
-  final T selected;
-  final ValueChanged<T> onChanged;
-
-  static const _segment = 30.0;
-  static const _height = 26.0;
+class _TrianglePainter extends CustomPainter {
+  _TrianglePainter(this.color);
+  final Color color;
 
   @override
-  Widget build(BuildContext context) {
-    final t = Tokens.of(context);
-    final index = options
-        .indexWhere((o) => o.value == selected)
-        .clamp(0, options.length - 1);
-    final reduceMotion = MediaQuery.disableAnimationsOf(context);
-    return Container(
-      height: _height,
-      padding: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        border: Border.all(color: t.border),
-        borderRadius: BorderRadius.circular(7),
-      ),
-      child: Stack(
-        children: [
-          AnimatedPositioned(
-            duration: reduceMotion
-                ? Duration.zero
-                : const Duration(milliseconds: 160),
-            curve: Curves.easeOutCubic,
-            left: index * _segment,
-            top: 0,
-            bottom: 0,
-            width: _segment,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: t.selected,
-                borderRadius: BorderRadius.circular(5),
-              ),
-            ),
-          ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (final o in options)
-                Tooltip(
-                  message: o.tooltip,
-                  child: Semantics(
-                    button: true,
-                    selected: o.value == selected,
-                    label: o.tooltip,
-                    child: MouseRegion(
-                      cursor: SystemMouseCursors.click,
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () => onChanged(o.value),
-                        child: SizedBox(
-                          width: _segment,
-                          child: Center(
-                            child: Icon(
-                              o.icon,
-                              size: 15,
-                              color: o.value == selected
-                                  ? t.primary
-                                  : t.tertiary,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ],
-      ),
+  void paint(Canvas canvas, Size size) {
+    // A downward triangle centred in the box (rotation turns it to point right).
+    final w = size.width, h = size.height;
+    final path = Path()
+      ..moveTo(w * 0.1, h * 0.28)
+      ..lineTo(w * 0.9, h * 0.28)
+      ..lineTo(w * 0.5, h * 0.78)
+      ..close();
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.fill
+        ..strokeJoin = StrokeJoin.round,
     );
   }
+
+  @override
+  bool shouldRepaint(_TrianglePainter old) => old.color != color;
 }

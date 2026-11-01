@@ -435,13 +435,12 @@ class _LayoutToggle extends ConsumerWidget {
       }
     }
 
-    return SegmentedIconSwitch<BoardLayout>(
-      selected: layout,
-      onChanged: set,
-      options: const [
-        SegmentOption(BoardLayout.board, Icons.view_kanban_outlined, 'Board'),
-        SegmentOption(BoardLayout.list, Icons.view_list_rounded, 'List'),
-      ],
+    // One button that flips the layout each click; it shows the current layout.
+    final isBoard = layout == BoardLayout.board;
+    return IconBtn(
+      icon: isBoard ? Icons.view_kanban_outlined : Icons.view_list_rounded,
+      tooltip: isBoard ? 'Board — click for List' : 'List — click for Board',
+      onPressed: () => set(isBoard ? BoardLayout.list : BoardLayout.board),
     );
   }
 }

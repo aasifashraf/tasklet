@@ -444,10 +444,15 @@ class _Section extends ConsumerWidget {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(8, 2, 8, 4),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Text(label, style: TextStyles.sectionLabel(context)),
-                    const SizedBox(width: 4),
-                    Chevron(
+                    Text(
+                      label,
+                      style: TextStyles.sectionLabel(context)
+                          .copyWith(height: 1),
+                    ),
+                    const SizedBox(width: 5),
+                    DisclosureTriangle(
                       collapsed: collapsed,
                       color: hovered ? t.secondary : t.tertiary,
                     ),
