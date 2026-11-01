@@ -193,6 +193,7 @@ class _SidebarState extends ConsumerState<Sidebar> {
           ? path == '/'
           : path == item.route || path.startsWith('${item.route}/');
       return _Row(
+        key: ValueKey('navrow:${item.name}'),
         icon: Icon(
           item.icon,
           size: 15,
@@ -469,6 +470,7 @@ class _Section extends ConsumerWidget {
 
 class _Row extends StatelessWidget {
   const _Row({
+    super.key,
     required this.icon,
     required this.label,
     this.selected = false,
