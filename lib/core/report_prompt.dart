@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:intl/intl.dart';
 
 import 'local_date.dart';
+import 'report_charts.dart';
 
 /// What the Reports Copy button produces (SPEC §4.9).
 enum ReportKind {
@@ -19,8 +20,13 @@ final _human = DateFormat('MMM d, y');
 String _humanDate(String ymd) =>
     _human.format(LocalDate.parse(ymd).toLocalDateTime());
 
-/// Builds the copyable text for [kind] from the report JSON.
-String buildReportText(ReportKind kind, Map<String, Object?> json) {
+/// Builds the export text for [kind] from the report JSON. With [charts], ready-made Mermaid charts are included
+/// before the data (prompts only; JSON Only stays pure JSON).
+String buildReportText(
+  ReportKind kind,
+  Map<String, Object?> json, {
+  List<ReportChart> charts = const [],
+}) {
   final pretty = const JsonEncoder.withIndent('  ').convert(json);
   if (kind == ReportKind.json) return pretty;
 
@@ -143,6 +149,22 @@ String buildReportText(ReportKind kind, Map<String, Object?> json) {
     b
       ..writeln('  ${n++}. Next steps (3–6 concrete recommendations)')
       ..writeln('- If a section has nothing to report, write "None."');
+  }
+
+  if (charts.isNotEmpty) {
+    b
+      ..writeln()
+      ..writeln(
+        'Ready-made charts (Mermaid), drawn from the same data. Show them as they are, or redraw them, before',
+      )
+      ..writeln('the text:');
+    for (final chart in charts) {
+      b
+        ..writeln()
+        ..writeln('```mermaid')
+        ..writeln(chart.mermaid)
+        ..writeln('```');
+    }
   }
 
   b

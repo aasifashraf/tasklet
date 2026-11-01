@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/date_format.dart';
 import '../../core/local_date.dart';
 import '../../core/models.dart';
 import '../../core/report.dart';
-import '../../core/report_prompt.dart';
 import '../../platform/native.dart';
 import '../../state/clock.dart';
-import '../../state/toast.dart';
 import '../../state/workspace.dart';
 import '../glyphs.dart';
 import '../task/pickers.dart';
@@ -17,6 +14,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'list_parts.dart';
 import 'page_scaffold.dart';
+import 'report_export_dialog.dart';
 
 /// Reports (SPEC §4.9): build a filter, then copy an AI-ready prompt or JSON. Never calls an AI service.
 class ReportsPage extends ConsumerStatefulWidget {
@@ -88,8 +86,9 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    'Pick what to include, then copy a ready-made prompt into any AI assistant to get a summary or a '
-                    'progress report. Tasklet never sends your data anywhere.',
+                    'Pick what to include, then export a ready-made prompt (with optional charts) as a text file to '
+                    'paste into any AI assistant for a summary or progress report. Tasklet never sends your data '
+                    'anywhere.',
                     style: TextStyles.bodySecondary(context),
                   ),
                   const SizedBox(height: 16),
@@ -162,7 +161,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                               ).copyWith(color: count == 0 ? t.tertiary : null),
                             ),
                           ),
-                          _copyButton(ws, period, today, count),
+                          _exportButton(ws, period, today, count),
                         ]),
                       ],
                     ),
@@ -389,39 +388,26 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     ],
   );
 
-  Widget _copyButton(
+  Widget _exportButton(
     Workspace ws,
     ReportPeriod period,
     LocalDate today,
     int count,
-  ) {
-    Future<void> copy(ReportKind kind) async {
-      final json = buildReportJson(
-        ws: ws,
-        filters: _filters,
-        period: period,
-        today: today,
-      );
-      await Clipboard.setData(ClipboardData(text: buildReportText(kind, json)));
-      ref
-          .read(toastProvider.notifier)
-          .show(
-            'Copied ${kind.label} — covers $count ${count == 1 ? 'task' : 'tasks'}',
-          );
-    }
-
-    return MenuAnchor(
-      menuChildren: [
-        for (final k in ReportKind.values)
-          menuItem(k.label, onPressed: count == 0 ? null : () => copy(k)),
-      ],
-      builder: (context, controller, _) => FilledButton.icon(
-        onPressed: count == 0
-            ? null
-            : () => controller.isOpen ? controller.close() : controller.open(),
-        icon: const Icon(Icons.copy, size: 14),
-        label: const Text('Copy  ▾'),
-      ),
-    );
-  }
+  ) => FilledButton.icon(
+    onPressed: count == 0
+        ? null
+        : () => showReportExportDialog(
+            context,
+            json: buildReportJson(
+              ws: ws,
+              filters: _filters,
+              period: period,
+              today: today,
+            ),
+            taskCount: count,
+            today: today,
+          ),
+    icon: const Icon(Icons.download, size: 15),
+    label: const Text('Export…'),
+  );
 }
