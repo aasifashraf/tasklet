@@ -243,60 +243,65 @@ class _SidebarState extends ConsumerState<Sidebar> {
     final key = 'project:${p.id}';
     final selected = path == '/projects/${p.id}';
     final index = section.indexOf(p);
+    List<Widget> menu() => [
+      menuItem(
+        p.favorite ? 'Unpin from Favorites' : 'Pin to Favorites',
+        leading: Icon(
+          p.favorite ? Icons.push_pin : Icons.push_pin_outlined,
+          size: 14,
+        ),
+        onPressed: () => _controller.setFavorite(p.id, !p.favorite),
+      ),
+      menuItem('Rename', onPressed: () => setState(() => _renaming = key)),
+      colorSubmenu(
+        selected: p.color,
+        onPick: (c) => _controller.setProjectColor(p.id, c),
+      ),
+      menuItem(
+        'New Project…',
+        onPressed: () {
+          context.go('/projects');
+          ref.read(newProjectRequestProvider.notifier).fire();
+        },
+      ),
+      const Divider(),
+      menuItem(
+        'Move Up',
+        onPressed: p.archived || index <= 0
+            ? null
+            : () => _controller.moveProject(
+                p.id,
+                before: index >= 2 ? section[index - 2].id : null,
+                after: section[index - 1].id,
+                favorites: favoritesList,
+              ),
+      ),
+      menuItem(
+        'Move Down',
+        onPressed: p.archived || index >= section.length - 1
+            ? null
+            : () => _controller.moveProject(
+                p.id,
+                before: section[index + 1].id,
+                after: index + 2 < section.length
+                    ? section[index + 2].id
+                    : null,
+                favorites: favoritesList,
+              ),
+      ),
+      const Divider(),
+      menuItem(
+        p.archived ? 'Unarchive' : 'Archive',
+        onPressed: () => _controller.setArchived(p.id, !p.archived),
+      ),
+      menuItem(
+        'Delete Project…',
+        danger: true,
+        onPressed: () => confirmDeleteProject(context, ref, p),
+      ),
+    ];
     return ContextMenuRegion(
-      menuChildren: () => [
-        menuItem(
-          p.favorite ? 'Remove Favorite' : 'Add Favorite',
-          onPressed: () => _controller.setFavorite(p.id, !p.favorite),
-        ),
-        menuItem('Rename', onPressed: () => setState(() => _renaming = key)),
-        colorSubmenu(
-          selected: p.color,
-          onPick: (c) => _controller.setProjectColor(p.id, c),
-        ),
-        menuItem(
-          'New Project…',
-          onPressed: () {
-            context.go('/projects');
-            ref.read(newProjectRequestProvider.notifier).fire();
-          },
-        ),
-        const Divider(),
-        menuItem(
-          'Move Up',
-          onPressed: p.archived || index <= 0
-              ? null
-              : () => _controller.moveProject(
-                  p.id,
-                  before: index >= 2 ? section[index - 2].id : null,
-                  after: section[index - 1].id,
-                  favorites: favoritesList,
-                ),
-        ),
-        menuItem(
-          'Move Down',
-          onPressed: p.archived || index >= section.length - 1
-              ? null
-              : () => _controller.moveProject(
-                  p.id,
-                  before: section[index + 1].id,
-                  after: index + 2 < section.length
-                      ? section[index + 2].id
-                      : null,
-                  favorites: favoritesList,
-                ),
-        ),
-        const Divider(),
-        menuItem(
-          p.archived ? 'Unarchive' : 'Archive',
-          onPressed: () => _controller.setArchived(p.id, !p.archived),
-        ),
-        menuItem(
-          'Delete Project…',
-          danger: true,
-          onPressed: () => confirmDeleteProject(context, ref, p),
-        ),
-      ],
+      menuChildren: menu,
       child: _renaming == key
           ? _RenameRow(
               icon: CubeIcon(color: t.named(p.color)),
@@ -311,6 +316,7 @@ class _SidebarState extends ConsumerState<Sidebar> {
               label: p.name,
               selected: selected,
               onTap: () => context.go('/projects/${p.id}'),
+              menuChildren: menu,
             ),
     );
   }
@@ -324,48 +330,50 @@ class _SidebarState extends ConsumerState<Sidebar> {
     final t = Tokens.of(context);
     final key = 'view:${v.id}';
     final index = section.indexOf(v);
+    List<Widget> menu() => [
+      menuItem('Rename', onPressed: () => setState(() => _renaming = key)),
+      colorSubmenu(
+        selected: v.color,
+        onPick: (c) =>
+            _controller.updateView(v.id, (x) => x.copyWith(color: c)),
+      ),
+      menuItem(
+        'Unpin from Sidebar',
+        leading: const Icon(Icons.push_pin, size: 14),
+        onPressed: () => _controller.setViewPinned(v.id, false),
+      ),
+      const Divider(),
+      menuItem(
+        'Move Up',
+        onPressed: index <= 0
+            ? null
+            : () => _controller.moveView(
+                v.id,
+                before: index >= 2 ? section[index - 2].id : null,
+                after: section[index - 1].id,
+              ),
+      ),
+      menuItem(
+        'Move Down',
+        onPressed: index >= section.length - 1
+            ? null
+            : () => _controller.moveView(
+                v.id,
+                before: section[index + 1].id,
+                after: index + 2 < section.length
+                    ? section[index + 2].id
+                    : null,
+              ),
+      ),
+      const Divider(),
+      menuItem(
+        'Delete View…',
+        danger: true,
+        onPressed: () => confirmDeleteView(context, ref, v),
+      ),
+    ];
     return ContextMenuRegion(
-      menuChildren: () => [
-        menuItem('Rename', onPressed: () => setState(() => _renaming = key)),
-        colorSubmenu(
-          selected: v.color,
-          onPick: (c) =>
-              _controller.updateView(v.id, (x) => x.copyWith(color: c)),
-        ),
-        menuItem(
-          'Remove from Sidebar',
-          onPressed: () => _controller.setViewPinned(v.id, false),
-        ),
-        const Divider(),
-        menuItem(
-          'Move Up',
-          onPressed: index <= 0
-              ? null
-              : () => _controller.moveView(
-                  v.id,
-                  before: index >= 2 ? section[index - 2].id : null,
-                  after: section[index - 1].id,
-                ),
-        ),
-        menuItem(
-          'Move Down',
-          onPressed: index >= section.length - 1
-              ? null
-              : () => _controller.moveView(
-                  v.id,
-                  before: section[index + 1].id,
-                  after: index + 2 < section.length
-                      ? section[index + 2].id
-                      : null,
-                ),
-        ),
-        const Divider(),
-        menuItem(
-          'Delete View…',
-          danger: true,
-          onPressed: () => confirmDeleteView(context, ref, v),
-        ),
-      ],
+      menuChildren: menu,
       child: _renaming == key
           ? _RenameRow(
               icon: LayersIcon(color: t.named(v.color)),
@@ -382,6 +390,7 @@ class _SidebarState extends ConsumerState<Sidebar> {
               label: v.name,
               selected: path == '/views/${v.id}',
               onTap: () => context.go('/views/${v.id}'),
+              menuChildren: menu,
             ),
     );
   }
@@ -485,12 +494,16 @@ class _Row extends StatelessWidget {
     this.selected = false,
     this.trailing,
     this.onTap,
+    this.menuChildren,
   });
   final Widget icon;
   final String label;
   final bool selected;
   final Widget? trailing;
   final VoidCallback? onTap;
+
+  /// When set, a ⋯ button appears on hover with the same menu as right-click.
+  final List<Widget> Function()? menuChildren;
 
   @override
   Widget build(BuildContext context) {
@@ -526,6 +539,22 @@ class _Row extends StatelessWidget {
                 ),
               ),
               ?trailing,
+              if (menuChildren != null)
+                MenuAnchor(
+                  menuChildren: menuChildren!(),
+                  builder: (context, controller, _) => Opacity(
+                    opacity: hovered || controller.isOpen ? 1 : 0,
+                    child: IconBtn(
+                      icon: Icons.more_horiz,
+                      size: 22,
+                      iconSize: 14,
+                      tooltip: 'More options',
+                      onPressed: () => controller.isOpen
+                          ? controller.close()
+                          : controller.open(),
+                    ),
+                  ),
+                ),
             ],
           ),
         ),

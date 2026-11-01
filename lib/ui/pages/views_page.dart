@@ -66,7 +66,7 @@ class _ViewsPageState extends ConsumerState<ViewsPage> {
             const NoticeBanner(
               icon: Icons.sync_problem_outlined,
               message:
-                  "views.json can't be read right now — it may still be syncing or be damaged. Views can't be "
+                  "views.json can't be read right now. It may still be syncing or be damaged. Views can't be "
                   'created or changed until it can be read again.',
             ),
           Expanded(
@@ -75,7 +75,7 @@ class _ViewsPageState extends ConsumerState<ViewsPage> {
                     icon: Icons.layers_outlined,
                     title: 'No views yet',
                     message:
-                        'A view is a saved set of filters across all your projects — like "Urgent this week". '
+                        'A view is a saved set of filters across all your projects, like "Urgent this week". '
                         'Create one, then set its filters.',
                     action: FilledButton.icon(
                       onPressed: editable ? _startCreate : null,
@@ -110,7 +110,7 @@ class _ViewsPageState extends ConsumerState<ViewsPage> {
                                 name,
                                 _newColor,
                               );
-                              // An unfiltered view isn't useful yet — go set its filters (SPEC §4.6).
+                              // An unfiltered view isn't useful yet; go set its filters (SPEC §4.6).
                               if (context.mounted) {
                                 context.go('/views/${view.id}');
                               }
@@ -180,7 +180,11 @@ class _ViewsPageState extends ConsumerState<ViewsPage> {
         menuChildren: editable
             ? () => [
                 menuItem(
-                  v.inSidebar ? 'Remove from Sidebar' : 'Add to Sidebar',
+                  v.inSidebar ? 'Unpin from Sidebar' : 'Pin to Sidebar',
+                  leading: Icon(
+                    v.inSidebar ? Icons.push_pin : Icons.push_pin_outlined,
+                    size: 14,
+                  ),
                   onPressed: () =>
                       _controller.setViewPinned(v.id, !v.inSidebar),
                 ),

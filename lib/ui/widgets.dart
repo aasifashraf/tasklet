@@ -263,7 +263,14 @@ Widget menuItem(
             : Text(hint, style: TextStyles.meta(context)),
         child: Text(
           label,
-          style: TextStyle(fontSize: 12, color: danger ? t.danger : null),
+          style: TextStyle(
+            fontSize: 12,
+            color: danger
+                ? (onPressed == null
+                      ? t.danger.withValues(alpha: 0.4)
+                      : t.danger)
+                : null,
+          ),
         ),
       );
     },
@@ -430,7 +437,7 @@ class _InlineEditFieldState extends State<InlineEditField> {
   );
 }
 
-/// Asks before a destructive action (projects, labels, views — SPEC §4.5/§4.6/§4.8). Cancel is the default button
+/// Asks before a destructive action (projects, labels, views; SPEC §4.5/§4.6/§4.8). Cancel is the default button
 /// and Escape cancels (docs/DECISIONS.md D8). Returns true only if the user confirmed.
 Future<bool> confirmDestructive(
   BuildContext context, {
@@ -583,7 +590,7 @@ class _TrianglePainter extends CustomPainter {
   bool shouldRepaint(_TrianglePainter old) => old.color != color;
 }
 
-/// "Change Color ▸" submenu with the 8-color grid, for the ⋯ / right-click menus of projects, labels and views — so
+/// "Change Color ▸" submenu with the 8-color grid, for the ⋯ / right-click menus of projects, labels and views, so
 /// recoloring is discoverable, not only by clicking the color icon.
 Widget colorSubmenu({
   required TaskletColor selected,

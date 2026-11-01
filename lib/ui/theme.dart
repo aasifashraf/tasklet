@@ -193,8 +193,13 @@ ThemeData buildTheme(Brightness brightness) {
     menuButtonTheme: MenuButtonThemeData(
       style: ButtonStyle(
         textStyle: const WidgetStatePropertyAll(TextStyle(fontSize: 12)),
-        foregroundColor: WidgetStatePropertyAll(t.primary),
-        iconColor: WidgetStatePropertyAll(t.secondary),
+        // Disabled items (e.g. Move Up on the first project) must look disabled.
+        foregroundColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.disabled) ? t.tertiary : t.primary,
+        ),
+        iconColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.disabled) ? t.tertiary : t.secondary,
+        ),
         iconSize: const WidgetStatePropertyAll(14),
         minimumSize: const WidgetStatePropertyAll(Size(180, 30)),
         padding: const WidgetStatePropertyAll(

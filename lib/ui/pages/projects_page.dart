@@ -200,7 +200,11 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage> {
           ? null
           : () => [
               menuItem(
-                p.favorite ? 'Remove Favorite' : 'Add Favorite',
+                p.favorite ? 'Unpin from Favorites' : 'Pin to Favorites',
+                leading: Icon(
+                  p.favorite ? Icons.push_pin : Icons.push_pin_outlined,
+                  size: 14,
+                ),
                 onPressed: () => _controller.setFavorite(p.id, !p.favorite),
               ),
               menuItem(
