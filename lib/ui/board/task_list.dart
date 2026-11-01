@@ -34,42 +34,42 @@ class TaskListView extends StatelessWidget {
       for (final s in TaskStatus.values)
         if (!display.hideEmptySections || (groups[s]?.isNotEmpty ?? false)) s,
     ];
-    return Scrollbar(
-      child: CustomScrollView(
-        slivers: [
-          for (final s in statuses)
-            SliverMainAxisGroup(
-              slivers: [
-                PinnedHeaderSliver(
-                  child: _SectionHeader(
-                    status: s,
-                    count: groups[s]?.length ?? 0,
-                    collapsed: collapsed.contains(s),
-                    onToggle: () => onToggle(s),
-                    onAdd: readOnly ? null : () => onAdd(s),
+    // No explicit Scrollbar: on desktop the scroll behavior adds one wired to this view's own controller (a bare
+    // Scrollbar here fell back to the unattached PrimaryScrollController and asserted on every scroll).
+    return CustomScrollView(
+      slivers: [
+        for (final s in statuses)
+          SliverMainAxisGroup(
+            slivers: [
+              PinnedHeaderSliver(
+                child: _SectionHeader(
+                  status: s,
+                  count: groups[s]?.length ?? 0,
+                  collapsed: collapsed.contains(s),
+                  onToggle: () => onToggle(s),
+                  onAdd: readOnly ? null : () => onAdd(s),
+                ),
+              ),
+              if (!collapsed.contains(s))
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(12, 2, 12, 8),
+                  sliver: SliverList.builder(
+                    itemCount: groups[s]?.length ?? 0,
+                    itemBuilder: (context, i) {
+                      final e = groups[s]![i];
+                      return TaskRow(
+                        key: ValueKey(e.task.id),
+                        entry: e,
+                        display: display,
+                        crossProject: crossProject,
+                      );
+                    },
                   ),
                 ),
-                if (!collapsed.contains(s))
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(12, 2, 12, 8),
-                    sliver: SliverList.builder(
-                      itemCount: groups[s]?.length ?? 0,
-                      itemBuilder: (context, i) {
-                        final e = groups[s]![i];
-                        return TaskRow(
-                          key: ValueKey(e.task.id),
-                          entry: e,
-                          display: display,
-                          crossProject: crossProject,
-                        );
-                      },
-                    ),
-                  ),
-              ],
-            ),
-          const SliverToBoxAdapter(child: SizedBox(height: 60)),
-        ],
-      ),
+            ],
+          ),
+        const SliverToBoxAdapter(child: SizedBox(height: 60)),
+      ],
     );
   }
 }
