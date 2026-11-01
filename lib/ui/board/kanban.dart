@@ -52,6 +52,7 @@ class BoardDragController extends ChangeNotifier {
   Offset _grab = Offset.zero;
   Size _size = Size.zero;
   int? _pointerId;
+  bool _inputAttached = false;
   OverlayEntry? _ghost;
   Widget? _ghostChild;
   Timer? _autoScroll;
@@ -148,6 +149,7 @@ class BoardDragController extends ChangeNotifier {
     target = _computeTarget();
     GestureBinding.instance.pointerRouter.addGlobalRoute(_onPointer);
     HardwareKeyboard.instance.addHandler(_onKey);
+    _inputAttached = true;
     _ghost = OverlayEntry(builder: _buildGhost);
     Overlay.of(context, rootOverlay: true).insert(_ghost!);
     if (reduceMotion) {
@@ -240,8 +242,11 @@ class BoardDragController extends ChangeNotifier {
   }
 
   void _detachInput() {
-    GestureBinding.instance.pointerRouter.removeGlobalRoute(_onPointer);
-    HardwareKeyboard.instance.removeHandler(_onKey);
+    if (_inputAttached) {
+      GestureBinding.instance.pointerRouter.removeGlobalRoute(_onPointer);
+      HardwareKeyboard.instance.removeHandler(_onKey);
+      _inputAttached = false;
+    }
     _autoScroll?.cancel();
     _pointerId = null;
   }

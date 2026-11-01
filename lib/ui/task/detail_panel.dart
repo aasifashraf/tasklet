@@ -68,13 +68,10 @@ class DetailPanelOverlay extends ConsumerWidget {
                     side: BorderSide(color: t.border),
                   ),
                   clipBehavior: Clip.antiAlias,
-                  child: FocusScope(
-                    autofocus: true,
-                    child: _PanelBody(
-                      key: ValueKey(task.id),
-                      entry: ProjectTask(project, task),
-                      readOnly: ws.readOnly,
-                    ),
+                  child: _PanelBody(
+                    key: ValueKey(task.id),
+                    entry: ProjectTask(project, task),
+                    readOnly: ws.readOnly,
                   ),
                 ),
               ),
@@ -102,6 +99,9 @@ class _PanelBodyState extends ConsumerState<_PanelBody> {
   );
   final _titleFocus = FocusNode();
   final _descriptionFocus = FocusNode();
+
+  /// The panel takes focus when it opens so Escape and Delete reach it (focus returns to the card on close).
+  final _panelFocus = FocusScopeNode(debugLabel: 'Task panel');
   Timer? _debounce;
   late WorkspaceController _controller;
   late TaskActions _actions;
@@ -120,6 +120,9 @@ class _PanelBodyState extends ConsumerState<_PanelBody> {
     });
     _descriptionFocus.addListener(() {
       if (!_descriptionFocus.hasFocus) _flush();
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _panelFocus.requestFocus();
     });
   }
 
@@ -146,6 +149,7 @@ class _PanelBodyState extends ConsumerState<_PanelBody> {
     _description.dispose();
     _titleFocus.dispose();
     _descriptionFocus.dispose();
+    _panelFocus.dispose();
     super.dispose();
   }
 
@@ -161,8 +165,7 @@ class _PanelBodyState extends ConsumerState<_PanelBody> {
     if (widget.readOnly) return;
     final title = _title.text.trim();
     final description = _description.text;
-    final current = ref
-        .read(workspaceDataProvider)
+    final current = _controller.workspace
         ?.projectById(entry.project.id)
         ?.taskById(entry.task.id);
     if (current == null) return;
@@ -195,140 +198,148 @@ class _PanelBodyState extends ConsumerState<_PanelBody> {
       contentPadding: EdgeInsets.zero,
     );
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Container(
-          height: 46,
-          padding: const EdgeInsets.fromLTRB(20, 0, 12, 0),
-          decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: t.border)),
-          ),
-          child: Row(
-            children: [
-              Text(
-                entry.displayId,
-                style: TextStyles.body(context)
-                    .copyWith(color: t.secondary, fontWeight: FontWeight.w500),
-              ),
-              const Spacer(),
-              IconBtn(
-                icon: Icons.delete_outline,
-                tooltip: 'Delete task',
-                onPressed: enabled ? () => _actions.delete(entry) : null,
-              ),
-              IconBtn(
-                icon: Icons.close,
-                tooltip: 'Close (Esc)',
-                onPressed: () => ref.read(openTaskProvider.notifier).close(),
-              ),
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-          child: Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              StatusPicker(
-                status: task.status,
-                enabled: enabled,
-                onPick: (s) => _actions.setStatus(entry, s, toast: false),
-              ),
-              PriorityPicker(
-                priority: task.priority,
-                enabled: enabled,
-                onPick: (p) => _actions.setPriority(entry, p, toast: false),
-              ),
-              DatePickerChip(
-                date: task.startDate,
-                placeholder: 'Start date',
-                enabled: enabled,
-                onPick: (d, _) => _actions.setStart(entry, d, toast: false),
-              ),
-              DatePickerChip(
-                date: task.dueDate,
-                placeholder: 'Due date',
-                enabled: enabled,
-                onPick: (d, _) => _actions.setDue(entry, d, toast: false),
-              ),
-              LabelsPicker(
-                selected: task.labelIds,
-                available: available,
-                enabled: enabled,
-                onToggle: (l) => _actions.toggleLabel(entry, l, toast: false),
-              ),
-              ProjectPicker(
-                project: entry.project,
-                options: projectOptions(ws, alsoInclude: entry.project.id),
-                enabled: enabled,
-                onPick: (p) => _actions.moveToProject(entry, p),
-              ),
-            ],
-          ),
-        ),
-        Divider(color: t.border),
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+    return FocusScope(
+      node: _panelFocus,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            height: 46,
+            padding: const EdgeInsets.fromLTRB(20, 0, 12, 0),
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: t.border)),
+            ),
+            child: Row(
               children: [
-                CallbackShortcuts(
-                  // Enter moves to the description; a title is conceptually one line.
-                  bindings: {
-                    const SingleActivator(LogicalKeyboardKey.enter): () =>
-                        _descriptionFocus.requestFocus(),
-                  },
-                  child: TextField(
-                    controller: _title,
-                    focusNode: _titleFocus,
-                    enabled: enabled,
-                    maxLines: null,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: t.primary,
-                      height: 1.35,
-                    ),
-                    decoration: fieldDecoration.copyWith(
-                      hintText: 'Task title',
-                    ),
-                  ),
+                Text(
+                  entry.displayId,
+                  style: TextStyles.body(
+                    context,
+                  ).copyWith(color: t.secondary, fontWeight: FontWeight.w500),
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _description,
-                  focusNode: _descriptionFocus,
-                  enabled: enabled,
-                  maxLines: null,
-                  minLines: 4,
-                  keyboardType: TextInputType.multiline,
-                  style: TextStyle(fontSize: 13, color: t.primary, height: 1.5),
-                  decoration: fieldDecoration.copyWith(
-                    hintText: 'Add a description…',
-                  ),
+                const Spacer(),
+                IconBtn(
+                  icon: Icons.delete_outline,
+                  tooltip: 'Delete task',
+                  onPressed: enabled ? () => _actions.delete(entry) : null,
+                ),
+                IconBtn(
+                  icon: Icons.close,
+                  tooltip: 'Close (Esc)',
+                  onPressed: () => ref.read(openTaskProvider.notifier).close(),
                 ),
               ],
             ),
           ),
-        ),
-        Container(
-          padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
-          decoration: BoxDecoration(
-            border: Border(top: BorderSide(color: t.border)),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                StatusPicker(
+                  status: task.status,
+                  enabled: enabled,
+                  onPick: (s) => _actions.setStatus(entry, s, toast: false),
+                ),
+                PriorityPicker(
+                  priority: task.priority,
+                  enabled: enabled,
+                  onPick: (p) => _actions.setPriority(entry, p, toast: false),
+                ),
+                DatePickerChip(
+                  date: task.startDate,
+                  placeholder: 'Start date',
+                  enabled: enabled,
+                  onPick: (d, _) => _actions.setStart(entry, d, toast: false),
+                ),
+                DatePickerChip(
+                  date: task.dueDate,
+                  placeholder: 'Due date',
+                  enabled: enabled,
+                  onPick: (d, _) => _actions.setDue(entry, d, toast: false),
+                ),
+                LabelsPicker(
+                  selected: task.labelIds,
+                  available: available,
+                  enabled: enabled,
+                  onToggle: (l) => _actions.toggleLabel(entry, l, toast: false),
+                ),
+                ProjectPicker(
+                  project: entry.project,
+                  options: projectOptions(ws, alsoInclude: entry.project.id),
+                  enabled: enabled,
+                  onPick: (p) => _actions.moveToProject(entry, p),
+                ),
+              ],
+            ),
           ),
-          child: Text(
-            [
-              'Created ${longDate(task.createdAt)}',
-              if (task.isDone && task.completedAt != null)
-                'Completed ${longDate(task.completedAt!)}',
-            ].join(' · '),
-            style: TextStyles.meta(context),
+          Divider(color: t.border),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  CallbackShortcuts(
+                    // Enter moves to the description; a title is conceptually one line.
+                    bindings: {
+                      const SingleActivator(LogicalKeyboardKey.enter): () =>
+                          _descriptionFocus.requestFocus(),
+                    },
+                    child: TextField(
+                      controller: _title,
+                      focusNode: _titleFocus,
+                      enabled: enabled,
+                      maxLines: null,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: t.primary,
+                        height: 1.35,
+                      ),
+                      decoration: fieldDecoration.copyWith(
+                        hintText: 'Task title',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _description,
+                    focusNode: _descriptionFocus,
+                    enabled: enabled,
+                    maxLines: null,
+                    minLines: 4,
+                    keyboardType: TextInputType.multiline,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: t.primary,
+                      height: 1.5,
+                    ),
+                    decoration: fieldDecoration.copyWith(
+                      hintText: 'Add a description…',
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
-      ],
+          Container(
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: t.border)),
+            ),
+            child: Text(
+              [
+                'Created ${longDate(task.createdAt)}',
+                if (task.isDone && task.completedAt != null)
+                  'Completed ${longDate(task.completedAt!)}',
+              ].join(' · '),
+              style: TextStyles.meta(context),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

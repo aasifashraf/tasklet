@@ -19,6 +19,11 @@ class FocusedTask extends Notifier<TaskRef?> {
   @override
   TaskRef? build() => null;
   void set(TaskRef? ref) => state = ref;
+
+  /// Clears the focused task if it is still [ref].
+  void clearIf(TaskRef ref) {
+    if (state == ref) state = null;
+  }
 }
 
 final focusedTaskProvider = NotifierProvider<FocusedTask, TaskRef?>(
@@ -353,10 +358,19 @@ class _TaskFocusState extends ConsumerState<TaskFocus> {
   final _node = FocusNode();
   bool _focused = false;
 
+  // Held directly: focus can change while this widget is being torn down, when `ref` is no longer usable.
+  late final FocusedTask _focusedTask = ref.read(focusedTaskProvider.notifier);
+
   @override
   void dispose() {
     _node.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _focusedTask;
   }
 
   @override
@@ -370,12 +384,11 @@ class _TaskFocusState extends ConsumerState<TaskFocus> {
     return Focus(
       focusNode: _node,
       onFocusChange: (f) {
-        setState(() => _focused = f);
-        final current = ref.read(focusedTaskProvider);
+        if (mounted) setState(() => _focused = f);
         if (f) {
-          ref.read(focusedTaskProvider.notifier).set(widget.taskRef);
-        } else if (current == widget.taskRef) {
-          ref.read(focusedTaskProvider.notifier).set(null);
+          _focusedTask.set(widget.taskRef);
+        } else {
+          _focusedTask.clearIf(widget.taskRef);
         }
       },
       child: Listener(

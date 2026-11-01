@@ -40,9 +40,8 @@ class TaskListView extends StatelessWidget {
           for (final s in statuses)
             SliverMainAxisGroup(
               slivers: [
-                SliverPersistentHeader(
-                  pinned: true,
-                  delegate: _HeaderDelegate(
+                PinnedHeaderSliver(
+                  child: _SectionHeader(
                     status: s,
                     count: groups[s]?.length ?? 0,
                     collapsed: collapsed.contains(s),
@@ -75,8 +74,8 @@ class TaskListView extends StatelessWidget {
   }
 }
 
-class _HeaderDelegate extends SliverPersistentHeaderDelegate {
-  _HeaderDelegate({
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({
     required this.status,
     required this.count,
     required this.collapsed,
@@ -91,31 +90,22 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
   final VoidCallback? onAdd;
 
   @override
-  double get minExtent => 36;
-  @override
-  double get maxExtent => 36;
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
+  Widget build(BuildContext context) {
     final t = Tokens.of(context);
     return Hoverable(
       builder: (context, hovered) => GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onToggle,
         child: Container(
+          height: 38,
           color: t.background,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.fromLTRB(16, 3, 16, 3),
           child: Container(
             decoration: BoxDecoration(
               color: t.surface,
               borderRadius: BorderRadius.circular(6),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 8),
-            margin: const EdgeInsets.symmetric(vertical: 3),
             child: Row(
               children: [
                 AnimatedRotation(
@@ -150,11 +140,4 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
       ),
     );
   }
-
-  @override
-  bool shouldRebuild(_HeaderDelegate old) =>
-      old.status != status ||
-      old.count != count ||
-      old.collapsed != collapsed ||
-      old.onAdd != onAdd;
 }
