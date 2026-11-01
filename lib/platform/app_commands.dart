@@ -5,7 +5,6 @@ import '../router.dart';
 import '../state/reminders.dart';
 import '../state/ui_state.dart';
 import '../state/workspace.dart';
-import '../ui/whats_new.dart';
 import 'notifications.dart';
 import 'windows.dart';
 
@@ -21,8 +20,9 @@ class AppCommands {
     mainWindowChannel.setMethodCallHandler((call) async {
       switch (call.method) {
         case MainCommands.showReleaseNotes:
+          // The main window's shell opens the sheet with its own context; don't wait for it to close.
           await bringMainWindowToFront();
-          await showWhatsNewFromAnywhere(_container);
+          _container.read(releaseNotesRequestProvider.notifier).fire();
         case MainCommands.sendTestNotification:
           await _reminders.sendTest();
           return await Notifications.allowed();

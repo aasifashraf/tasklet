@@ -175,12 +175,14 @@ class _GeneralTabState extends ConsumerState<_GeneralTab> {
   late final _name = TextEditingController(
     text: ref.read(prefsProvider).userName,
   );
-  late final PrefsNotifier _prefs = ref.read(prefsProvider.notifier);
+  // Read up front: dispose() saves the name, and `ref` can't be used there.
+  late final PrefsNotifier _prefs;
   final _nameFocus = FocusNode();
 
   @override
   void initState() {
     super.initState();
+    _prefs = ref.read(prefsProvider.notifier);
     // Saved on blur (SPEC §11.1).
     _nameFocus.addListener(() {
       if (!_nameFocus.hasFocus) {
@@ -362,6 +364,7 @@ class _NotificationsTab extends ConsumerStatefulWidget {
 
 class _NotificationsTabState extends ConsumerState<_NotificationsTab> {
   bool? _allowed;
+  bool _sent = false;
 
   /// Turning reminders on, or moving the time, to an already-passed time waits until tomorrow (SPEC §11.3).
   Future<void> _save(ReminderSettings next) async {
@@ -438,23 +441,11 @@ class _NotificationsTabState extends ConsumerState<_NotificationsTab> {
         label: 'Remind Me At',
         child: Align(
           alignment: Alignment.centerLeft,
-          child: OutlinedButton(
-            onPressed: !s.enabled
-                ? null
-                : () async {
-                    final picked = await showTimePicker(
-                      context: context,
-                      initialTime: TimeOfDay(hour: s.hour, minute: s.minute),
-                    );
-                    if (picked != null) {
-                      await _save(
-                        s.copyWith(hour: picked.hour, minute: picked.minute),
-                      );
-                    }
-                  },
-            child: Text(
-              TimeOfDay(hour: s.hour, minute: s.minute).format(context),
-            ),
+          child: _TimeSelect(
+            hour: s.hour,
+            minute: s.minute,
+            enabled: s.enabled,
+            onChanged: (h, m) => _save(s.copyWith(hour: h, minute: m)),
           ),
         ),
       ),
@@ -487,11 +478,35 @@ class _NotificationsTabState extends ConsumerState<_NotificationsTab> {
             final allowed = await sendToMainWindow<bool>(
               MainCommands.sendTestNotification,
             );
-            if (mounted) setState(() => _allowed = allowed);
+            if (mounted) {
+              setState(() {
+                _allowed = allowed;
+                _sent = true;
+              });
+            }
           },
           child: const Text('Send Test Notification'),
         ),
       ),
+      // Windows can't report Do Not Disturb or per-app banner settings, so say where to look.
+      if (_sent && _allowed != false)
+        Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Row(
+            children: [
+              Flexible(
+                child: Text(
+                  'Sent. Not seeing it? Check Do Not Disturb and your notification settings.',
+                  style: TextStyles.bodySecondary(context),
+                ),
+              ),
+              TextButton(
+                onPressed: openNotificationSettings,
+                child: const Text('Open Settings'),
+              ),
+            ],
+          ),
+        ),
     ]);
   }
 }
@@ -546,5 +561,78 @@ class _DataTab extends ConsumerWidget {
         ),
       ),
     ]);
+  }
+}
+
+/// A compact hour : minute picker that fits the small Settings window (the Material clock dial doesn't).
+class _TimeSelect extends StatelessWidget {
+  const _TimeSelect({
+    required this.hour,
+    required this.minute,
+    required this.enabled,
+    required this.onChanged,
+  });
+  final int hour;
+  final int minute;
+  final bool enabled;
+  final void Function(int hour, int minute) onChanged;
+
+  static String _two(int n) => n.toString().padLeft(2, '0');
+
+  @override
+  Widget build(BuildContext context) {
+    final minutes = {for (var m = 0; m < 60; m += 5) m, minute}.toList()
+      ..sort();
+    Widget select(
+      String value,
+      List<(String, VoidCallback)> items,
+      String tooltip,
+    ) => MenuAnchor(
+      style: const MenuStyle(
+        maximumSize: WidgetStatePropertyAll(Size(120, 280)),
+      ),
+      menuChildren: [
+        for (final (label, onPick) in items)
+          MenuItemButton(
+            onPressed: onPick,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: label == value ? FontWeight.w600 : null,
+              ),
+            ),
+          ),
+      ],
+      builder: (context, controller, _) => Tooltip(
+        message: tooltip,
+        child: OutlinedButton(
+          onPressed: enabled
+              ? () => controller.isOpen ? controller.close() : controller.open()
+              : null,
+          style: OutlinedButton.styleFrom(minimumSize: const Size(56, 30)),
+          child: Text('$value  ▾'),
+        ),
+      ),
+    );
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        select(_two(hour), [
+          for (var h = 0; h < 24; h++) (_two(h), () => onChanged(h, minute)),
+        ], 'Hour'),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          child: Text(
+            ':',
+            style: TextStyles.body(context)
+                .copyWith(fontWeight: FontWeight.w600),
+          ),
+        ),
+        select(_two(minute), [
+          for (final m in minutes) (_two(m), () => onChanged(hour, m)),
+        ], 'Minute'),
+      ],
+    );
   }
 }

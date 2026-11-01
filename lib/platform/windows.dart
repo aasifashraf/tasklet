@@ -2,8 +2,13 @@ import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
 
-/// Messages from the Settings window to the main window (each window runs its own engine).
-const mainWindowChannel = WindowMethodChannel('tasklet/main');
+/// Messages from the Settings window to the main window (each window runs its own engine). One-to-many: the main
+/// window registers the handler and any window may call it (the default "paired" mode only lets two windows that
+/// both registered talk to each other).
+const mainWindowChannel = WindowMethodChannel(
+  'tasklet/main',
+  mode: ChannelMode.unidirectional,
+);
 
 /// Commands the main window accepts over [mainWindowChannel].
 abstract final class MainCommands {
@@ -47,6 +52,8 @@ Future<void> bringMainWindowToFront() async {
 Future<T?> sendToMainWindow<T>(String method, [Object? arguments]) async {
   try {
     return await mainWindowChannel.invokeMethod<T>(method, arguments);
+  } on WindowChannelException {
+    return null; // main window not ready
   } on MissingPluginException {
     return null;
   }

@@ -41,6 +41,9 @@ class Signal extends Notifier<int> {
 /// Ask the Projects page to start an inline "New Project" row.
 final newProjectRequestProvider = NotifierProvider<Signal, int>(Signal.new);
 
+/// Ask the main window to show the What's New sheet (from Settings → General or a notification).
+final releaseNotesRequestProvider = NotifierProvider<Signal, int>(Signal.new);
+
 /// Ask the current board to open and focus its search field (Ctrl+F).
 final searchRequestProvider = NotifierProvider<Signal, int>(Signal.new);
 

@@ -76,6 +76,11 @@ class _AppShellState extends ConsumerState<AppShell> with WindowListener {
     final prefs = ref.watch(prefsProvider);
     final width = _dragWidth ?? prefs.sidebarWidth;
     final openTask = ref.watch(openTaskProvider);
+    // Settings → General → Show Release Notes (another window) asks for the sheet through this signal.
+    ref.listen(
+      releaseNotesRequestProvider,
+      (_, _) => showWhatsNew(context, ref),
+    );
     return AppMenu(
       child: Scaffold(
         body: Stack(

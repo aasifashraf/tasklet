@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../platform/whats_new_notes.dart';
-import '../router.dart';
 import '../state/prefs.dart';
 import 'theme.dart';
 
@@ -13,18 +12,6 @@ Future<void> showWhatsNew(BuildContext context, WidgetRef ref) => _show(
       .read(prefsProvider.notifier)
       .set(PrefKeys.whatsNewSeen, currentRelease.id),
 );
-
-/// Same, from code without a widget context (Settings window, Help menu).
-Future<void> showWhatsNewFromAnywhere(ProviderContainer container) async {
-  final context = rootNavigatorKey.currentContext;
-  if (context == null) return;
-  await _show(
-    context,
-    () => container
-        .read(prefsProvider.notifier)
-        .set(PrefKeys.whatsNewSeen, currentRelease.id),
-  );
-}
 
 bool _open = false;
 
