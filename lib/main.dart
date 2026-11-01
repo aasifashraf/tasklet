@@ -10,11 +10,13 @@ import 'package:window_manager/window_manager.dart';
 import 'app.dart';
 import 'data/prefs_store.dart';
 import 'platform/app_commands.dart';
+import 'platform/error_log.dart';
 import 'platform/lifecycle.dart';
 import 'platform/notifications.dart';
 import 'platform/windows.dart';
 import 'state/prefs.dart';
 import 'state/reminders.dart';
+import 'state/workspace.dart';
 import 'ui/settings/settings_app.dart';
 
 Future<void> main(List<String> args) async {
@@ -23,6 +25,7 @@ Future<void> main(List<String> args) async {
   if (Platform.isMacOS) await FilePicker.skipEntitlementsChecks();
 
   final support = await getApplicationSupportDirectory();
+  ErrorLog.install(support.path);
   final prefs = await PrefsStore.open(p.join(support.path, 'settings.json'));
   await prefs.watch();
   final overrides = [prefsStoreProvider.overrideWithValue(prefs)];
@@ -49,9 +52,22 @@ Future<void> main(List<String> args) async {
   final reminders = ReminderService(container);
   final commands = AppCommands(container, reminders)
     ..registerMainWindowHandler();
-  await AppLifecycle.instance.init();
-  await Notifications.init(commands.handleNotificationTap);
+  // The tray and notifications are optional: a failure there must never leave the window blank.
+  try {
+    await AppLifecycle.instance.init();
+  } catch (e, s) {
+    ErrorLog.record(e, s, context: 'tray');
+  }
+  try {
+    await Notifications.init(commands.handleNotificationTap);
+  } catch (e, s) {
+    ErrorLog.record(e, s, context: 'notifications');
+  }
   reminders.start();
+  // Quitting waits (briefly) for pending saves so the last edit isn't lost.
+  AppLifecycle.instance.beforeQuit.add(
+    () => container.read(workspaceProvider.notifier).flushSaves(),
+  );
 
   runApp(
     UncontrolledProviderScope(container: container, child: const TaskletApp()),

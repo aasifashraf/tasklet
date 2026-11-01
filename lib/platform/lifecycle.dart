@@ -56,8 +56,20 @@ class AppLifecycle with WindowListener {
     await windowManager.hide();
   }
 
+  /// Run in order before exiting (flush the open task panel, then wait for saves). Bounded so Quit always works.
+  final beforeQuit = <Future<void> Function()>[];
+
   /// Really exits (tray "Quit Tasklet", or File → Exit).
   Future<void> quit() async {
+    try {
+      await Future(() async {
+        for (final hook in [...beforeQuit]) {
+          await hook();
+        }
+      }).timeout(const Duration(seconds: 4));
+    } catch (_) {
+      // A stuck save (locked file, offline drive) must not block quitting; the atomic write keeps files intact.
+    }
     await windowManager.setPreventClose(false);
     _tray?.setVisible(false);
     _tray?.dispose();

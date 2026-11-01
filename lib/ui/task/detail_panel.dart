@@ -113,6 +113,7 @@ class _PanelBodyState extends ConsumerState<_PanelBody> {
     super.initState();
     _controller = ref.read(workspaceProvider.notifier);
     _actions = ref.read(taskActionsProvider);
+    _controller.pendingEditFlushers.add(_flush); // Quit saves typed text first
     _title.addListener(_scheduleSave);
     _description.addListener(_scheduleSave);
     _titleFocus.addListener(() {
@@ -145,6 +146,7 @@ class _PanelBodyState extends ConsumerState<_PanelBody> {
   @override
   void dispose() {
     _flush(revertEmptyTitle: true); // save immediately on close (SPEC §7.2)
+    _controller.pendingEditFlushers.remove(_flush);
     _title.dispose();
     _description.dispose();
     _titleFocus.dispose();

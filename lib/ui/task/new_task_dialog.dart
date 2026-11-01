@@ -7,6 +7,7 @@ import '../../core/local_date.dart';
 import '../../core/models.dart';
 import '../../state/boards.dart';
 import '../../state/clock.dart';
+import '../../state/toast.dart';
 import '../../state/ui_state.dart';
 import '../../state/workspace.dart';
 import '../glyphs.dart';
@@ -151,6 +152,7 @@ class _NewTaskDialogState extends ConsumerState<_NewTaskDialog> {
   late List<String> _labels = [...widget.defaults.labelIds];
   bool _createMore = false;
   bool _closing = false;
+  bool _submitting = false;
 
   @override
   void initState() {
@@ -194,19 +196,31 @@ class _NewTaskDialogState extends ConsumerState<_NewTaskDialog> {
 
   Future<void> _submit() async {
     final title = _title.text.trim();
-    if (title.isEmpty) return;
-    await ref
-        .read(workspaceProvider.notifier)
-        .createTask(
-          projectId: _projectId,
-          title: title,
-          description: _description.text,
-          status: _status,
-          priority: _priority,
-          startDate: _start,
-          dueDate: _due,
-          labelIds: _labels,
-        );
+    // Enter and Ctrl+Enter both submit; a slow (synced) save must not create the task twice.
+    if (title.isEmpty || _submitting) return;
+    // The chosen project may have been deleted (here or by sync) while the dialog was open.
+    final projectGone =
+        ref.read(workspaceDataProvider)?.projectById(_projectId) == null;
+    setState(() => _submitting = true);
+    try {
+      await ref
+          .read(workspaceProvider.notifier)
+          .createTask(
+            projectId: projectGone ? noProjectId : _projectId,
+            title: title,
+            description: _description.text,
+            status: _status,
+            priority: _priority,
+            startDate: _start,
+            dueDate: _due,
+            labelIds: projectGone ? const [] : _labels,
+          );
+    } catch (e) {
+      ref.read(toastProvider.notifier).show("Couldn't create the task: $e");
+      return;
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
     if (!mounted) return;
     if (_createMore) {
       // Keep status/priority/project; restore due date and labels to how the dialog opened (SPEC §7.1).
