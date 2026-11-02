@@ -85,3 +85,34 @@ Project? stripLabel(Project project, String labelId, DateTime now) {
     leftOut: backup.tasks.length - tasks.length,
   );
 }
+
+/// [project] as it should be written into another organization's folder (docs/DECISIONS.md D15). Workspace labels
+/// its tasks use ([workspaceLabels], from the organization it leaves) come along as the project's own labels, so
+/// the other folder's labels.json is never touched. It keeps its key unless a project there already has it, keeps
+/// every task number, and goes to the end of the Projects (and Favorites) list.
+Project projectForTransfer(
+  Project project, {
+  required List<Label> workspaceLabels,
+  required List<Project> targetProjects,
+  required DateTime now,
+}) {
+  final own = {for (final l in project.labels) l.id};
+  final used = {for (final t in project.tasks) ...t.labelIds};
+  final carried = [
+    for (final l in workspaceLabels)
+      if (used.contains(l.id) && !own.contains(l.id)) l,
+  ];
+  final keyTaken = targetProjects.any((p) => p.key == project.key);
+  return project.copyWith(
+    key: keyTaken ? keyForNewProject(project.name, targetProjects) : null,
+    labels: [...project.labels, ...carried],
+    sortOrder: orderAfterAll(targetProjects.map((p) => p.sortOrder)),
+    favoriteOrder: project.favorite
+        ? orderAfterAll([
+            for (final p in targetProjects)
+              if (p.favorite) p.favoriteOrder,
+          ])
+        : null,
+    updatedAt: now,
+  );
+}

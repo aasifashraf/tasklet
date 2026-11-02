@@ -50,7 +50,8 @@ planned.
 ### Organize
 - **Organizations** keep separate lives apart: your employer, freelance clients, open source. Each one is its own
   folder with its own projects, labels and quick filters, so each can sync through a different service (the company
-  OneDrive, your personal Dropbox). Switch at the top of the sidebar or with Ctrl+Alt+1 … 9.
+  OneDrive, your personal Dropbox). Switch at the top of the sidebar or with Ctrl+Alt+1 … 9, and move a
+  project to another organization from its menu.
 - **Projects** with a short, permanent key, so every task gets an ID like `WEB-12` that never changes, even after a
   rename.
 - **Tasks without a project** are allowed and get IDs like `TSK-3`.

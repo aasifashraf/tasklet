@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:path/path.dart' as p;
 
 import '../core/colors.dart';
+import '../core/models.dart';
 import '../core/organization.dart';
 import '../data/workspace_store.dart';
 import '../platform/windows.dart';
@@ -121,6 +122,48 @@ Future<void> editOrganization(
   await ref
       .read(workspaceProvider.notifier)
       .updateOrganization(entry.folder, info);
+}
+
+/// "Move to Organization ▸" for a project's menus: every other organization on this computer; null when there is
+/// none. Moving goes to the Dashboard if the project's own page is open.
+Widget? moveToOrganizationMenu(
+  BuildContext context,
+  WidgetRef ref,
+  Project project,
+) {
+  final ws = ref.read(workspaceDataProvider);
+  final others = [
+    for (final o in ref.read(prefsProvider).organizations)
+      if (ws != null && !sameFolder(o.folder, ws.folder)) o,
+  ];
+  if (others.isEmpty) return null;
+  return SubmenuButton(
+    menuChildren: [
+      for (final o in others)
+        menuItem(
+          o.info.name,
+          leading: OrgGlyph(o.info, size: 13),
+          onPressed: () async {
+            final router = GoRouter.of(context);
+            final onPage = router.state.uri.path == '/projects/${project.id}';
+            final error = await ref
+                .read(workspaceProvider.notifier)
+                .moveProjectToOrganization(project.id, o.folder);
+            if (error != null) {
+              ref
+                  .read(toastProvider.notifier)
+                  .show(error, duration: const Duration(seconds: 8));
+              return;
+            }
+            if (onPage) router.go(NavItem.dashboard.route);
+            ref
+                .read(toastProvider.notifier)
+                .show('Moved "${project.name}" to ${o.info.name}.');
+          },
+        ),
+    ],
+    child: const Text('Move to Organization', style: TextStyle(fontSize: 12)),
+  );
 }
 
 /// Asks for a new name, icon and color for [initial]; null if cancelled.

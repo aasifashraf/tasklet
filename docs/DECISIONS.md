@@ -178,4 +178,8 @@ a time and switches between them from the sidebar header, the Organization menu 
   (a personal preference, and project and quick-filter boards are already per folder).
 - The window title and tray tooltip name the open organization ("Acme Corp - Tasklet").
 - Settings → Organizations lists them; its changes go to the main window, which owns the open folder.
+- Move to Organization (a project's menu) writes the project into the other folder first and only then removes it
+  here (Recycle Bin or `.trash`), so a failure never leaves it in neither. Workspace labels its tasks use go along
+  as the project's own labels (the other folder's labels.json is never touched); task numbers stay; the key changes
+  only if a project there already has it. A folder saved by a newer version refuses it.
 

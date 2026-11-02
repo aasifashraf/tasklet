@@ -257,6 +257,7 @@ class _SidebarState extends ConsumerState<Sidebar> {
         kind: GlyphKind.project,
         onPick: (icon, color) => _controller.setProjectIcon(p.id, icon, color),
       ),
+      ?moveToOrganizationMenu(context, ref, p),
       menuItem(
         'New Project…',
         onPressed: () {

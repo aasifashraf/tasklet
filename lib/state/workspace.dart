@@ -424,11 +424,17 @@ class WorkspaceController extends Notifier<WorkspaceState> {
   Project _project(String id) =>
       _ws.projectById(id) ?? (throw StateError('Unknown project $id'));
 
+  MoveToTrash get _trash => ref.read(trashProvider);
+
   // Shown when an edit would put a start date after the due date.
   void _datesOutOfOrder() => ref
       .read(toastProvider.notifier)
       .show("The start date can't be after the due date.");
 }
+
+/// Moves a deleted project's file to the Recycle Bin or Trash (false: the store keeps it in the folder's `.trash`).
+/// Tests override it so they never touch the real Recycle Bin.
+final trashProvider = Provider<MoveToTrash>((ref) => moveToOsTrash);
 
 /// Where local backups of workspace files are kept (`<app support>/backups`); overridden in main(). Null = none.
 final backupDirProvider = Provider<String?>((ref) => null);

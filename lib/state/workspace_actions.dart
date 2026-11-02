@@ -165,7 +165,56 @@ extension WorkspaceActions on WorkspaceController {
         ],
       ),
     );
-    await _save((s) => s.deleteProject(project, moveToTrash: moveToOsTrash));
+    final trash = _trash;
+    await _save((s) => s.deleteProject(project, moveToTrash: trash));
+  }
+
+  /// Moves a project with its tasks into the organization at [folder] (docs/DECISIONS.md D15). It is written
+  /// there first and only then removed here (to the Recycle Bin or `.trash`), so a failure never leaves it in
+  /// neither. Returns why it couldn't move, or null.
+  Future<String?> moveProjectToOrganization(
+    String projectId,
+    String folder,
+  ) async {
+    await flushSaves();
+    final ws = workspace;
+    var project = ws?.projectById(projectId);
+    if (ws == null || project == null || project.isNoProject) return null;
+    if (ws.readOnly) return "This organization can't be changed right now.";
+    try {
+      final target = WorkspaceStore(folder);
+      final there = await target.read();
+      final name = there.organization.name;
+      if (there.readOnly) {
+        return "$name can't be changed right now: it was saved by a newer version of Tasklet, or is mid-sync.";
+      }
+      if (there.projectById(projectId) != null) {
+        return '$name already has this project.';
+      }
+      // An edit made while the copy was being written goes along too.
+      for (var round = 0; project != null && round < 3; round++) {
+        final moving = project;
+        await target.writeProject(
+          wops.projectForTransfer(
+            moving,
+            workspaceLabels: ws.labels,
+            targetProjects: there.projects,
+            now: _now,
+          ),
+        );
+        await target.queue.drain();
+        final latest = workspace?.projectById(projectId);
+        project = identical(latest, moving) ? null : latest;
+      }
+    } on WorkspaceFolderMissing {
+      return "Can't find that organization's folder.";
+    } on UnsafeWriteException catch (e) {
+      return e.message;
+    } on FileSystemException catch (e) {
+      return "Couldn't write to that organization: ${e.message}";
+    }
+    await deleteProject(projectId);
+    return null;
   }
 
   // ---------------------------------------------------------------- tasks

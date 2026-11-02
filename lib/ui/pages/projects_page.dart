@@ -11,6 +11,7 @@ import '../../state/prefs.dart';
 import '../../state/ui_state.dart';
 import '../../state/workspace.dart';
 import '../icon_picker.dart';
+import '../organizations.dart';
 import '../shell/sidebar.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -219,6 +220,7 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage> {
                 onPick: (icon, color) =>
                     _controller.setProjectIcon(p.id, icon, color),
               ),
+              ?moveToOrganizationMenu(context, ref, p),
               menuItem(
                 p.archived ? 'Unarchive' : 'Archive',
                 onPressed: () => _controller.setArchived(p.id, !p.archived),
