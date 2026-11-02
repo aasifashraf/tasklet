@@ -96,6 +96,62 @@ void main() {
       expect(matchesSearch(e, 'web-12'), isTrue);
       expect(matchesSearch(e, 'login chrome'), isFalse);
     });
+
+    test('any part of the id matches, the same as searching the id text', () {
+      // web's key is WEB: "WEB-12".
+      for (final (query, expected) in [
+        ('we', true),
+        ('Web', true),
+        ('b-1', true),
+        ('-12', true),
+        ('12', true),
+        ('1', true),
+        ('13', false),
+        ('web-13', false),
+        ('eb12', false),
+        ('-', true),
+      ]) {
+        expect(
+          matchesSearch(e, query),
+          'web-12 fix login button\nsafari only'.contains(query.toLowerCase()),
+          reason: query,
+        );
+        expect(matchesSearch(e, query), expected, reason: query);
+      }
+    });
+
+    test('a narrower query matches only tasks the previous one matched', () {
+      bool narrows(String next, String previous) =>
+          SearchQuery(next).narrows(SearchQuery(previous));
+      expect(narrows('dep', ''), isTrue);
+      expect(narrows('deploy', 'dep'), isTrue);
+      expect(narrows('deploy cache', 'deploy'), isTrue);
+      expect(narrows('cache deploy', 'deploy ca'), isTrue);
+      expect(narrows('web-12', 'b-1'), isTrue);
+      expect(narrows('dep', 'deploy'), isFalse);
+      expect(narrows('', 'dep'), isFalse);
+      expect(narrows('deploy', 'deploy cache'), isFalse);
+
+      // Whatever narrows, the matches really are a subset.
+      final tasks = [
+        for (final (i, t) in [
+          'Fix login',
+          'Deploy cache',
+          'cache deploy fix',
+          'web',
+        ].indexed)
+          entry(task('t$i', number: i + 1, title: t), web),
+      ];
+      for (final (next, previous) in [
+        ('deploy cache', 'dep'),
+        ('fix', ''),
+        ('web-2', 'web'),
+      ]) {
+        final n = SearchQuery(next), p = SearchQuery(previous);
+        expect(n.narrows(p), isTrue);
+        expect(tasks.where(n.matches).every(p.matches), isTrue, reason: next);
+      }
+    });
   });
 
   group('toggleProjectFilter', () {

@@ -98,6 +98,16 @@ Future<void> main(List<String> args) async {
     final q = SearchQuery('deploy cachex');
     return tasks.where(q.matches).length;
   }, runs: 5);
+  final deploy = SearchQuery('deploy');
+  final deployGroups = groupAndSort(tasks.where(deploy.matches), ViewDisplay());
+  await timed('search, typing more ("deploy" then "deploy c")', () async {
+    final q = SearchQuery('deploy c');
+    return [
+      for (final g in deployGroups.values)
+        for (final e in g)
+          if (q.matches(e)) e,
+    ].length;
+  }, runs: 5);
   await timed('dashboard: glance + upNext + recent', () async {
     glanceFor(tasks, today, now);
     upNext(tasks, today);

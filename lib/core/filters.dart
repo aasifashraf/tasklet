@@ -57,21 +57,42 @@ class SearchQuery {
       ];
 
   static final _whitespace = RegExp(r'\s+');
-
-  /// Lowercased title + description per task, computed on first search and dropped with the task.
-  static final _lowerText = Expando<String>();
+  static final _digits = RegExp(r'^[0-9]+$');
 
   final List<String> words;
 
+  // Per word, for matching task IDs ("WEB-12") without building one for every task: project keys are always
+  // A-Z and 0-9 (project_keys.dart), so a word without a dash is in the ID only if it is in the key or, when all
+  // digits, in the number.
+  late final List<String> _upperWords = [
+    for (final w in words) w.toUpperCase(),
+  ];
+  late final List<bool> _allDigits = [
+    for (final w in words) _digits.hasMatch(w),
+  ];
+
   bool get isEmpty => words.isEmpty;
 
+  /// Whether every task this query matches is also matched by [previous]: each of its words is part of one of
+  /// these words (typing more of a search). Words match within one field, so a part of one does too.
+  bool narrows(SearchQuery previous) =>
+      previous.words.every((p) => words.any((w) => w.contains(p)));
+
   bool matches(ProjectTask entry) {
-    if (words.isEmpty) return true;
-    final task = entry.task;
-    final text = _lowerText[task] ??= '${task.title}\n${task.description}'
-        .toLowerCase();
-    final id = entry.displayId.toLowerCase();
-    return words.every((w) => id.contains(w) || text.contains(w));
+    final text = entry.task.searchText;
+    for (var i = 0; i < words.length; i++) {
+      if (!text.contains(words[i]) && !_inId(entry, i)) return false;
+    }
+    return true;
+  }
+
+  bool _inId(ProjectTask entry, int i) {
+    final word = words[i];
+    if (word.contains('-')) {
+      return entry.displayId.toLowerCase().contains(word);
+    }
+    return entry.project.key.contains(_upperWords[i]) ||
+        (_allDigits[i] && '${entry.task.number}'.contains(word));
   }
 }
 

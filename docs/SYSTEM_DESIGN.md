@@ -352,13 +352,14 @@ Source: SQLite [FTS5](https://sqlite.org/fts5.html); forum note on populating ex
 | Stage | v1.1 | v2 |
 |---|---|---|
 | Input | 200 ms debounce (exists) | same |
-| Matching | substring on cached lowercase title + description (exists); add **title-first** pass and cap description scan length (first 2 KB) for live results, full scan on Enter [Proposed] | FTS5 trigram + filters in SQL |
-| Cancellation | drop stale results by generation counter [Proposed] | same, plus `sqlite3_interrupt` for long queries |
+| Matching | substring on lowercase title + description cached on the task, ID checked without building it, typing more of a query filters the last result [Done in v1.1; title-first with a description cap was dropped because it changes which tasks match] | FTS5 trigram + filters in SQL |
+| Cancellation | not needed while search is synchronous after the debounce; a generation counter comes with an isolate | generation counter plus `sqlite3_interrupt` for long queries |
 | Ranking | none (board order) | none by default; `bm25` only if users ask |
 | Off-thread | only if > 50 ms after the above, via a long-lived isolate that holds the search text [Optional] | database isolate |
 
-Expected v1.1 effect at 100k [Unverified]: title-first search touches ~3 MB of text instead of ~15 MB, which should
-put warm queries near the 10k measurement (11-15 ms) scaled linearly (~40-60 ms).
+Measured v1.1 effect at 100k: a new query 63-95 ms p50 (was 144-174 ms), typing more of a query 30 ms
+(docs/PERFORMANCE.md). Most of the old cost was the per-task cache lookup and building every task's ID string,
+not the text scan itself.
 
 ---
 

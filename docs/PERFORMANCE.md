@@ -23,7 +23,7 @@ A > 2x regression on any row blocks a release.
 | All Tasks board: filter + group + sort | 117-150 / 135-173 ms | 171 / 213 ms, now only when filters, search, sort or day change | p95 < 50 ms |
 | **All Tasks board after an edit** | **same full recompute** | **20 / 54 ms including the edit itself (patched)** | p95 < 50 ms |
 | Largest project board (20k tasks) | 7-11 / 15-23 ms | unchanged | p95 < 50 ms |
-| Search, next keystroke | 144-174 / 162-203 ms | unchanged (phase 6) | p95 < 100 ms |
+| **Search, next keystroke** | **144-174 / 162-203 ms** | **63-95 / 66-104 ms; typing more of a query 30 / 36 ms** | p95 < 100 ms |
 | **Dashboard aggregates** | **966-1,241 / 1,014-1,316 ms, every 30 s** | **56-59 / 74-93 ms, only when data, day or filter change** | p95 < 30 ms |
 | **Reports: tasks in a period** | **1,091 / 1,166 ms** | **13 / 28 ms** | p95 < 50 ms |
 | Sidebar counts | 7-9 / 16-19 ms on every sidebar rebuild | same cost, only when data, day or rules change | |
@@ -39,5 +39,11 @@ changes (cards watch only their own labels and open state), and boards nobody sh
 Phase 6: after an edit, a board takes the tasks that changed (`diffTasks`, ~5 ms) and moves just those to their
 sorted places (`patchGroups`, under 1 ms) instead of filtering and sorting every task again. A project-level change
 (rename, archive, labels), more than 200 changed tasks, or a new filter, search, sort or day still recomputes in full.
+
+Search keeps each task's lowercased text on the task itself (no lookup table) and checks words against the task
+ID without building the ID string. When a new query only adds to the last one (every old word is part of a new
+word), the board filters its last result, which is already grouped and sorted. Matching stays exact: no
+description cap and no ranking, so a search finds the same tasks as before. Search runs synchronously after the
+200 ms debounce, so there are no stale results to drop; an isolate is only worth it if a query stays over 50 ms.
 
 Earlier measurements at 10k and 500k tasks: [SYSTEM_DESIGN.md](SYSTEM_DESIGN.md) section 3.

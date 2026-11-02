@@ -193,7 +193,8 @@ final navCountsProvider = Provider<({int today, int allOpen})>((ref) {
 ///
 /// After an edit only a few tasks change, so when the filters, search, display and day are the same as last time it
 /// re-inserts just those tasks (`patchGroups`) instead of sorting everything again: ~200 ms at 100k tasks becomes
-/// ~1 ms. Anything else, or a larger change, recomputes in full. Auto-disposed: a board nobody shows doesn't keep
+/// ~1 ms. Typing more of a search filters the last result instead. Anything else, or a larger change, recomputes in
+/// full. Auto-disposed: a board nobody shows doesn't keep
 /// its sorted copy of the tasks in memory.
 final boardProvider = NotifierProvider.autoDispose
     .family<BoardNotifier, BoardData?, BoardKind>(BoardNotifier.new);
@@ -203,7 +204,7 @@ class BoardNotifier extends Notifier<BoardData?> {
   final BoardKind kind;
 
   /// The inputs and result of the last computation, the base for patching.
-  ({Workspace ws, String inputs, BoardData data})? _last;
+  ({Workspace ws, String inputs, SearchQuery query, BoardData data})? _last;
 
   @override
   BoardData? build() {
@@ -250,24 +251,39 @@ class BoardNotifier extends Notifier<BoardData?> {
           view: view,
         );
 
-    // Everything besides the tasks that decides what the board shows.
+    // Everything besides the tasks and the search that decides what the board shows.
     final inputs = [
       display.toJson(),
       filters.toJson(),
-      search,
       today,
       if (kind is TodayBoard) [for (final r in rules) r.name]..sort(),
     ].toString();
     final last = _last;
-    if (last != null && last.inputs == inputs) {
+    if (last != null && last.inputs == inputs && last.data.search == search) {
       final diff = identical(last.ws, ws) ? null : diffTasks(last.ws, ws);
       if (identical(last.ws, ws) || diff != null) {
         final data = diff == null
             ? result(last.data.groups, last.data.totalInScope)
             : _patched(last.data, diff, today, rules, filters, query, result);
-        _last = (ws: ws, inputs: inputs, data: data);
+        _last = (ws: ws, inputs: inputs, query: query, data: data);
         return data;
       }
+    }
+    // Typing more of a search: the matches are some of the last ones, already grouped and sorted.
+    if (last != null &&
+        last.inputs == inputs &&
+        identical(last.ws, ws) &&
+        query.narrows(last.query)) {
+      final data = result({
+        for (final MapEntry(key: status, value: tasks)
+            in last.data.groups.entries)
+          status: [
+            for (final e in tasks)
+              if (query.matches(e)) e,
+          ],
+      }, last.data.totalInScope);
+      _last = (ws: ws, inputs: inputs, query: query, data: data);
+      return data;
     }
 
     final scope = scopeTasks(ws, kind, today, rules).toList();
@@ -280,7 +296,7 @@ class BoardNotifier extends Notifier<BoardData?> {
       ),
       scope.length,
     );
-    _last = (ws: ws, inputs: inputs, data: data);
+    _last = (ws: ws, inputs: inputs, query: query, data: data);
     return data;
   }
 

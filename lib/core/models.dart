@@ -275,6 +275,9 @@ class Task {
       ? null
       : LocalDate.fromDateTime(completedAt!);
 
+  /// Lowercased title + description for search, built on the first search and kept with this instance.
+  late final String searchText = '$title\n$description'.toLowerCase();
+
   bool get isDone => status == TaskStatus.done;
 
   Task copyWith({
