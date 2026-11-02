@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import '../core/colors.dart';
 import '../core/merge.dart';
 import '../core/models.dart';
+import '../core/organization.dart';
 import '../core/project_keys.dart';
 import '../core/task_ops.dart'
     show resolveDuplicateNumbers, resolveDuplicateTaskIds;
@@ -81,6 +82,7 @@ class WorkspaceStore {
   final DateTime Function() _now;
 
   bool _readOnly = false;
+  OrgInfo _organization = const OrgInfo(name: '');
   bool _labelsReadable = true;
   bool _viewsReadable = true;
   List<Object?> _opaqueLabels = const [];
@@ -124,14 +126,19 @@ class WorkspaceStore {
   String get _markerPath => p.join(folder, markerFileName);
 
   /// Prepares an existing folder for use: writes the marker file (once) and the projects directory. Used when the
-  /// user chooses or creates a folder. Adds no demo data (SPEC §10).
-  static Future<void> initialize(String folder) async {
+  /// user chooses or creates a folder. Adds no demo data (SPEC §10). A new marker gets [organization] as the
+  /// folder's identity (D15); an existing one is left alone.
+  static Future<void> initialize(String folder, {OrgInfo? organization}) async {
     if (!await Directory(folder).exists()) throw WorkspaceFolderMissing(folder);
     final marker = File(p.join(folder, markerFileName));
     if (!await marker.exists()) {
       await writeFileAtomic(
         marker.path,
-        encodeJson({'app': 'tasklet', 'formatVersion': formatVersion}),
+        encodeJson({
+          'app': 'tasklet',
+          'formatVersion': formatVersion,
+          ...?organization?.toJson(),
+        }),
       );
     }
     await Directory(p.join(folder, projectsDirName)).create();
@@ -154,7 +161,9 @@ class WorkspaceStore {
       _last = null;
     }
     final signature = StringBuffer();
-    _readOnly = await _markerIsNewerOrUnreadable();
+    final (:readOnly, :marker) = await _readMarker();
+    _readOnly = readOnly;
+    _organization = OrgInfo.fromMarker(marker, folderName(folder));
 
     final (labels, labelsReadable) = await _readList(
       labelsPath,
@@ -328,6 +337,7 @@ class WorkspaceStore {
       readOnly: _readOnly,
       hiddenEntryCount: hidden,
       repairs: repairs,
+      organization: _organization,
     );
     // Self-heal writes change files, so that read is never reused.
     _last = healed.isEmpty ? workspace : null;
@@ -629,24 +639,71 @@ class WorkspaceStore {
 
   static String _key(String path) => p.canonicalize(path);
 
-  /// A missing marker is a fresh or legacy folder (writable). An unreadable marker might be mid-sync, and a newer
-  /// format version can't be written safely. Both make this read read-only.
-  Future<bool> _markerIsNewerOrUnreadable() async {
-    final marker = File(_markerPath);
+  /// The marker's JSON (null when missing or unreadable) and whether it makes the folder read-only. A missing
+  /// marker is a fresh or legacy folder (writable). An unreadable marker might be mid-sync, and a newer format
+  /// version can't be written safely: both make this read read-only.
+  Future<({bool readOnly, Map<String, Object?>? marker})> _readMarker() =>
+      _readMarkerAt(folder);
+
+  static Future<({bool readOnly, Map<String, Object?>? marker})> _readMarkerAt(
+    String folder,
+  ) async {
+    final marker = File(p.join(folder, markerFileName));
     try {
-      if (!await marker.exists()) return false;
+      if (!await marker.exists()) return (readOnly: false, marker: null);
       final json = jsonDecode(await marker.readAsString());
-      if (json is! Map<String, Object?>) return true;
+      if (json is! Map<String, Object?>) return (readOnly: true, marker: null);
       // No version (hand-made or legacy marker) means format 1; `1.0` from another JSON writer is 1. Anything
       // else that isn't a whole number can't be judged, so it stays read-only.
       final version = json['formatVersion'] ?? 1;
-      if (version is! num || version != version.truncate()) return true;
-      return version > formatVersion;
+      final readOnly =
+          version is! num ||
+          version != version.truncate() ||
+          version > formatVersion;
+      return (readOnly: readOnly, marker: json);
     } on FormatException {
-      return true;
+      return (readOnly: true, marker: null);
     } on FileSystemException {
-      return true;
+      return (readOnly: true, marker: null);
     }
+  }
+
+  /// Saves an organization's identity into [folder]'s marker, replacing only the fields that differ from [before]
+  /// (what the user saw), so anything else there (a newer version's values, another computer's change to another
+  /// field) survives. For an organization that isn't open; the open one saves through [writeOrganization].
+  static Future<void> writeOrganizationAt(
+    String folder,
+    OrgInfo organization, {
+    required OrgInfo before,
+  }) async {
+    if (!await Directory(folder).exists()) throw WorkspaceFolderMissing(folder);
+    final (:readOnly, :marker) = await _readMarkerAt(folder);
+    if (readOnly) {
+      throw const UnsafeWriteException(
+        "Not saving the organization: its folder was saved by a newer version of Tasklet, or its marker file can't "
+        'be read right now.',
+      );
+    }
+    await writeFileAtomic(
+      p.join(folder, markerFileName),
+      encodeJson(
+        organization.applyTo(
+          marker ?? {'app': 'tasklet', 'formatVersion': formatVersion},
+          before,
+        ),
+      ),
+    );
+  }
+
+  /// Saves the open organization's name, icon and color into the marker (D15); see [writeOrganizationAt].
+  Future<void> writeOrganization(OrgInfo organization) {
+    _checkWritable();
+    final before = _organization;
+    return queue.enqueue(_markerPath, () async {
+      await writeOrganizationAt(folder, organization, before: before);
+      _organization = organization;
+      _remember(_markerPath);
+    });
   }
 
   /// Conflict copies of labels.json / views.json (e.g. "labels (conflicted copy).json", "views-LAPTOP.json"). Adds

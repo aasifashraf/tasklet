@@ -6,8 +6,10 @@ import 'package:uuid/uuid.dart';
 
 import '../core/colors.dart';
 import '../core/local_date.dart';
+import '../core/merge.dart' show jsonEquals;
 import '../core/models.dart';
 import '../core/ordering.dart';
+import '../core/organization.dart';
 import '../core/task_ops.dart' as ops;
 import '../core/workspace_ops.dart' as wops;
 import '../data/backups.dart';
@@ -64,6 +66,7 @@ class WorkspaceController extends Notifier<WorkspaceState> {
   StreamSubscription<int>? _inFlightSub;
   bool _refreshPending = false;
   int _generation = 0;
+  String? _openFolder;
 
   /// Bumped by every optimistic change; a refresh read that overlapped one is stale and dropped.
   int _mutations = 0;
@@ -94,10 +97,127 @@ class WorkspaceController extends Notifier<WorkspaceState> {
 
   // ---------------------------------------------------------------- folder
 
-  /// Points the app at [folder] (onboarding, Settings → Data → Change…). Prepares it (marker file) first.
+  /// Points the app at [folder] (onboarding, or Settings → Organizations → Change Folder… for the open
+  /// organization, which then lives there). Prepares it (marker file) first.
   Future<void> chooseFolder(String folder) async {
+    final current = workspace?.folder ?? ref.read(prefsProvider).dataFolder;
+    final orgs = _organizations;
+    if (current != null && !orgs.any((o) => sameFolder(o.folder, folder))) {
+      await _saveOrganizations([
+        for (final o in orgs)
+          sameFolder(o.folder, current) ? (folder: folder, info: o.info) : o,
+      ]);
+    }
     await ref.read(prefsProvider.notifier).set(PrefKeys.dataFolder, folder);
     await _open(folder, initialize: true);
+  }
+
+  // ---------------------------------------------------------------- organizations (docs/DECISIONS.md D15)
+
+  List<OrgEntry> get _organizations => ref.read(prefsProvider).organizations;
+
+  Future<void> _saveOrganizations(List<OrgEntry> orgs) => ref
+      .read(prefsProvider.notifier)
+      .set(PrefKeys.organizations, encodeOrganizations(orgs));
+
+  /// Opens another organization. Debounced edits are saved into the current one first.
+  Future<void> switchOrganization(String folder) async {
+    final current = workspace?.folder;
+    if (current != null && sameFolder(current, folder)) return;
+    await flushSaves();
+    await ref.read(prefsProvider.notifier).set(PrefKeys.dataFolder, folder);
+    await _open(folder);
+  }
+
+  /// Makes [folder] an organization on this computer and opens it: a new folder gets [identity] in its marker; an
+  /// existing Tasklet folder keeps its own. Throws if the folder can't be prepared.
+  Future<void> addOrganization(String folder, {OrgInfo? identity}) async {
+    await WorkspaceStore.initialize(folder, organization: identity);
+    final orgs = _organizations;
+    if (!orgs.any((o) => sameFolder(o.folder, folder))) {
+      await _saveOrganizations([
+        ...orgs,
+        (folder: folder, info: identity ?? OrgInfo(name: folderName(folder))),
+      ]);
+    }
+    await switchOrganization(folder);
+  }
+
+  /// Forgets an organization on this computer; its folder and files are untouched. The open one can't be removed.
+  Future<void> removeOrganization(String folder) async {
+    final current = workspace?.folder ?? ref.read(prefsProvider).dataFolder;
+    if (current != null && sameFolder(current, folder)) return;
+    await _saveOrganizations([
+      for (final o in _organizations)
+        if (!sameFolder(o.folder, folder)) o,
+    ]);
+  }
+
+  /// Moves an organization up (-1) or down (1) in the switcher.
+  Future<void> moveOrganization(String folder, int delta) async {
+    final orgs = [..._organizations];
+    final i = orgs.indexWhere((o) => sameFolder(o.folder, folder));
+    final j = i + delta;
+    if (i < 0 || j < 0 || j >= orgs.length) return;
+    orgs.insert(j, orgs.removeAt(i));
+    await _saveOrganizations(orgs);
+  }
+
+  /// Renames or re-icons an organization. The open one saves through its store (and shows at once); another one
+  /// writes its folder's marker directly.
+  Future<void> updateOrganization(String folder, OrgInfo info) async {
+    final ws = workspace;
+    if (ws != null && sameFolder(ws.folder, folder)) {
+      _set(ws.copyWith(organization: info));
+      unawaited(_rememberOrganization(_ws));
+      return _save((s) => s.writeOrganization(info));
+    }
+    final before = _organizations
+        .where((o) => sameFolder(o.folder, folder))
+        .firstOrNull
+        ?.info;
+    if (before == null) return;
+    try {
+      await WorkspaceStore.writeOrganizationAt(folder, info, before: before);
+      await _saveOrganizations([
+        for (final o in _organizations)
+          sameFolder(o.folder, folder) ? (folder: o.folder, info: info) : o,
+      ]);
+    } catch (e) {
+      ref
+          .read(toastProvider.notifier)
+          .show(
+            e is UnsafeWriteException
+                ? e.message
+                : e is WorkspaceFolderMissing
+                ? "Can't find that organization's folder."
+                : "Couldn't save the organization: $e",
+            duration: const Duration(seconds: 8),
+          );
+    }
+  }
+
+  /// Keeps this computer's list current with the open folder's identity (it may have been renamed on another
+  /// computer, or opened before organizations existed).
+  Future<void> _rememberOrganization(Workspace ws) async {
+    final orgs = _organizations;
+    final i = orgs.indexWhere((o) => sameFolder(o.folder, ws.folder));
+    final updated = [
+      for (final (k, o) in orgs.indexed)
+        k == i ? (folder: o.folder, info: ws.organization) : o,
+      if (i < 0) (folder: ws.folder, info: ws.organization),
+    ];
+    final encoded = encodeOrganizations(updated);
+    if (!jsonEquals(encoded, ref.read(prefsProvider)[PrefKeys.organizations])) {
+      await _saveOrganizations(updated);
+    }
+  }
+
+  /// Filters, search, the open task, Undo and notices belong to the folder they were made in.
+  void _resetSession() {
+    _recentlyDeleted.clear();
+    ref.read(openTaskProvider.notifier).close();
+    ref.read(repairNotesProvider.notifier).clear();
   }
 
   Future<void> retry() async {
@@ -111,6 +231,10 @@ class WorkspaceController extends Notifier<WorkspaceState> {
 
   Future<void> _open(String folder, {bool initialize = false}) async {
     await _closeFolder();
+    if (_openFolder == null || !sameFolder(_openFolder!, folder)) {
+      _resetSession();
+    }
+    _openFolder = folder;
     final generation = ++_generation;
     state = LoadingState(folder);
     try {
@@ -125,6 +249,7 @@ class WorkspaceController extends Notifier<WorkspaceState> {
       _store = store;
       _noteRepairs(ws);
       state = ReadyState(ws);
+      unawaited(_rememberOrganization(ws));
       _inFlightSub = store.queue.inFlightChanges.listen((n) {
         if (n == 0 && _refreshPending) unawaited(refresh());
       });
@@ -205,6 +330,9 @@ class WorkspaceController extends Notifier<WorkspaceState> {
       }
       // An unchanged folder returns the same instance: nothing to rebuild.
       if (identical(ws, workspace)) return;
+      if (ws.organization != workspace?.organization) {
+        unawaited(_rememberOrganization(ws));
+      }
       state = ReadyState(ws);
     } on WorkspaceFolderMissing {
       state = FailedState(
@@ -307,6 +435,16 @@ final backupDirProvider = Provider<String?>((ref) => null);
 
 final workspaceProvider = NotifierProvider<WorkspaceController, WorkspaceState>(
   WorkspaceController.new,
+);
+
+/// The folder being opened or open (the current organization), or null before one is chosen. Session state that
+/// belongs to one folder (board filters, search) watches this to start empty in another organization.
+final openFolderProvider = Provider<String?>(
+  (ref) => switch (ref.watch(workspaceProvider)) {
+    ReadyState(:final workspace) => workspace.folder,
+    LoadingState(:final folder) || FailedState(:final folder) => folder,
+    NoFolderState() => null,
+  },
 );
 
 /// The open workspace, or null while not ready. Most widgets watch this.

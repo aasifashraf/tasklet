@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/organization.dart';
 import '../router.dart';
 import '../state/reminders.dart';
 import '../state/ui_state.dart';
@@ -18,6 +19,7 @@ class AppCommands {
 
   void registerMainWindowHandler() {
     mainWindowChannel.setMethodCallHandler((call) async {
+      final workspace = _container.read(workspaceProvider.notifier);
       switch (call.method) {
         case MainCommands.showReleaseNotes:
           // The main window's shell opens the sheet with its own context; don't wait for it to close.
@@ -29,9 +31,35 @@ class AppCommands {
         case MainCommands.chooseFolder:
           final folder = call.arguments;
           if (folder is String) {
-            await _container
-                .read(workspaceProvider.notifier)
-                .chooseFolder(folder);
+            await workspace.chooseFolder(folder);
+          }
+        case MainCommands.switchOrganization:
+          final folder = call.arguments;
+          if (folder is String) {
+            await bringMainWindowToFront();
+            final path = appRouter.state.uri.path;
+            await workspace.switchOrganization(folder);
+            // A project or quick-filter page belongs to the organization just left.
+            if (path.startsWith('/projects/') || path.startsWith('/views/')) {
+              appRouter.go('/');
+            }
+          }
+        case MainCommands.updateOrganization:
+          if (call.arguments case {'folder': final String folder}) {
+            await workspace.updateOrganization(
+              folder,
+              OrgInfo.fromJson(call.arguments, folderName(folder)),
+            );
+          }
+        case MainCommands.removeOrganization:
+          final folder = call.arguments;
+          if (folder is String) await workspace.removeOrganization(folder);
+        case MainCommands.moveOrganization:
+          if (call.arguments case {
+            'folder': final String folder,
+            'delta': final int delta,
+          }) {
+            await workspace.moveOrganization(folder, delta);
           }
         default:
           throw MissingPluginException('Unknown command ${call.method}');

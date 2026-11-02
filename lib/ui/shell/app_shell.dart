@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../../platform/lifecycle.dart';
 import '../../platform/native.dart';
 import '../../state/clock.dart';
 import '../../state/prefs.dart';
@@ -48,6 +49,11 @@ class _AppShellState extends ConsumerState<AppShell> with WindowListener {
   void initState() {
     super.initState();
     windowManager.addListener(this);
+    ref.listenManual(
+      workspaceDataProvider.select((w) => w?.organization.name),
+      (_, name) => AppLifecycle.instance.showOrganization(name),
+      fireImmediately: true,
+    );
     // Show release notes once after an update brings new ones (fresh installs just get the sidebar entry).
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final seen = ref.read(prefsProvider).whatsNewSeen;

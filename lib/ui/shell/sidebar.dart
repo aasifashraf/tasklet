@@ -11,6 +11,7 @@ import '../../state/ui_state.dart';
 import '../../state/workspace.dart';
 import '../glyphs.dart';
 import '../icon_picker.dart';
+import '../organizations.dart';
 import '../pages/restore_dialog.dart';
 import '../task/new_task_dialog.dart';
 import '../theme.dart';
@@ -56,11 +57,11 @@ class _SidebarState extends ConsumerState<Sidebar> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 10, 8, 6),
+            padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
             child: Row(
               children: [
-                Text('Tasklet', style: TextStyles.section(context)),
-                const Spacer(),
+                const Expanded(child: OrganizationSwitcher()),
+                const SizedBox(width: 4),
                 IconBtn(
                   icon: Icons.edit_square,
                   tooltip: 'New Task (Ctrl+N)',

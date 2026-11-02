@@ -4,97 +4,16 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path/path.dart' as p;
 
 import '../platform/native.dart';
 import '../state/workspace.dart';
+import 'organizations.dart';
 import 'theme.dart';
 
 /// Native folder picker for an existing folder. Returns null if cancelled.
 Future<String?> pickExistingFolder() => FilePicker.getDirectoryPath(
   dialogTitle: 'Choose a folder for your Tasklet data',
 );
-
-/// "Create New Folder…" (SPEC §10): the native folder picker chooses where, then a name prompt (default
-/// "Tasklet"). A save-file dialog isn't used because confirming "overwrite" on an existing file would destroy it
-/// (docs/DECISIONS.md D9). Returns the created folder, or null if cancelled.
-Future<String?> pickNewFolder(BuildContext context) async {
-  final parent = await FilePicker.getDirectoryPath(
-    dialogTitle: 'Choose where to create your Tasklet folder',
-  );
-  if (parent == null || !context.mounted) return null;
-  final name = await showDialog<String>(
-    context: context,
-    builder: (_) => _FolderNameDialog(parent: parent),
-  );
-  if (name == null) return null;
-  final dir = Directory(p.join(parent, name));
-  await dir.create();
-  return dir.path;
-}
-
-class _FolderNameDialog extends StatefulWidget {
-  const _FolderNameDialog({required this.parent});
-  final String parent;
-
-  @override
-  State<_FolderNameDialog> createState() => _FolderNameDialogState();
-}
-
-class _FolderNameDialogState extends State<_FolderNameDialog> {
-  final _controller = TextEditingController(text: 'Tasklet');
-  String? _error;
-
-  static final _invalid = RegExp(r'[<>:"/\|?*\x00-\x1F]');
-
-  void _submit() {
-    final name = _controller.text.trim();
-    if (name.isEmpty || _invalid.hasMatch(name) || name.endsWith('.')) {
-      setState(() => _error = 'Use a name without < > : " /  | ? *');
-    } else if (FileSystemEntity.typeSync(p.join(widget.parent, name)) !=
-        FileSystemEntityType.notFound) {
-      setState(() => _error = 'Something named "$name" already exists there.');
-    } else {
-      Navigator.pop(context, name);
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: Text('New folder', style: TextStyles.section(context)),
-    content: SizedBox(
-      width: 360,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('In ${widget.parent}', style: TextStyles.meta(context)),
-          const SizedBox(height: 10),
-          TextField(
-            controller: _controller,
-            autofocus: true,
-            style: TextStyles.body(context),
-            onSubmitted: (_) => _submit(),
-            decoration: InputDecoration(errorText: _error),
-          ),
-        ],
-      ),
-    ),
-    actions: [
-      OutlinedButton(
-        onPressed: () => Navigator.pop(context),
-        child: const Text('Cancel'),
-      ),
-      FilledButton(onPressed: _submit, child: const Text('Create')),
-    ],
-  );
-}
 
 /// First launch / no folder chosen (SPEC §10).
 class OnboardingPage extends ConsumerStatefulWidget {
@@ -158,7 +77,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
               Text(
                 'Tasklet keeps your tasks as plain files in a folder you choose. No account, no server. '
                 'Pick a folder inside OneDrive, Dropbox, Google Drive or iCloud Drive and your tasks will sync '
-                'across your computers.',
+                'across your computers. Each folder is an organization; add more later (work, freelance, '
+                'open source) and switch between them at the top of the sidebar.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 13, color: t.secondary, height: 1.5),
               ),
@@ -179,10 +99,23 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                 width: 240,
                 child: OutlinedButton(
                   onPressed: _busy == null
-                      ? () => _run('create', () => pickNewFolder(context))
+                      ? () => _run('create', () async {
+                          final created = await showNewOrganizationDialog(
+                            context,
+                          );
+                          if (created != null) {
+                            await ref
+                                .read(workspaceProvider.notifier)
+                                .addOrganization(
+                                  created.folder,
+                                  identity: created.info,
+                                );
+                          }
+                          return null; // already opened
+                        })
                       : null,
                   child: Text(
-                    _busy == 'create' ? 'Creating…' : 'Create New Folder…',
+                    _busy == 'create' ? 'Creating…' : 'Create Organization…',
                   ),
                 ),
               ),

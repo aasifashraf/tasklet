@@ -73,6 +73,8 @@ class RepairNotes extends Notifier<List<String>> {
     for (final n in state)
       if (n != note) n,
   ];
+
+  void clear() => state = const [];
 }
 
 final repairNotesProvider = NotifierProvider<RepairNotes, List<String>>(

@@ -48,6 +48,9 @@ planned.
 ## Features
 
 ### Organize
+- **Organizations** keep separate lives apart: your employer, freelance clients, open source. Each one is its own
+  folder with its own projects, labels and quick filters, so each can sync through a different service (the company
+  OneDrive, your personal Dropbox). Switch at the top of the sidebar or with Ctrl+Alt+1 … 9.
 - **Projects** with a short, permanent key, so every task gets an ID like `WEB-12` that never changes, even after a
   rename.
 - **Tasks without a project** are allowed and get IDs like `TSK-3`.
@@ -112,8 +115,9 @@ The installer isn't code-signed yet, so Windows SmartScreen may show a warning t
 ## Getting started
 
 1. Start Tasklet. On first launch it asks where to keep your data.
-2. Choose **Create New Folder…** (for example inside your OneDrive folder) or **Choose Existing Folder…** to open a
-   folder you already use with Tasklet on another computer.
+2. Choose **Create Organization…** (name it, then pick where its folder goes, for example inside your OneDrive
+   folder) or **Choose Existing Folder…** to open a folder you already use with Tasklet on another computer.
+   Add more organizations later from the top of the sidebar or the **Organization** menu.
 3. Create a project from the **Projects** page, then add tasks with **Ctrl+N**.
 
 ### Keyboard shortcuts
@@ -125,6 +129,7 @@ The installer isn't code-signed yet, so Windows SmartScreen may show a warning t
 | Search the current board | Ctrl+F |
 | Delete the selected or open task | Delete or Ctrl+Backspace |
 | Go to Dashboard, Today, All Tasks, … (sidebar order) | Ctrl+1 … Ctrl+7 |
+| Switch to the first nine organizations | Ctrl+Alt+1 … Ctrl+Alt+9 |
 | Settings | Ctrl+, |
 | Refresh from disk | F5 |
 | Close the detail panel or cancel a drag | Esc |
@@ -133,9 +138,11 @@ On macOS, use ⌘ instead of Ctrl.
 
 ## Your data
 
+Each organization is one folder:
+
 ```text
-<your folder>/
-  tasklet-workspace.json     marker file and format version
+<organization folder>/
+  tasklet-workspace.json     marker file: format version, and the organization's name, icon and color
   labels.json                workspace labels
   views.json                 quick filters
   projects/

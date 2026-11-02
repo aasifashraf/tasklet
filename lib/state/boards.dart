@@ -78,10 +78,15 @@ ViewDisplay defaultDisplay(BoardKind kind) => switch (kind) {
   _ => ViewDisplay(),
 };
 
-/// Session-only filters per board (reset on relaunch). Saved views keep theirs in the view instead.
+/// Session-only filters per board (reset on relaunch and in another organization). Saved views keep theirs in the
+/// view instead.
 class SessionFilters extends Notifier<Map<String, BoardFilters>> {
   @override
-  Map<String, BoardFilters> build() => {};
+  Map<String, BoardFilters> build() {
+    ref.watch(openFolderProvider);
+    return {};
+  }
+
   void set(String boardId, BoardFilters f) => state = {...state, boardId: f};
 }
 
@@ -93,7 +98,11 @@ final sessionFiltersProvider =
 /// Session-only search text per board; never saved, not even in views (SPEC §6). null = search field closed.
 class SessionSearch extends Notifier<Map<String, String?>> {
   @override
-  Map<String, String?> build() => {};
+  Map<String, String?> build() {
+    ref.watch(openFolderProvider);
+    return {};
+  }
+
   void set(String boardId, String? text) => state = {...state, boardId: text};
 }
 

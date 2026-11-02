@@ -16,6 +16,7 @@ import '../../state/toast.dart';
 import '../../state/ui_state.dart';
 import '../../state/workspace.dart';
 import '../board/task_tiles.dart';
+import '../organizations.dart';
 import '../task/new_task_dialog.dart';
 import '../theme.dart';
 import '../whats_new.dart';
@@ -23,11 +24,20 @@ import '../whats_new.dart';
 /// One menu command: label, accelerator, and action (SPEC §12). The same table builds the Windows in-window menu
 /// bar, the macOS native menu bar, and the keyboard shortcuts.
 class AppCommand {
-  const AppCommand(this.label, this.run, {this.shortcut, this.enabled = true});
+  const AppCommand(
+    this.label,
+    this.run, {
+    this.shortcut,
+    this.enabled = true,
+    this.checked = false,
+  });
   final String label;
   final VoidCallback run;
   final SingleActivator? shortcut;
   final bool enabled;
+
+  /// Shows a check mark (the open organization).
+  final bool checked;
 }
 
 class CommandGroup {
@@ -165,6 +175,28 @@ List<CommandGroup> buildCommands(BuildContext context, WidgetRef ref) {
           shortcut: i < digits.length ? accel(digits[i]) : null,
         ),
     ]),
+    CommandGroup('Organization', [
+      for (final (i, o) in prefs.organizations.indexed)
+        AppCommand(
+          o.info.name,
+          () => switchToOrganization(context, ref, o.folder),
+          shortcut: organizationShortcut(i),
+          checked: ws != null && sameFolder(o.folder, ws.folder),
+        ),
+      null,
+      AppCommand('New Organization…', () => newOrganization(context, ref)),
+      AppCommand('Open Existing Folder…', () => openExistingOrganization(ref)),
+      if (ws != null)
+        AppCommand(
+          'Edit Organization…',
+          () => editOrganization(context, ref, (
+            folder: ws.folder,
+            info: ws.organization,
+          )),
+          enabled: !readOnly,
+        ),
+      AppCommand('Manage Organizations…', openSettingsWindow),
+    ]),
     CommandGroup('Window', [AppCommand('Settings', openSettingsWindow)]),
     CommandGroup('Help', [
       AppCommand("What's New", () => showWhatsNew(context, ref)),
@@ -222,7 +254,7 @@ class AppMenu extends ConsumerWidget {
                     members: [
                       for (final c in section)
                         PlatformMenuItem(
-                          label: c.label,
+                          label: c.checked ? '✓ ${c.label}' : c.label,
                           shortcut: c.shortcut,
                           onSelected: c.enabled ? c.run : null,
                         ),
@@ -275,6 +307,13 @@ class AppMenu extends ConsumerWidget {
                             MenuItemButton(
                               onPressed: c.enabled ? c.run : null,
                               shortcut: c.shortcut,
+                              trailingIcon: c.checked
+                                  ? Icon(
+                                      Icons.check,
+                                      size: 14,
+                                      color: t.primary,
+                                    )
+                                  : null,
                               child: Text(
                                 c.label,
                                 style: const TextStyle(fontSize: 12),

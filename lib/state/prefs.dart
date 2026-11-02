@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
 
 import '../core/models.dart';
+import '../core/organization.dart';
 import '../core/today_rules.dart';
 import '../data/prefs_store.dart';
 
@@ -84,6 +86,19 @@ class ReminderSettings {
   );
 }
 
+/// An organization on this computer: its folder and (cached) identity.
+typedef OrgEntry = ({String folder, OrgInfo info});
+
+/// Whether two paths name the same folder (case-insensitive on Windows and macOS).
+bool sameFolder(String a, String b) =>
+    p.canonicalize(a).toLowerCase() == p.canonicalize(b).toLowerCase();
+
+/// The stored form of [organizations] for [PrefKeys.organizations].
+List<Map<String, Object?>> encodeOrganizations(List<OrgEntry> organizations) =>
+    [
+      for (final o in organizations) {'folder': o.folder, ...o.info.toJson()},
+    ];
+
 /// Keys of the device-local prefs file.
 abstract final class PrefKeys {
   static const dataFolder = 'dataFolder';
@@ -102,6 +117,7 @@ abstract final class PrefKeys {
   static const reminderEnabledSince = 'reminderEnabledSince';
   static const whatsNewSeen = 'whatsNewSeen';
   static const recentIcons = 'recentIcons';
+  static const organizations = 'organizations';
   static String boardDisplay(String boardId) => 'display:$boardId';
   static String collapsedGroups(String boardId) => 'collapsed:$boardId';
 }
@@ -111,6 +127,9 @@ class Prefs {
   Prefs(this._v);
   final Map<String, Object?> _v;
 
+  /// The raw stored value of [key].
+  Object? operator [](String key) => _v[key];
+
   T? _get<T>(String key) => _v[key] is T ? _v[key] as T : null;
   List<String> _list(String key) => [
     if (_v[key] case final List<Object?> l)
@@ -118,7 +137,32 @@ class Prefs {
         if (e is String) e,
   ];
 
+  /// The open organization's folder.
   String? get dataFolder => _get<String>(PrefKeys.dataFolder);
+
+  /// Organizations on this computer in the user's order, each folder once (docs/DECISIONS.md D15). The open folder
+  /// is always listed, so a settings file from before organizations shows it as the first organization. Names,
+  /// icons and colors are a cache of each folder's marker, refreshed when it opens.
+  List<OrgEntry> get organizations {
+    final list = <OrgEntry>[];
+    void add(String folder, OrgInfo info) {
+      if (!list.any((o) => sameFolder(o.folder, folder))) {
+        list.add((folder: folder, info: info));
+      }
+    }
+
+    if (_v[PrefKeys.organizations] case final List<Object?> stored) {
+      for (final e in stored) {
+        if (e case {'folder': final String folder}) {
+          add(folder, OrgInfo.fromJson(e, folderName(folder)));
+        }
+      }
+    }
+    if (dataFolder case final current?) {
+      add(current, OrgInfo(name: folderName(current)));
+    }
+    return list;
+  }
 
   ThemeChoice get theme => ThemeChoice.values.firstWhere(
     (t) => t.name == _v[PrefKeys.theme],

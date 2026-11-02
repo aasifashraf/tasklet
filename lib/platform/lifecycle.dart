@@ -51,6 +51,17 @@ class AppLifecycle with WindowListener {
       ..setVisible(true);
   }
 
+  /// Names the open organization in the window title and tray tooltip ("Acme Corp - Tasklet").
+  Future<void> showOrganization(String? name) async {
+    final title = name == null ? 'Tasklet' : '$name - Tasklet';
+    _tray?.setTooltip(title);
+    try {
+      await windowManager.setTitle(title);
+    } catch (_) {
+      // No window manager (tests): the title is cosmetic.
+    }
+  }
+
   @override
   Future<void> onWindowClose() async {
     await windowManager.hide();

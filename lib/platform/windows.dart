@@ -15,6 +15,16 @@ abstract final class MainCommands {
   static const showReleaseNotes = 'showReleaseNotes';
   static const sendTestNotification = 'sendTestNotification';
   static const chooseFolder = 'chooseFolder';
+
+  // Organizations (docs/DECISIONS.md D15): the main window owns the open folder, so Settings asks it.
+  static const switchOrganization = 'switchOrganization';
+
+  /// Arguments: `{folder, name, icon, color}`.
+  static const updateOrganization = 'updateOrganization';
+  static const removeOrganization = 'removeOrganization';
+
+  /// Arguments: `{folder, delta}` (-1 up, 1 down).
+  static const moveOrganization = 'moveOrganization';
 }
 
 const _settingsArgument = 'settings';

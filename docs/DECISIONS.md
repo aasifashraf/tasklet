@@ -80,8 +80,8 @@ and the destructive button is red. Task deletion never confirms (SPEC §7.4).
 
 ## D9. Creating a new data folder
 
-"Create New Folder…" (SPEC §10) uses the native folder picker to choose *where*, then a small name prompt (default
-"Tasklet") that refuses names already in use. A native save-file dialog was rejected: it writes a file at the chosen
+"Create Organization…" (SPEC §10's "Create New Folder…", D15) asks for the organization's name and uses the native
+folder picker to choose *where*; the folder is named after the organization and must not exist yet. A native save-file dialog was rejected: it writes a file at the chosen
 path, and confirming its "replace existing file?" prompt would destroy whatever file had that name.
 
 ## D10. macOS sandbox
@@ -152,3 +152,30 @@ have an icon, and there are 16 colors.
   them (D1). Every color must reach 3:1 against every surface as a glyph, so green, orange and yellow (and the new
   colors) use darker shades in the light theme; `test/ui/design_system_test.dart` checks this.
 - Quick filters keep their stacked-layers glyph with the 16 colors.
+
+## D15. Organizations are data folders
+
+SPEC §1 has one workspace (one folder). People who work for an employer, freelance and contribute to open source
+want those kept apart, sometimes on the same day. An **organization** is one Tasklet data folder; the app opens one at
+a time and switches between them from the sidebar header, the Organization menu or Ctrl+Alt+1 … 9.
+
+- Why folders, not an organization field inside one folder: complete separation for free (projects, labels, quick
+  filters, No Project, keys, backups, Today, dashboard, reports and reminders all already work per folder); each
+  organization can sync through a different service, so work data can stay in the company's cloud; no data-format
+  migration; an organization moves, backs up or is shared as a plain folder.
+- Identity: `name`, `icon` and `color` in the folder's marker (`tasklet-workspace.json`), so they sync with it. A
+  marker without a name (a folder from before organizations) shows the folder's name. Saving replaces only the fields
+  the user changed, so values from a newer version and unknown keys survive. Older versions only read the marker's
+  `formatVersion` and never rewrite it, so the format version stays 1.
+- This computer's list: the `organizations` device pref holds the folders in the user's order, with each one's name,
+  icon and color cached for the switcher; it refreshes whenever that folder opens. `dataFolder` stays the open one,
+  so older settings files still work: their folder becomes the first organization. The list isn't synced: on a new
+  computer, add each folder with Open Existing Folder… (its name comes from its marker). Removing an organization
+  only forgets it on this computer; its folder is never deleted.
+- Switching saves pending edits into the current folder first. Board filters and searches, the open task, Undo and
+  repair notices belong to the folder and start empty in the other one. Reminders, badges and the tray follow the
+  open organization only. Board layout preferences for All Tasks and Today stay per computer, not per organization
+  (a personal preference, and project and quick-filter boards are already per folder).
+- The window title and tray tooltip name the open organization ("Acme Corp - Tasklet").
+- Settings → Organizations lists them; its changes go to the main window, which owns the open folder.
+

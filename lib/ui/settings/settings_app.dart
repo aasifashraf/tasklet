@@ -6,6 +6,7 @@ import '../../core/reminder.dart';
 import '../../platform/native.dart';
 import '../../platform/windows.dart';
 import '../../state/prefs.dart';
+import '../organizations.dart';
 import '../startup.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -33,7 +34,7 @@ enum _Tab {
   general('General', Icons.tune),
   sidebar('Sidebar', Icons.view_sidebar_outlined),
   notifications('Notifications', Icons.notifications_none),
-  data('Data', Icons.folder_outlined);
+  organizations('Organizations', Icons.domain);
 
   const _Tab(this.label, this.icon);
   final String label;
@@ -111,7 +112,7 @@ class _SettingsPageState extends State<_SettingsPage> {
               _Tab.general => const _GeneralTab(),
               _Tab.sidebar => const _SidebarTab(),
               _Tab.notifications => const _NotificationsTab(),
-              _Tab.data => const _DataTab(),
+              _Tab.organizations => const _OrganizationsTab(),
             },
           ),
         ],
@@ -511,56 +512,170 @@ class _NotificationsTabState extends ConsumerState<_NotificationsTab> {
   }
 }
 
-class _DataTab extends ConsumerWidget {
-  const _DataTab();
+/// Organizations on this computer (docs/DECISIONS.md D15). Changes go to the main window, which owns the open
+/// folder; the list here follows the shared prefs file.
+class _OrganizationsTab extends ConsumerWidget {
+  const _OrganizationsTab();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final folder = ref.watch(prefsProvider.select((p) => p.dataFolder));
-    final cloud = folder == null ? null : cloudProviderFor(folder);
+    final prefs = ref.watch(prefsProvider);
+    final orgs = prefs.organizations;
+    final open = prefs.dataFolder;
     return _tabBody([
-      _Row(
-        label: 'Data Folder',
-        description: 'Your tasks are plain JSON files here.',
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SelectableText(
-              folder ?? 'No folder chosen',
-              style: TextStyles.body(context),
-            ),
-            if (cloud != null) ...[
-              const SizedBox(height: 2),
-              Text('(Synced with $cloud)', style: TextStyles.meta(context)),
-            ],
-            const SizedBox(height: 10),
-            Row(
+      Text(
+        'Each organization is its own folder of plain JSON files, with its own projects, labels and quick filters. '
+        'Add one with New Organization… or Open Existing Folder… in the Organization menu or at the top of the '
+        'sidebar.',
+        style: TextStyles.bodySecondary(context),
+      ),
+      const SizedBox(height: 12),
+      for (final (i, o) in orgs.indexed)
+        _OrganizationRow(
+          entry: o,
+          isOpen: open != null && sameFolder(o.folder, open),
+          first: i == 0,
+          last: i == orgs.length - 1,
+        ),
+    ]);
+  }
+}
+
+class _OrganizationRow extends StatelessWidget {
+  const _OrganizationRow({
+    required this.entry,
+    required this.isOpen,
+    required this.first,
+    required this.last,
+  });
+  final OrgEntry entry;
+  final bool isOpen;
+  final bool first;
+  final bool last;
+
+  Future<void> _move(int delta) => sendToMainWindow<void>(
+    MainCommands.moveOrganization,
+    {'folder': entry.folder, 'delta': delta},
+  );
+
+  Future<void> _edit(BuildContext context) async {
+    final info = await showEditOrganizationDialog(context, entry.info);
+    if (info != null && info != entry.info) {
+      await sendToMainWindow<void>(MainCommands.updateOrganization, {
+        'folder': entry.folder,
+        ...info.toJson(),
+      });
+    }
+  }
+
+  Future<void> _remove(BuildContext context) async {
+    final ok = await confirmDestructive(
+      context,
+      title: "Remove '${entry.info.name}'?",
+      message:
+          'It disappears from the list on this computer. Its folder and files are not deleted; you can add it '
+          'again with Open Existing Folder….',
+      confirmLabel: 'Remove',
+    );
+    if (ok) {
+      await sendToMainWindow<void>(
+        MainCommands.removeOrganization,
+        entry.folder,
+      );
+    }
+  }
+
+  Future<void> _changeFolder() async {
+    final picked = await pickExistingFolder();
+    if (picked != null) {
+      await sendToMainWindow<void>(MainCommands.chooseFolder, picked);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Tokens.of(context);
+    final cloud = cloudProviderFor(entry.folder);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
+      decoration: BoxDecoration(
+        border: Border.all(color: t.border),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 1),
+            child: OrgGlyph(entry.info, size: 16),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                OutlinedButton(
-                  onPressed: folder == null
-                      ? null
-                      : () => openInFileManager(folder),
-                  child: const Text('Show in Folder'),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        entry.info.name,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyles.body(context)
+                            .copyWith(fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                    if (isOpen) ...[
+                      const SizedBox(width: 8),
+                      Text('Open', style: TextStyles.meta(context)),
+                    ],
+                  ],
                 ),
-                const SizedBox(width: 8),
-                OutlinedButton(
-                  onPressed: () async {
-                    final picked = await pickExistingFolder();
-                    if (picked != null) {
-                      await sendToMainWindow<void>(
-                        MainCommands.chooseFolder,
-                        picked,
-                      );
-                    }
-                  },
-                  child: const Text('Change…'),
-                ),
+                const SizedBox(height: 2),
+                SelectableText(entry.folder, style: TextStyles.meta(context)),
+                if (cloud != null)
+                  Text('Synced with $cloud', style: TextStyles.meta(context)),
               ],
             ),
-          ],
-        ),
+          ),
+          if (!isOpen)
+            TextButton(
+              onPressed: () => sendToMainWindow<void>(
+                MainCommands.switchOrganization,
+                entry.folder,
+              ),
+              child: const Text('Open'),
+            ),
+          MenuAnchor(
+            menuChildren: [
+              menuItem('Edit…', onPressed: () => _edit(context)),
+              menuItem(
+                'Show in Folder',
+                onPressed: () => openInFileManager(entry.folder),
+              ),
+              if (isOpen) menuItem('Change Folder…', onPressed: _changeFolder),
+              const Divider(),
+              menuItem('Move Up', onPressed: first ? null : () => _move(-1)),
+              menuItem('Move Down', onPressed: last ? null : () => _move(1)),
+              if (!isOpen) ...[
+                const Divider(),
+                menuItem(
+                  'Remove from This Computer…',
+                  danger: true,
+                  onPressed: () => _remove(context),
+                ),
+              ],
+            ],
+            builder: (context, controller, _) => IconBtn(
+              icon: Icons.more_horiz,
+              tooltip: 'More',
+              onPressed: () =>
+                  controller.isOpen ? controller.close() : controller.open(),
+            ),
+          ),
+        ],
       ),
-    ]);
+    );
   }
 }
 

@@ -1,5 +1,6 @@
 import 'colors.dart';
 import 'local_date.dart';
+import 'organization.dart';
 
 // Entities from SPEC §2.2.
 //
@@ -943,13 +944,18 @@ class Workspace {
     this.readOnly = false,
     this.hiddenEntryCount = 0,
     List<String> repairs = const [],
-  }) : projects = List.unmodifiable(projects),
+    OrgInfo? organization,
+  }) : organization = organization ?? OrgInfo(name: folderName(folder)),
+       projects = List.unmodifiable(projects),
        labels = List.unmodifiable(labels),
        views = List.unmodifiable(views),
        conflicts = List.unmodifiable(conflicts),
        repairs = List.unmodifiable(repairs);
 
   final String folder;
+
+  /// The organization this folder is (docs/DECISIONS.md D15).
+  final OrgInfo organization;
 
   /// Real projects (never includes the No-Project bucket).
   final List<Project> projects;
@@ -1039,8 +1045,10 @@ class Workspace {
     List<Label>? labels,
     List<SavedView>? views,
     List<SyncConflict>? conflicts,
+    OrgInfo? organization,
   }) => Workspace(
     folder: folder,
+    organization: organization ?? this.organization,
     projects: projects ?? this.projects,
     noProject: noProject ?? this.noProject,
     noProjectOnDisk: noProjectOnDisk ?? this.noProjectOnDisk,
