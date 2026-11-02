@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.1.0, November 2026
+
+- Organizations: each one is its own data folder with its own projects, labels and quick filters, so work,
+  freelance and open source stay apart and can sync through different services. Switch from the top of the sidebar,
+  the Organization menu or Ctrl+Alt+1 to 9. New Organization asks for a name, icon and location; Open Existing
+  Folder adds a folder from another computer. Settings > Organizations renames, reorders, relocates or forgets them
+  (files are never deleted). The window title names the open one. Your current folder becomes your first
+  organization.
+- Move a project to another organization from its menu: it is written there before it is removed here, with the
+  labels its tasks use and the same task numbers
+- Export an organization to one `.tasklet.json` file and import it as a new organization
+- Icons for projects and labels: about 640 project-related icons (Lucide) with search, recents and a color row
+- 16 colors (teal, cyan, indigo, pink, lime, amber, brown and slate added); green, orange and yellow are darker in
+  the light theme so every color reads on every background
+- Boards patch only the tasks that changed after an edit (about 20 ms instead of 170 ms with 100,000 tasks), search
+  is faster, and typing more of a search filters the previous result
+
 ## 1.0.3, November 2026
 
 - Restore earlier versions: Tasklet keeps recent versions of each project, the workspace labels and the quick

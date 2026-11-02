@@ -169,6 +169,18 @@ extension WorkspaceActions on WorkspaceController {
     await _save((s) => s.deleteProject(project, moveToTrash: trash));
   }
 
+  /// The open organization as one export (docs/DECISIONS.md D15), with every pending edit saved first. Throws
+  /// [UnsafeWriteException] while some file can't be read.
+  Future<OrgBundle> exportOrganization() async {
+    await flushSaves();
+    final store = _store;
+    final ws = workspace;
+    if (store == null || ws == null) {
+      throw const UnsafeWriteException('No organization is open.');
+    }
+    return store.exportBundle(ws, _now);
+  }
+
   /// Moves a project with its tasks into the organization at [folder] (docs/DECISIONS.md D15). It is written
   /// there first and only then removed here (to the Recycle Bin or `.trash`), so a failure never leaves it in
   /// neither. Returns why it couldn't move, or null.

@@ -8,6 +8,7 @@ import '../core/colors.dart';
 import '../core/local_date.dart';
 import '../core/merge.dart' show jsonEquals;
 import '../core/models.dart';
+import '../core/org_bundle.dart';
 import '../core/ordering.dart';
 import '../core/organization.dart';
 import '../core/task_ops.dart' as ops;

@@ -195,6 +195,16 @@ List<CommandGroup> buildCommands(BuildContext context, WidgetRef ref) {
           )),
           enabled: !readOnly,
         ),
+      null,
+      AppCommand(
+        'Export Organization…',
+        () => exportOrganization(ref),
+        enabled: ws != null,
+      ),
+      AppCommand(
+        'Import Organization…',
+        () => importOrganization(context, ref),
+      ),
       AppCommand('Manage Organizations…', openSettingsWindow),
     ]),
     CommandGroup('Window', [AppCommand('Settings', openSettingsWindow)]),

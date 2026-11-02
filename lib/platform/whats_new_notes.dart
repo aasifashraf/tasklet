@@ -33,6 +33,35 @@ class ReleaseNotes {
 /// `pubspec.yaml` version has none. The sheet shows the newest release first and earlier ones below it.
 const releases = <ReleaseNotes>[
   ReleaseNotes(
+    version: '1.1.0',
+    month: 'November 2026',
+    features: [
+      ReleaseFeature(
+        Icons.domain,
+        'Organizations',
+        'Keep work, freelance and open source apart. Each organization has its own projects, labels and quick filters in its own folder, so each can sync through a different service. Switch at the top of the sidebar or with Ctrl+Alt+1 to 9.',
+      ),
+      ReleaseFeature(
+        Icons.drive_file_move_outlined,
+        'Move, export and import',
+        'Move a project to another organization from its menu. Export an organization to one file and import it as a new organization, from the Organization menu.',
+      ),
+      ReleaseFeature(
+        Icons.palette_outlined,
+        'Icons and 16 colors',
+        'Give projects and labels an icon from about 640 project-related icons, with search, and pick from 16 colors. Click a project or label icon to change it.',
+      ),
+      ReleaseFeature(
+        Icons.speed,
+        'Faster with big workspaces',
+        'Boards update right away after an edit, search keeps up while you type, and the dashboard and reports stay quick with tens of thousands of tasks.',
+      ),
+    ],
+    fixes: [
+      'Green, orange and yellow are a little darker in the light theme, so icons and dots stay easy to see.',
+    ],
+  ),
+  ReleaseNotes(
     version: '1.0.3',
     month: 'November 2026',
     features: [

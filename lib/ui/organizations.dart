@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
+import 'dart:math';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +12,7 @@ import 'package:path/path.dart' as p;
 
 import '../core/colors.dart';
 import '../core/models.dart';
+import '../core/org_bundle.dart';
 import '../core/organization.dart';
 import '../data/workspace_store.dart';
 import '../platform/windows.dart';
@@ -79,13 +83,15 @@ Future<void> newOrganization(BuildContext context, WidgetRef ref) async {
 }
 
 /// The New Organization dialog: creates the (empty) folder and returns it with the identity to give it; null if
-/// cancelled. [parent] is the suggested location (next to the open organization's folder).
+/// cancelled. [parent] is the suggested location (next to the open organization's folder). [imported] prefills it
+/// from an export and turns it into the Import Organization dialog.
 Future<({String folder, OrgInfo info})?> showNewOrganizationDialog(
   BuildContext context, {
   String? parent,
+  OrgBundle? imported,
 }) => showDialog<({String folder, OrgInfo info})>(
   context: context,
-  builder: (_) => _NewOrganizationDialog(parent: parent),
+  builder: (_) => _NewOrganizationDialog(parent: parent, imported: imported),
 );
 
 /// Open Existing Folder…: adds a folder (a Tasklet folder from another computer, or any folder) as an
@@ -234,6 +240,15 @@ class OrganizationSwitcher extends ConsumerWidget {
                     info: ws.organization,
                   )),
           ),
+        const Divider(),
+        menuItem(
+          'Export Organization…',
+          onPressed: ws == null ? null : () => exportOrganization(ref),
+        ),
+        menuItem(
+          'Import Organization…',
+          onPressed: () => importOrganization(context, ref),
+        ),
         menuItem('Manage Organizations…', onPressed: openSettingsWindow),
       ],
       builder: (context, controller, _) => Hoverable(
@@ -333,18 +348,24 @@ class _OrganizationDialogState extends State<_OrganizationDialog> {
 /// New Organization: identity plus where its folder goes. The folder is named after the organization and must
 /// not exist yet (an existing folder is added with Open Existing Folder… instead).
 class _NewOrganizationDialog extends StatefulWidget {
-  const _NewOrganizationDialog({required this.parent});
+  const _NewOrganizationDialog({required this.parent, this.imported});
   final String? parent;
+  final OrgBundle? imported;
 
   @override
   State<_NewOrganizationDialog> createState() => _NewOrganizationDialogState();
 }
 
 class _NewOrganizationDialogState extends State<_NewOrganizationDialog> {
-  final _name = TextEditingController();
-  String? _icon = OrgInfo.defaultIcon;
-  TaskletColor _color = TaskletColor
-      .rotation[DateTime.now().microsecond % TaskletColor.rotation.length];
+  late final _name = TextEditingController(
+    text: widget.imported?.organization.name,
+  );
+  late String? _icon = widget.imported == null
+      ? OrgInfo.defaultIcon
+      : widget.imported!.organization.icon;
+  late TaskletColor _color =
+      widget.imported?.organization.color ??
+      TaskletColor.rotation[Random().nextInt(TaskletColor.rotation.length)];
   late String? _parent = widget.parent;
   String? _error;
   bool _creating = false;
@@ -410,8 +431,12 @@ class _NewOrganizationDialogState extends State<_NewOrganizationDialog> {
   Widget build(BuildContext context) {
     final t = Tokens.of(context);
     final parent = _parent;
+    final imported = widget.imported;
     return AlertDialog(
-      title: Text('New Organization', style: TextStyles.section(context)),
+      title: Text(
+        imported == null ? 'New Organization' : 'Import Organization',
+        style: TextStyles.section(context),
+      ),
       content: SizedBox(
         width: 400,
         child: Column(
@@ -419,8 +444,13 @@ class _NewOrganizationDialogState extends State<_NewOrganizationDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Each organization keeps its own projects, labels and quick filters in its own folder. Put it in '
-              'the cloud folder you use for that work (OneDrive, Dropbox, Google Drive or iCloud Drive) to sync it.',
+              imported == null
+                  ? 'Each organization keeps its own projects, labels and quick filters in its own folder. Put it '
+                        'in the cloud folder you use for that work (OneDrive, Dropbox, Google Drive or iCloud '
+                        'Drive) to sync it.'
+                  : 'The export has ${_count(imported.projects.length, 'project')} with '
+                        '${_count(imported.taskCount, 'task')}. They go into a new folder, with its labels and '
+                        'quick filters.',
               style: TextStyles.bodySecondary(context),
             ),
             const SizedBox(height: 14),
@@ -479,11 +509,114 @@ class _NewOrganizationDialogState extends State<_NewOrganizationDialog> {
         ),
         FilledButton(
           onPressed: _creating ? null : _submit,
-          child: Text(_creating ? 'Creating…' : 'Create'),
+          child: Text(
+            _creating
+                ? (imported == null ? 'Creating…' : 'Importing…')
+                : (imported == null ? 'Create' : 'Import'),
+          ),
         ),
       ],
     );
   }
+}
+
+String _count(int n, String noun) => '$n ${n == 1 ? noun : '${noun}s'}';
+
+/// Export Organization…: saves the open organization as one file (docs/DECISIONS.md D15).
+Future<void> exportOrganization(WidgetRef ref) async {
+  final toast = ref.read(toastProvider.notifier);
+  final OrgBundle bundle;
+  try {
+    bundle = await ref.read(workspaceProvider.notifier).exportOrganization();
+  } on UnsafeWriteException catch (e) {
+    toast.show(e.message, duration: const Duration(seconds: 8));
+    return;
+  }
+  final json = bundle.toJson();
+  final bytes = await Isolate.run(
+    () => utf8.encode(const JsonEncoder.withIndent('  ').convert(json)),
+  );
+  final name = bundle.organization.name.replaceAll(_unsafeFileChars, '-');
+  final uri = await FilePicker.saveFile(
+    dialogTitle: 'Export organization',
+    fileName: '$name${OrgBundle.fileExtension}',
+    bytes: bytes,
+  );
+  if (uri == null) return;
+  toast.show(
+    'Exported ${bundle.organization.name}: ${_count(bundle.projects.length, 'project')}, '
+    '${_count(bundle.taskCount, 'task')}.',
+  );
+}
+
+final _unsafeFileChars = RegExp(r'[<>:"/\\|?*\x00-\x1F]');
+
+/// Imports are read whole; larger files are refused rather than exhausting memory.
+const _maxImportBytes = 512 * 1024 * 1024;
+
+/// Import Organization…: makes a new organization from an export, in a new folder.
+Future<void> importOrganization(BuildContext context, WidgetRef ref) async {
+  final toast = ref.read(toastProvider.notifier);
+  final picked = await FilePicker.pickFiles(
+    dialogTitle: 'Import organization',
+    type: FileType.custom,
+    allowedExtensions: const ['json'],
+  );
+  final path = picked.singleOrNull?.path;
+  if (path == null) return;
+  final OrgBundle bundle;
+  try {
+    if (await File(path).length() > _maxImportBytes) {
+      throw const FormatException('This file is too large to import.');
+    }
+    bundle = await Isolate.run(() async {
+      final Object? json;
+      try {
+        json = jsonDecode(await File(path).readAsString());
+      } on FormatException {
+        throw const FormatException("This file isn't a Tasklet export.");
+      }
+      return OrgBundle.fromJson(json, isSafeId: WorkspaceStore.isSafeProjectId);
+    });
+  } on FormatException catch (e) {
+    toast.show(e.message, duration: const Duration(seconds: 8));
+    return;
+  } on FileSystemException catch (e) {
+    toast.show("Couldn't read that file: ${e.message}");
+    return;
+  }
+  if (!context.mounted) return;
+  final current = ref.read(workspaceDataProvider)?.folder;
+  final created = await showNewOrganizationDialog(
+    context,
+    parent: current == null ? null : p.dirname(current),
+    imported: bundle,
+  );
+  if (created == null) return;
+  try {
+    await WorkspaceStore.importBundle(created.folder, bundle, created.info);
+  } on Exception catch (e) {
+    toast.show(
+      e is UnsafeWriteException
+          ? e.message
+          : e is FileSystemException
+          ? "Couldn't write the organization: ${e.message}"
+          : "Couldn't import: $e",
+      duration: const Duration(seconds: 8),
+    );
+    try {
+      await Directory(created.folder)
+          .delete(); // still empty: created for this import
+    } on FileSystemException {
+      // Leave it; it's empty either way.
+    }
+    return;
+  }
+  await _add(ref, created.folder, null);
+  toast.show(
+    'Imported ${created.info.name}: ${_count(bundle.projects.length, 'project')}, '
+    '${_count(bundle.taskCount, 'task')}.',
+  );
 }
 
 /// The icon (opens the icon picker) next to the name field.

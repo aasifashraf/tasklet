@@ -182,4 +182,10 @@ a time and switches between them from the sidebar header, the Organization menu 
   here (Recycle Bin or `.trash`), so a failure never leaves it in neither. Workspace labels its tasks use go along
   as the project's own labels (the other folder's labels.json is never touched); task numbers stay; the key changes
   only if a project there already has it. A folder saved by a newer version refuses it.
+- Export Organization writes one `<name>.tasklet.json` (`app`, `kind: "organization"`, `formatVersion: 1`, the
+  identity, and labels, quick filters and project files as stored, so newer-version fields survive). It refuses
+  while a file can't be read rather than export a partial organization. Import Organization reads it whole (512 MB
+  at most, parsed off the UI thread), refuses another kind or a newer format, checks every project parses and has a
+  safe id, then writes it into a new, empty folder chosen in the New Organization dialog; on any failure that folder
+  is emptied again. Ids are kept: a new folder can't clash.
 

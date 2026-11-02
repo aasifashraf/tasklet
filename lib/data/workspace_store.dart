@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import '../core/colors.dart';
 import '../core/merge.dart';
 import '../core/models.dart';
+import '../core/org_bundle.dart';
 import '../core/organization.dart';
 import '../core/project_keys.dart';
 import '../core/task_ops.dart'
@@ -693,6 +694,77 @@ class WorkspaceStore {
         ),
       ),
     );
+  }
+
+  /// [ws] (this folder's last read, plus edits) as one export (D15). Entries this version can't show are included
+  /// as stored. Refuses while a file couldn't be read (mid-sync or damaged): the export would silently miss it.
+  OrgBundle exportBundle(Workspace ws, DateTime now) {
+    if (!ws.labelsReadable ||
+        !ws.viewsReadable ||
+        _unreadableProjects.isNotEmpty) {
+      throw const UnsafeWriteException(
+        "Can't export yet: some files in this organization's folder can't be read right now (still syncing, or "
+        'damaged). Try again in a moment.',
+      );
+    }
+    final noProject = ws.noProject;
+    return OrgBundle(
+      organization: ws.organization,
+      exportedAt: now,
+      labels: [for (final l in ws.labels) l.toJson(), ..._opaqueLabels],
+      views: [for (final v in ws.views) v.toJson(), ..._opaqueViews],
+      projects: [
+        for (final p in ws.projects) p.toJson(),
+        if (noProject.tasks.isNotEmpty || noProject.hiddenEntryCount > 0)
+          noProject.toJson(),
+      ],
+    );
+  }
+
+  /// Writes [bundle] into [folder], which must exist and be empty (New Organization creates it), as a new
+  /// organization named [organization]. On failure the files written so far are removed again.
+  static Future<void> importBundle(
+    String folder,
+    OrgBundle bundle,
+    OrgInfo organization,
+  ) async {
+    final dir = Directory(folder);
+    if (!await dir.exists()) throw WorkspaceFolderMissing(folder);
+    if (!await dir.list().isEmpty) {
+      throw const UnsafeWriteException(
+        'Import needs a new, empty folder for the organization.',
+      );
+    }
+    try {
+      await initialize(folder, organization: organization);
+      if (bundle.labels.isNotEmpty) {
+        await writeFileAtomic(
+          p.join(folder, labelsFileName),
+          encodeJson(bundle.labels),
+        );
+      }
+      if (bundle.views.isNotEmpty) {
+        await writeFileAtomic(
+          p.join(folder, viewsFileName),
+          encodeJson(bundle.views),
+        );
+      }
+      for (final project in bundle.projects) {
+        final id = project['id']! as String;
+        if (!isSafeProjectId(id)) {
+          throw UnsafeWriteException('Invalid project id: $id');
+        }
+        await writeFileAtomic(
+          p.join(folder, projectsDirName, '$id.json'),
+          encodeJson(project),
+        );
+      }
+    } catch (_) {
+      for (final entity in await dir.list().toList()) {
+        await entity.delete(recursive: true);
+      }
+      rethrow;
+    }
   }
 
   /// Saves the open organization's name, icon and color into the marker (D15); see [writeOrganizationAt].
