@@ -112,3 +112,25 @@ bug. Two additions protect it:
   regenerated; a marker without `formatVersion` (or `1.0`) counts as version 1; files over 100 MB are treated as
   unreadable. Manual order (SPEC §5.1) re-spaces only the neighbours around a drop when they share a position, so a
   card always lands where it's dropped.
+
+## D13. Merging edits from two computers
+
+Whole-file "last writer wins" could lose an edit when two computers changed one project between syncs. Every project
+save now compares the file's stamp (modified time and size) with what this computer last read or wrote. If it
+changed, the save merges instead of overwriting (`lib/core/merge.dart`), keeps a backup of the other version, and
+shows a notice:
+
+- Per task, field by field: a field changed on one side takes that side's value; changed on both, the more
+  recently updated task wins. Timestamps more than 5 minutes in the future count as "now", so a wrong clock can't win
+  every conflict.
+- A task deleted on one side stays deleted unless the other side edited it after (then it is kept and reported).
+- Tasks created on both sides are both kept; a duplicate number goes to the newer one (as on read).
+- Project fields merge the same way; the project's own labels list merges as one value (rarely edited on two
+  computers at once).
+- A changed file that can't be parsed yet (mid-sync) is never written over; the save fails with a message.
+
+The watcher recognises this store's own saves by the file stamp it wrote, not by a 2-second window, so another
+computer's change landing right after a local save is picked up. Deletion markers (tombstones) were not added: the
+last-read version already tells "deleted here" from "created there". They would only be needed to merge the sync
+service's conflict copies, which stay listed and untouched (D3). Refresh still waits while any save is running:
+typical saves take 6-15 ms, so per-file tracking would add complexity without a measurable benefit.

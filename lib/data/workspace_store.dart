@@ -5,6 +5,7 @@ import 'dart:isolate';
 import 'package:path/path.dart' as p;
 
 import '../core/colors.dart';
+import '../core/merge.dart';
 import '../core/models.dart';
 import '../core/project_keys.dart';
 import '../core/task_ops.dart'
@@ -97,6 +98,12 @@ class WorkspaceStore {
   /// The last parse of each project file and the (modified, size) it had then. A refresh re-parses only files whose
   /// stamp changed and keeps the same [Project] instances for the rest.
   final _parsed = <String, ({DateTime modified, int size, Project? project})>{};
+
+  /// Stamps of the files this store wrote last (see [isOwnWrite]).
+  final _ownStamps = <String, ({DateTime modified, int size})>{};
+
+  /// Merge notes from saves, collected by [takeMergeNotes].
+  final _mergeNotes = <String>[];
 
   /// What the last [read] saw (every file's stamp) and returned; an unchanged folder returns the same [Workspace].
   String? _lastSignature;
@@ -422,9 +429,78 @@ class WorkspaceStore {
         throw WorkspaceFolderMissing(folder);
       }
       await Directory(_projectsDir).create();
-      await _backUp(path, force: backupFirst);
-      await writeFileAtomic(path, await _encodeProject(project));
+      // Changed on another computer since we last read or wrote it? Merge instead of overwriting.
+      final merged = await _mergeIfChangedOnDisk(path, project);
+      final toWrite = merged ?? project;
+      await _backUp(path, force: backupFirst || merged != null);
+      await writeFileAtomic(path, await _encodeProject(toWrite));
+      _remember(path, toWrite);
     });
+  }
+
+  /// Compare-before-write (docs/SYSTEM_DESIGN.md section 14): if the file's stamp differs from what this store last
+  /// read or wrote, another computer (or tool) changed it. Returns [mine] merged with that version, or null when the
+  /// file is unchanged (or new). Refuses to write over a version it can't read.
+  Future<Project?> _mergeIfChangedOnDisk(String path, Project mine) async {
+    final known = _parsed[path];
+    final file = File(path);
+    if (known == null || !await file.exists()) return null;
+    final stat = await file.stat();
+    if (stat.modified == known.modified && stat.size == known.size) return null;
+    final theirs = stat.size > _isolateParseBytes
+        ? (await _parseOnIsolate([path])).single
+        : await _readProject(file);
+    if (theirs == null || theirs.id != mine.id) {
+      throw UnsafeWriteException(
+        "Couldn't save \"${mine.name}\": it was just changed on another computer and is still syncing. "
+        'Try again in a moment.',
+      );
+    }
+    final result = mergeProject(
+      base: known.project ?? theirs,
+      mine: mine,
+      theirs: theirs,
+      now: _now(),
+    );
+    _mergeNotes
+      ..add(
+        '"${mine.name}" was also changed on another computer; both sets of changes were combined.',
+      )
+      ..addAll(result.notes);
+    return result.project;
+  }
+
+  /// Records what this store just wrote: the file's stamp (so the watcher recognises its own save and the next
+  /// write can detect foreign changes) and, for project files, the written project as the next merge base.
+  void _remember(String path, [Project? written]) {
+    final stat = File(path).statSync();
+    if (stat.type == FileSystemEntityType.notFound) return;
+    _ownStamps[_key(path)] = (modified: stat.modified, size: stat.size);
+    if (written != null) {
+      _parsed[path] = (
+        modified: stat.modified,
+        size: stat.size,
+        project: written,
+      );
+    }
+  }
+
+  /// Notes about merges done by saves since the last call (shown as repair notices).
+  List<String> takeMergeNotes() {
+    final notes = [..._mergeNotes];
+    _mergeNotes.clear();
+    return notes;
+  }
+
+  /// Whether a change the folder watcher reports at [path] is this store's own save: pending in the queue, or the
+  /// file still has the stamp of our last write. Unlike a time window, a foreign change right after our save is
+  /// recognised as foreign.
+  bool isOwnWrite(String path) {
+    if (queue.isPending(path)) return true;
+    final own = _ownStamps[_key(path)];
+    if (own == null) return false;
+    final stat = FileStat.statSync(path);
+    return stat.modified == own.modified && stat.size == own.size;
   }
 
   /// Keeps the current version of [path] in [backups]. A backup failure never blocks the save itself.
@@ -461,6 +537,7 @@ class WorkspaceStore {
       }
       await _backUp(path, force: true);
       await writeFileAtomic(path, contents);
+      _remember(path);
     });
   }
 
@@ -485,6 +562,7 @@ class WorkspaceStore {
     return queue.enqueue(labelsPath, () async {
       await _backUp(labelsPath);
       await writeFileAtomic(labelsPath, encodeJson(json));
+      _remember(labelsPath);
     });
   }
 
@@ -499,6 +577,7 @@ class WorkspaceStore {
     return queue.enqueue(viewsPath, () async {
       await _backUp(viewsPath);
       await writeFileAtomic(viewsPath, encodeJson(json));
+      _remember(viewsPath);
     });
   }
 

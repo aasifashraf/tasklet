@@ -48,6 +48,9 @@ class SaveQueue {
     return tail;
   }
 
+  /// Whether a write of [path] is queued or running right now.
+  bool isPending(String path) => _tails.containsKey(_key(path));
+
   /// Whether this instance wrote [path] within [window] (used to ignore watcher events caused by our own saves).
   bool isRecentOwnWrite(
     String path, {

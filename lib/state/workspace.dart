@@ -130,7 +130,7 @@ class WorkspaceController extends Notifier<WorkspaceState> {
       });
       final watcher = FolderWatcher(
         folder,
-        isOwnWrite: store.queue.isRecentOwnWrite,
+        isOwnWrite: store.isOwnWrite,
       );
       _watcher = watcher;
       _watchSub = watcher.changes.listen((_) => refresh());
@@ -238,6 +238,13 @@ class WorkspaceController extends Notifier<WorkspaceState> {
     if (store == null) return;
     try {
       await write(store);
+      // A save that merged with another computer's version wrote more than what's on screen: show it.
+      final merged = store.takeMergeNotes();
+      if (merged.isNotEmpty) {
+        ref.read(repairNotesProvider.notifier).add(merged);
+        _refreshPending = true;
+        if (store.queue.inFlight == 0) unawaited(refresh());
+      }
     } catch (e) {
       ref
           .read(toastProvider.notifier)

@@ -105,7 +105,7 @@ class PrefsStore {
 
   Future<void> _reload() async {
     // A queued save of ours will land shortly and trigger its own event; reading now could undo it in memory.
-    if (_queue.isRecentOwnWrite(path, window: Duration.zero)) return;
+    if (_queue.isPending(path)) return;
     var loaded = await _tryLoad(path);
     if (loaded == null) {
       // Briefly locked by the other window's rename or an antivirus scan: try once more, else keep what we have.
