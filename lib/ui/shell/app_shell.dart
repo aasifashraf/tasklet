@@ -128,7 +128,8 @@ class _AppShellState extends ConsumerState<AppShell> with WindowListener {
   }
 }
 
-/// Non-blocking workspace notices: sync conflicts, read-only folder, hidden entries (SPEC §2.5, DECISIONS D1–D3).
+/// Non-blocking workspace notices: sync conflicts, read-only folder, hidden entries, repairs (SPEC §2.5,
+/// DECISIONS D1–D3, D12).
 class _Notices extends ConsumerWidget {
   const _Notices();
 
@@ -173,6 +174,14 @@ class _Notices extends ConsumerWidget {
               ],
               onDismiss: () => dismiss('conflict:${c.file}'),
             ),
+        for (final note in ref.watch(repairNotesProvider))
+          NoticeBanner(
+            icon: Icons.auto_fix_high_outlined,
+            message:
+                '$note Repaired after syncing; the previous version is in Restore Previous Version.',
+            onDismiss: () =>
+                ref.read(repairNotesProvider.notifier).dismiss(note),
+          ),
       ],
     );
   }

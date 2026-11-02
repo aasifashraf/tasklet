@@ -57,6 +57,28 @@ class DismissedNotices extends Notifier<Set<String>> {
 final dismissedNoticesProvider =
     NotifierProvider<DismissedNotices, Set<String>>(DismissedNotices.new);
 
+/// Repairs Tasklet made to synced data this session (`Workspace.repairs`), shown until dismissed. Kept here because
+/// the next read finds nothing left to repair.
+class RepairNotes extends Notifier<List<String>> {
+  @override
+  List<String> build() => const [];
+
+  void add(Iterable<String> notes) => state = [
+    ...state,
+    for (final n in notes)
+      if (!state.contains(n)) n,
+  ];
+
+  void dismiss(String note) => state = [
+    for (final n in state)
+      if (n != note) n,
+  ];
+}
+
+final repairNotesProvider = NotifierProvider<RepairNotes, List<String>>(
+  RepairNotes.new,
+);
+
 /// Whether a modal (New Task dialog, menu, other dialog) is open; keyboard shortcuts stand down (SPEC §12).
 class ModalDepth extends Notifier<int> {
   @override

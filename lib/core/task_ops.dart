@@ -143,6 +143,50 @@ Project? resolveDuplicateNumbers(Project project) {
   );
 }
 
+/// A task found in more than one project file, and where it was kept.
+typedef DuplicateTask = ({Task task, String keptIn, String droppedFrom});
+
+/// The same task id in two project files (a sync race between computers, or a file brought back from the sync
+/// service's own history) would show one task twice. The copy edited most recently wins (ties: the project with
+/// the smaller id, so every computer decides the same way); the others are removed. Returns the changed projects by
+/// id and one entry per removed copy.
+({Map<String, Project> changed, List<DuplicateTask> dropped})
+resolveDuplicateTaskIds(Iterable<Project> projects) {
+  final winner = <String, (Project, Task)>{};
+  for (final p in projects) {
+    for (final t in p.tasks) {
+      final best = winner[t.id];
+      if (best == null) {
+        winner[t.id] = (p, t);
+        continue;
+      }
+      final (bestProject, bestTask) = best;
+      final byUpdated = t.updatedAt.compareTo(bestTask.updatedAt);
+      if (byUpdated > 0 ||
+          (byUpdated == 0 && p.id.compareTo(bestProject.id) < 0)) {
+        winner[t.id] = (p, t);
+      }
+    }
+  }
+  final changed = <String, Project>{};
+  final dropped = <DuplicateTask>[];
+  for (final p in projects) {
+    final kept = [
+      for (final t in p.tasks)
+        if (identical(winner[t.id]!.$1, p)) t,
+    ];
+    if (kept.length == p.tasks.length) continue;
+    for (final t in p.tasks) {
+      final (keptIn, _) = winner[t.id]!;
+      if (!identical(keptIn, p)) {
+        dropped.add((task: t, keptIn: keptIn.id, droppedFrom: p.id));
+      }
+    }
+    changed[p.id] = p.copyWith(tasks: kept);
+  }
+  return (changed: changed, dropped: dropped);
+}
+
 /// Moves [task] from [from] to [to]. The task gets [restoreNumber] if given and still free in [to], otherwise
 /// [to]'s next number. Labels not in [allowedLabelIds] (labels usable in [to]) are dropped. Lands at the top of its
 /// status group. Returns (updated from, updated to, moved task).

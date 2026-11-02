@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
+import 'package:tasklet/core/colors.dart';
+import 'package:tasklet/core/models.dart';
 import 'package:tasklet/data/backups.dart';
 import 'package:tasklet/data/workspace_store.dart';
 
@@ -74,6 +76,33 @@ void main() {
           (await s.readBackup(b))!.name,
       ];
       expect(names, ['v4', 'v3', 'v2']);
+    },
+  );
+
+  test(
+    'labels.json is restored exactly, after backing up the current file',
+    () async {
+      final s = store();
+      await s.read();
+      await s.writeLabels([
+        Label(id: 'l1', name: 'bug', color: TaskletColor.red),
+      ]);
+      now = now.add(const Duration(hours: 1));
+      await s.writeLabels([
+        Label(id: 'l1', name: 'renamed', color: TaskletColor.red),
+      ]);
+      final first = (await s.labelsBackups()).single;
+      final original = await File(first.path).readAsString();
+
+      now = now.add(const Duration(minutes: 1));
+      await s.restoreListFile(first, labels: true);
+      expect(
+        await File(p.join(folder, 'labels.json')).readAsString(),
+        original,
+      );
+      final ws = await s.read();
+      expect(ws.labels.single.name, 'bug');
+      expect(await s.labelsBackups(), hasLength(2), reason: 'current kept');
     },
   );
 

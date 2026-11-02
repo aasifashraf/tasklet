@@ -900,10 +900,12 @@ class Workspace {
     List<SyncConflict> conflicts = const [],
     this.readOnly = false,
     this.hiddenEntryCount = 0,
+    List<String> repairs = const [],
   }) : projects = List.unmodifiable(projects),
        labels = List.unmodifiable(labels),
        views = List.unmodifiable(views),
-       conflicts = List.unmodifiable(conflicts);
+       conflicts = List.unmodifiable(conflicts),
+       repairs = List.unmodifiable(repairs);
 
   final String folder;
 
@@ -925,6 +927,10 @@ class Workspace {
 
   /// Tasks, labels and views hidden because they come from a newer version or are damaged (preserved on disk).
   final int hiddenEntryCount;
+
+  /// What the read that produced this snapshot repaired and saved (duplicate task numbers or tasks), in plain
+  /// words for a notice. Empty for snapshots made by edits.
+  final List<String> repairs;
 
   /// Real projects plus the No-Project bucket.
   Iterable<Project> get allProjects sync* {

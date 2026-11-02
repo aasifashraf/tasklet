@@ -9,6 +9,7 @@ import '../../state/workspace.dart';
 import '../glyphs.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'restore_dialog.dart';
 import 'list_parts.dart';
 import 'page_scaffold.dart';
 
@@ -83,6 +84,16 @@ class _LabelsPageState extends ConsumerState<LabelsPage> {
                 onPressed: () => setScope(p.id),
               ),
           ],
+        ),
+        // Project labels live in the project's file, so their history is the project's.
+        IconBtn(
+          icon: Icons.history,
+          tooltip: 'Restore Previous Version…',
+          onPressed: locked
+              ? null
+              : () => scopeProject == null
+                    ? showRestoreListDialog(context, ref, labels: true)
+                    : showRestoreProjectDialog(context, ref, scopeProject),
         ),
         TextButton.icon(
           onPressed: locked ? null : () => setState(() => _creating = true),

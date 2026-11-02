@@ -59,6 +59,43 @@ void main() {
     });
   });
 
+  group('one task in two project files', () {
+    test('the most recently edited copy is kept, the other removed', () {
+      final a = project(
+        'pa',
+        tasks: [
+          task('t1', title: 'old', updated: at(1)),
+          task('only-a'),
+        ],
+      );
+      final b = project(
+        'pb',
+        tasks: [task('t1', title: 'new', updated: at(9))],
+      );
+      final r = resolveDuplicateTaskIds([a, b]);
+      expect(r.changed.keys, ['pa']);
+      expect([for (final t in r.changed['pa']!.tasks) t.id], ['only-a']);
+      expect(r.dropped.single.keptIn, 'pb');
+      expect(r.dropped.single.droppedFrom, 'pa');
+    });
+
+    test('a tie is decided the same way on every computer', () {
+      final a = project('pa', tasks: [task('t1')]);
+      final b = project('pb', tasks: [task('t1')]);
+      expect(resolveDuplicateTaskIds([b, a]).dropped.single.keptIn, 'pa');
+      expect(resolveDuplicateTaskIds([a, b]).dropped.single.keptIn, 'pa');
+    });
+
+    test('unique ids change nothing', () {
+      final r = resolveDuplicateTaskIds([
+        project('pa', tasks: [task('a')]),
+        project('pb', tasks: [task('b')]),
+      ]);
+      expect(r.changed, isEmpty);
+      expect(r.dropped, isEmpty);
+    });
+  });
+
   test('a stored key that is not a valid key is regenerated from the name', () {
     final projects = [
       project('p1', name: 'Website', key: 'W-B'),

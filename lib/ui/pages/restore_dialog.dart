@@ -19,23 +19,83 @@ Future<void> showRestoreProjectDialog(
   BuildContext context,
   WidgetRef ref,
   Project project,
-) => showDialog<void>(
+) {
+  final controller = ref.read(workspaceProvider.notifier);
+  return _show(
+    context,
+    title: 'Restore ${project.name}',
+    what: 'a project',
+    load: () => controller.projectBackups(project.id),
+    restore: (backup, when) async {
+      final leftOut = await controller.restoreProjectBackup(project.id, backup);
+      final moved = switch (leftOut) {
+        null || 0 => '',
+        1 => ' 1 task that has since moved to another project stayed there.',
+        final n =>
+          ' $n tasks that have since moved to other projects stayed there.',
+      };
+      return leftOut == null
+          ? "Couldn't restore that version: the backup can't be read."
+          : 'Restored ${project.name} to $when.$moved';
+    },
+  );
+}
+
+/// "Restore Previous Version…" for the workspace labels ([labels]) or the quick filters.
+Future<void> showRestoreListDialog(
+  BuildContext context,
+  WidgetRef ref, {
+  required bool labels,
+}) {
+  final controller = ref.read(workspaceProvider.notifier);
+  final name = labels ? 'Labels' : 'Quick Filters';
+  return _show(
+    context,
+    title: 'Restore $name',
+    what: labels ? 'workspace labels' : 'quick filters',
+    load: () => controller.listBackups(labels: labels),
+    restore: (backup, when) async =>
+        await controller.restoreListBackup(backup, labels: labels)
+        ? 'Restored $name to $when.'
+        : '',
+  );
+}
+
+Future<void> _show(
+  BuildContext context, {
+  required String title,
+  required String what,
+  required Future<List<Backup>> Function() load,
+  required Future<String> Function(Backup backup, String when) restore,
+}) => showDialog<void>(
   context: context,
-  builder: (_) => _RestoreDialog(project: project),
+  builder: (_) =>
+      _RestoreDialog(title: title, what: what, load: load, restore: restore),
 );
 
 class _RestoreDialog extends ConsumerStatefulWidget {
-  const _RestoreDialog({required this.project});
-  final Project project;
+  const _RestoreDialog({
+    required this.title,
+    required this.what,
+    required this.load,
+    required this.restore,
+  });
+
+  final String title;
+
+  /// What changes create a backup ("a project", "quick filters"), for the empty state.
+  final String what;
+  final Future<List<Backup>> Function() load;
+
+  /// Restores [Backup] and returns the toast message ('' when the store already reported a failure).
+  final Future<String> Function(Backup backup, String when) restore;
 
   @override
   ConsumerState<_RestoreDialog> createState() => _RestoreDialogState();
 }
 
 class _RestoreDialogState extends ConsumerState<_RestoreDialog> {
-  late final Future<List<Backup>> _backups = ref
-      .read(workspaceProvider.notifier)
-      .projectBackups(widget.project.id);
+  late final Future<List<Backup>> _backups = widget.load();
   Backup? _selected;
   bool _restoring = false;
 
@@ -52,24 +112,10 @@ class _RestoreDialogState extends ConsumerState<_RestoreDialog> {
     final backup = _selected;
     if (backup == null) return;
     setState(() => _restoring = true);
-    final leftOut = await ref
-        .read(workspaceProvider.notifier)
-        .restoreProjectBackup(widget.project.id, backup);
+    final message = await widget.restore(backup, _label(backup));
     if (!mounted) return;
     Navigator.pop(context);
-    final moved = switch (leftOut) {
-      null || 0 => '',
-      1 => ' 1 task that has since moved to another project stayed there.',
-      final n =>
-        ' $n tasks that have since moved to other projects stayed there.',
-    };
-    ref
-        .read(toastProvider.notifier)
-        .show(
-          leftOut == null
-              ? "Couldn't restore that version: the backup can't be read."
-              : 'Restored ${widget.project.name} to ${_label(backup)}.$moved',
-        );
+    if (message.isNotEmpty) ref.read(toastProvider.notifier).show(message);
   }
 
   @override
@@ -88,10 +134,7 @@ class _RestoreDialogState extends ConsumerState<_RestoreDialog> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Restore ${widget.project.name}',
-                  style: TextStyles.section(context),
-                ),
+                Text(widget.title, style: TextStyles.section(context)),
                 const SizedBox(height: 8),
                 Text(
                   'Pick an earlier version. Your current version is kept as a backup, so you can switch back.',
@@ -105,8 +148,8 @@ class _RestoreDialogState extends ConsumerState<_RestoreDialog> {
                   )
                 else if (backups.isEmpty)
                   Text(
-                    'No earlier versions yet. Tasklet keeps one before you change a project, at most every 10 '
-                    'minutes, on this computer.',
+                    'No earlier versions yet. Tasklet keeps one before you change ${widget.what}, at most every '
+                    '10 minutes, on this computer.',
                     style: TextStyles.body(context),
                   )
                 else

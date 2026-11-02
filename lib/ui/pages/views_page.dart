@@ -11,6 +11,7 @@ import '../glyphs.dart';
 import '../shell/sidebar.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'restore_dialog.dart';
 import 'list_parts.dart';
 import 'page_scaffold.dart';
 
@@ -54,6 +55,13 @@ class _ViewsPageState extends ConsumerState<ViewsPage> {
     return PageScaffold(
       title: 'Quick Filters',
       actions: [
+        IconBtn(
+          icon: Icons.history,
+          tooltip: 'Restore Previous Version…',
+          onPressed: editable
+              ? () => showRestoreListDialog(context, ref, labels: false)
+              : null,
+        ),
         TextButton.icon(
           onPressed: editable ? _startCreate : null,
           icon: const Icon(Icons.add, size: 15),

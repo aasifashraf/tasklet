@@ -7,7 +7,8 @@ import 'package:path/path.dart' as p;
 import '../core/colors.dart';
 import '../core/models.dart';
 import '../core/project_keys.dart';
-import '../core/task_ops.dart' show resolveDuplicateNumbers;
+import '../core/task_ops.dart'
+    show resolveDuplicateNumbers, resolveDuplicateTaskIds;
 import 'atomic_file.dart';
 import 'backups.dart';
 import 'save_queue.dart';
@@ -134,7 +135,8 @@ class WorkspaceStore {
   /// - Unreadable files are skipped and remembered so they're never overwritten.
   /// - Sync conflict copies are reported and never touched; if a project's main file is missing, its newest copy
   ///   is shown instead (first save recreates the main file).
-  /// - Project keys and duplicate task numbers are resolved and the repairs persisted.
+  /// - A task found in two project files is kept once, then project keys and duplicate task numbers are resolved;
+  ///   the repairs are persisted and described in [Workspace.repairs].
   /// - Files over [maxFileBytes] are treated as unreadable (never loaded, never overwritten).
   /// - Only files that changed since the last read are parsed again; if nothing changed, the previous [Workspace]
   ///   instance is returned. [reparse] forces a full read (explicit Refresh).
@@ -236,20 +238,49 @@ class WorkspaceStore {
             favorite: false,
           );
 
-    // Self-heal what syncing two computers can break: duplicate project keys and duplicate task numbers.
+    // Self-heal what syncing two computers can break: one task in two project files, duplicate project keys and
+    // duplicate task numbers. Each repair is saved and described in `repairs` for a notice.
+    final duplicates = resolveDuplicateTaskIds([
+      ...canonical.values,
+      if (storedNoProject != null) noProject,
+    ]);
     final changedKeys = resolveProjectKeys(canonical.values);
     final healed = <Project>[];
+    final renumberNotes = <String>[];
     Project heal(Project pr) {
-      var next = changedKeys.containsKey(pr.id)
-          ? pr.copyWith(key: changedKeys[pr.id])
-          : pr;
-      next = resolveDuplicateNumbers(next) ?? next;
+      var next = duplicates.changed[pr.id] ?? pr;
+      if (changedKeys.containsKey(pr.id)) {
+        next = next.copyWith(key: changedKeys[pr.id]);
+      }
+      final renumbered = resolveDuplicateNumbers(next);
+      if (renumbered != null) {
+        for (final t in renumbered.tasks) {
+          final before = next.taskById(t.id)!.number;
+          if (before != t.number) {
+            renumberNotes.add(
+              'Two computers both created ${next.key}-$before; the newer one is now ${next.key}-${t.number}.',
+            );
+          }
+        }
+        next = renumbered;
+      }
       if (!identical(next, pr)) healed.add(next);
       return next;
     }
 
     final projects = [for (final pr in canonical.values) heal(pr)];
     if (storedNoProject != null) noProject = heal(noProject);
+    final nameOf = {
+      for (final pr in [...projects, noProject]) pr.id: pr.name,
+    };
+    final repairs = _readOnly
+        ? const <String>[]
+        : [
+            for (final d in duplicates.dropped)
+              '"${d.task.title}" was in both ${nameOf[d.keptIn]} and ${nameOf[d.droppedFrom]}; the most recently '
+                  'edited copy was kept in ${nameOf[d.keptIn]}.',
+            ...renumberNotes,
+          ];
 
     final last = _last;
     if (last != null &&
@@ -289,6 +320,7 @@ class WorkspaceStore {
       conflicts: conflicts,
       readOnly: _readOnly,
       hiddenEntryCount: hidden,
+      repairs: repairs,
     );
     // Self-heal writes change files, so that read is never reused.
     _last = healed.isEmpty ? workspace : null;
@@ -402,6 +434,34 @@ class WorkspaceStore {
     } on FileSystemException {
       // Out of space or locked: saving the user's change matters more than the history.
     }
+  }
+
+  /// Earlier versions of labels.json, newest first.
+  Future<List<Backup>> labelsBackups() async =>
+      await backups?.list(labelsPath) ?? const [];
+
+  /// Earlier versions of views.json (quick filters), newest first.
+  Future<List<Backup>> viewsBackups() async =>
+      await backups?.list(viewsPath) ?? const [];
+
+  /// Puts a labels.json or views.json backup back exactly as it was, after backing up the current file. Refused
+  /// like any write when the current file can't be read right now (it might be mid-sync). Callers re-read after.
+  Future<void> restoreListFile(Backup backup, {required bool labels}) {
+    _checkWritable();
+    final path = labels ? labelsPath : viewsPath;
+    if (!(labels ? _labelsReadable : _viewsReadable)) {
+      throw UnsafeWriteException(
+        'Not restoring: ${p.basename(path)} could not be read and might be mid-sync.',
+      );
+    }
+    return queue.enqueue(path, () async {
+      final contents = await File(backup.path).readAsString();
+      if (jsonDecode(contents) is! List) {
+        throw const FormatException('This backup is damaged.');
+      }
+      await _backUp(path, force: true);
+      await writeFileAtomic(path, contents);
+    });
   }
 
   /// Earlier versions of a project's file, newest first.

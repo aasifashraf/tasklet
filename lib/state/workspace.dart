@@ -16,6 +16,7 @@ import '../data/workspace_store.dart';
 import '../platform/trash.dart';
 import 'prefs.dart';
 import 'toast.dart';
+import 'ui_state.dart';
 
 const _uuid = Uuid();
 String newId() => _uuid.v4();
@@ -120,6 +121,7 @@ class WorkspaceController extends Notifier<WorkspaceState> {
       final ws = await store.read();
       if (generation != _generation) return;
       _store = store;
+      _noteRepairs(ws);
       state = ReadyState(ws);
       _inFlightSub = store.queue.inFlightChanges.listen((n) {
         if (n == 0 && _refreshPending) unawaited(refresh());
@@ -192,6 +194,8 @@ class WorkspaceController extends Notifier<WorkspaceState> {
     final mutations = _mutations;
     try {
       final ws = await store.read(reparse: full);
+      // Repairs are saved by the read itself, so report them even if this snapshot is then discarded.
+      if (generation == _generation) _noteRepairs(ws);
       // An edit or save that happened during the read supersedes it.
       if (generation != _generation ||
           mutations != _mutations ||
@@ -211,6 +215,12 @@ class WorkspaceController extends Notifier<WorkspaceState> {
       );
     } catch (_) {
       // Transient (e.g. mid-sync); keep showing the last good state.
+    }
+  }
+
+  void _noteRepairs(Workspace ws) {
+    if (ws.repairs.isNotEmpty) {
+      ref.read(repairNotesProvider.notifier).add(ws.repairs);
     }
   }
 
@@ -304,9 +314,11 @@ class WorkspaceController extends Notifier<WorkspaceState> {
     return project;
   }
 
+  /// Changes a project; does nothing if it's gone (deleted here or by sync while a menu was open).
   Future<void> updateProject(String id, Project Function(Project p) change) {
-    final updated = change(_project(id)).copyWith(updatedAt: _now);
-    return _putProject(updated);
+    final project = workspace?.projectById(id);
+    if (project == null) return Future.value();
+    return _putProject(change(project).copyWith(updatedAt: _now));
   }
 
   Future<void> renameProject(String id, String name) =>
@@ -319,7 +331,8 @@ class WorkspaceController extends Notifier<WorkspaceState> {
       updateProject(id, (p) => p.copyWith(archived: archived));
 
   Future<void> setFavorite(String id, bool favorite) {
-    final ws = _ws;
+    final ws = workspace;
+    if (ws == null) return Future.value();
     final maxFav = ws.projects
         .where((p) => p.favorite)
         .fold<double>(
@@ -342,15 +355,14 @@ class WorkspaceController extends Notifier<WorkspaceState> {
     String? after,
     required bool favorites,
   }) {
-    double orderOf(String? pid) {
-      final p = pid == null ? null : _ws.projectById(pid);
-      return favorites ? p!.favoriteOrder : p!.sortOrder;
+    // A neighbour that vanished meanwhile counts as an open end.
+    double? orderOf(String? pid) {
+      final p = pid == null ? null : workspace?.projectById(pid);
+      if (p == null) return null;
+      return favorites ? p.favoriteOrder : p.sortOrder;
     }
 
-    final value = sortOrderBetween(
-      before == null ? null : orderOf(before),
-      after == null ? null : orderOf(after),
-    );
+    final value = sortOrderBetween(orderOf(before), orderOf(after));
     return updateProject(
       id,
       (p) => favorites
@@ -404,10 +416,34 @@ class WorkspaceController extends Notifier<WorkspaceState> {
     return restored.tasks.length - tasks.length;
   }
 
+  /// Earlier versions of the workspace labels or quick filters file, newest first.
+  Future<List<Backup>> listBackups({required bool labels}) async =>
+      await (labels ? _store?.labelsBackups() : _store?.viewsBackups()) ??
+      const [];
+
+  /// Restores workspace labels or quick filters from a backup (the current file is backed up first) and re-reads
+  /// it. Returns false if it couldn't be restored (a toast says why).
+  Future<bool> restoreListBackup(Backup backup, {required bool labels}) async {
+    final store = _store;
+    if (store == null) return false;
+    var ok = true;
+    await _save((s) async {
+      try {
+        await s.restoreListFile(backup, labels: labels);
+      } catch (_) {
+        ok = false;
+        rethrow;
+      }
+    });
+    if (ok) await refresh();
+    return ok;
+  }
+
   /// Deletes a project file (to the Recycle Bin/Trash; see docs/DECISIONS.md D4). Callers confirm first.
   Future<void> deleteProject(String id) async {
-    final ws = _ws;
-    final project = _project(id);
+    final ws = workspace;
+    final project = ws?.projectById(id);
+    if (ws == null || project == null) return;
     _set(
       ws.copyWith(
         projects: [
@@ -657,10 +693,12 @@ class WorkspaceController extends Notifier<WorkspaceState> {
     String? projectId,
   }) async {
     if (projectId == null) {
+      final ws = workspace;
+      if (ws == null) return;
       final labels = [
-        for (final l in _ws.labels) l.id == labelId ? change(l) : l,
+        for (final l in ws.labels) l.id == labelId ? change(l) : l,
       ];
-      _set(_ws.copyWith(labels: labels));
+      _set(ws.copyWith(labels: labels));
       await _save((s) => s.writeLabels(labels));
     } else {
       await updateProject(
@@ -674,7 +712,8 @@ class WorkspaceController extends Notifier<WorkspaceState> {
 
   /// Deletes a label and strips it from every task that had it (SPEC §4.8). Callers confirm first.
   Future<void> deleteLabel(String labelId, {String? projectId}) async {
-    final ws = _ws;
+    final ws = workspace;
+    if (ws == null) return;
     final now = _now;
     Project strip(Project p) => p.copyWith(
       labels: [
@@ -733,19 +772,32 @@ class WorkspaceController extends Notifier<WorkspaceState> {
     return view;
   }
 
-  Future<void> updateView(String id, SavedView Function(SavedView v) change) =>
-      _putViews([
-        for (final v in _ws.views)
-          v.id == id ? change(v).copyWith(updatedAt: _now) : v,
-      ]);
+  /// Edits and deletes of quick filters; nothing happens when no workspace is open.
+  Future<void> _changeViews(
+    List<SavedView> Function(List<SavedView> views) change,
+  ) {
+    final ws = workspace;
+    if (ws == null) return Future.value();
+    return _putViews(change(ws.views));
+  }
 
-  Future<void> deleteView(String id) => _putViews([
-    for (final v in _ws.views)
-      if (v.id != id) v,
-  ]);
+  Future<void> updateView(String id, SavedView Function(SavedView v) change) =>
+      _changeViews(
+        (views) => [
+          for (final v in views)
+            v.id == id ? change(v).copyWith(updatedAt: _now) : v,
+        ],
+      );
+
+  Future<void> deleteView(String id) => _changeViews(
+    (views) => [
+      for (final v in views)
+        if (v.id != id) v,
+    ],
+  );
 
   Future<void> setViewPinned(String id, bool pinned) {
-    final maxOrder = _ws.views
+    final maxOrder = (workspace?.views ?? const <SavedView>[])
         .where((v) => v.inSidebar)
         .fold<double>(
           -sortOrderGap,
@@ -761,9 +813,10 @@ class WorkspaceController extends Notifier<WorkspaceState> {
   }
 
   Future<void> moveView(String id, {String? before, String? after}) {
+    // A neighbour that vanished meanwhile counts as an open end.
     double? orderOf(String? vid) => vid == null
         ? null
-        : _ws.views.firstWhere((v) => v.id == vid).sidebarOrder;
+        : workspace?.views.where((v) => v.id == vid).firstOrNull?.sidebarOrder;
     final value = sortOrderBetween(orderOf(before), orderOf(after));
     return updateView(id, (v) => v.copyWith(sidebarOrder: value));
   }

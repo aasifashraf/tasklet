@@ -151,6 +151,39 @@ void main() {
     });
 
     test(
+      'one task in two project files is kept once, saved, and explained',
+      () async {
+        final store = WorkspaceStore(folder, clock: () => t0);
+        await store.writeProject(
+          project(
+            'pa',
+            name: 'Infra',
+            key: 'OPS',
+            tasks: [task('t1', title: 'Rotate certs', updated: at(1))],
+          ),
+        );
+        await store.writeProject(
+          project(
+            'pb',
+            name: 'API',
+            key: 'API',
+            tasks: [task('t1', title: 'Rotate certs', updated: at(5))],
+          ),
+        );
+        final ws = await WorkspaceStore(folder, clock: () => t0).read();
+        expect(ws.projectById('pa')!.tasks, isEmpty);
+        expect(ws.projectById('pb')!.tasks.single.id, 't1');
+        expect(
+          ws.repairs.single,
+          contains('"Rotate certs" was in both API and Infra'),
+        );
+        final again = await WorkspaceStore(folder, clock: () => t0).read();
+        expect(again.projectById('pa')!.tasks, isEmpty, reason: 'saved');
+        expect(again.repairs, isEmpty);
+      },
+    );
+
+    test(
       'a file over the size cap is never loaded and never overwritten',
       () async {
         final path = p.join(folder, 'projects', 'p1.json');

@@ -33,6 +33,31 @@ class ReleaseNotes {
 /// `pubspec.yaml` version has none. The sheet shows the newest release first and earlier ones below it.
 const releases = <ReleaseNotes>[
   ReleaseNotes(
+    version: '1.0.3',
+    month: 'November 2026',
+    features: [
+      ReleaseFeature(
+        Icons.history,
+        'Restore earlier versions',
+        'Tasklet keeps recent versions of each project, your labels and quick filters on this computer. Use Restore Previous Version in a project menu, or the history button on the Labels and Quick Filters pages.',
+      ),
+      ReleaseFeature(
+        Icons.auto_fix_high_outlined,
+        'Repairs after syncing',
+        'If two computers created the same task number, or one task ended up in two projects, Tasklet fixes it and tells you what changed.',
+      ),
+    ],
+    fixes: [
+      'Undo changes back only what it changed, so edits synced from another computer are kept.',
+      'The task panel stays open when you move its task to another project.',
+      'Dropping a card between two cards always puts it exactly there.',
+      'Opening Settings twice quickly opens one window, and brings back a minimized one.',
+      'Changes from your sync service show up promptly even while it is busy.',
+      'Reports count done tasks correctly in every case, and very long date ranges stay fast.',
+      'Choosing or creating a data folder explains what went wrong if it fails.',
+    ],
+  ),
+  ReleaseNotes(
     version: '1.0.2',
     month: 'November 2026',
     features: [
