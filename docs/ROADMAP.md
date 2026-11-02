@@ -20,6 +20,22 @@ milestone's behavior working. Section numbers refer to [SPEC.md](SPEC.md).
 - [x] **10. What's New + menu bar + shortcuts + accessibility pass** (§12, §13)
 - [ ] **11. macOS hardening**: PlatformMenuBar, notification permission, dock reopen, signing/notarization
 
+## v1.1, released November 2026
+
+- [x] **Organizations**: one data folder each, switcher, Organization menu, Ctrl+Alt+1 … 9, Settings tab, move a
+      project between organizations, export and import (DECISIONS D15)
+- [x] **Icons and 16 colors** for projects, labels and quick filters (D14)
+- [x] **Starter content** in new organizations: labels, quick filters, and a sample project in the first (D16)
+- [x] **Merging edits from two computers**, local backups and Restore Previous Version (D12, D13)
+- [x] **Performance**: incremental reads, patched boards, faster search, dashboard and reports at 100k tasks
+      ([PERFORMANCE.md](PERFORMANCE.md))
+
+## Next
+
+- [ ] Smoother dragging, searchable pickers and a frame-time test
+- [ ] Stress runs at 100,000 and 500,000 tasks; Help → Export Diagnostics
+- [ ] Code-signed Windows installer; macOS release (milestone 11)
+
 ## Phase 2, iOS + Android
 
 Reuse `lib/core/` and `lib/state/` unchanged. Adaptive shell (drawer sidebar, full-screen detail, Settings as a page,

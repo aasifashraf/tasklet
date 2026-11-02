@@ -19,7 +19,7 @@ Read with `Tokens.of(context)`. Never write `Color(0x…)` outside `theme.dart` 
 | `tertiary` | meta text, placeholders, idle icons, disabled items |
 | `accent` | the one action color: primary buttons, focus, Done |
 | `danger`, `warning`, `success` | destructive actions, warnings, confirmations |
-| `named(TaskletColor)` | the 8 user colors for projects, labels and quick filters: dots, icons and fills, never body text |
+| `named(TaskletColor)` | the 16 user colors for projects, labels, quick filters and organizations: glyphs, dots and fills, never body text; each reaches 3:1 on every surface (darker shades in the light theme where needed) |
 
 **Contrast floors** (checked by `test/ui/design_system_test.dart` on every surface, both themes): primary ≥ 7:1,
 secondary ≥ 4.5:1, tertiary ≥ 3:1. Use tertiary only for text that is not needed to understand the screen.
@@ -43,6 +43,9 @@ These are the values in use; new code picks from them (a token group is planned,
 - **Radius:** 6 for buttons and controls, 8 for cards, rows and panels, 12 for the chip/pill shell.
 - **Heights:** chip 24, compact control 26, sidebar row 30, button 30, list row 38.
 - **Icons:** 12 (inline meta), 14 (default), 16 (emphasis), painted glyphs in `glyphs.dart` for status/priority.
+  Projects, labels, quick filters and organizations show a user-picked Lucide icon (catalog in `lib/ui/icons/`,
+  generated from `tool/icons/catalog.txt`) or their default glyph (cube, dot, funnel). Always draw them with
+  `ProjectGlyph`, `LabelGlyph`, `ViewGlyph` or `OrgGlyph`, never a raw icon.
 - **Spacing:** multiples of 4 (4, 8, 12, 16, 24); 6 is allowed for tight icon-to-label gaps.
 - **Borders:** always 1px `border`; no shadows on resting elements in dark mode.
 - **Motion:** 120 ms for hover/fades, 200 ms for panels and drops, `Curves.easeOutCubic`. Respect
@@ -51,8 +54,9 @@ These are the values in use; new code picks from them (a token group is planned,
 ## Components
 
 Reuse before building: `PropChip` (the single 24 px chip shell for every property), `IconBtn` (icon-only button,
-always with a tooltip), `PillToggle`, `menuItem` / `colorSubmenu` / `ColorGrid`, `ListRowShell`, `PageScaffold`,
-`EmptyState`, `NoticeBanner`, `confirmDestructive`. A second implementation of any of these is a bug.
+always with a tooltip), `PillToggle`, `menuItem`, `IconPickerButton` / `iconMenuItem` / `showIconPicker` (icon and
+color), `ListRowShell`, `PageScaffold`, `EmptyState`, `NoticeBanner`, `confirmDestructive`. A second implementation of
+any of these is a bug.
 
 States every interactive element needs: hover, selected (if applicable), disabled (tertiary text, no hover),
 **keyboard focus** (accent ring; not yet consistent, see TODO), and a tooltip or label for screen readers.

@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/board.png" alt="Tasklet board with Backlog, Todo, In Progress and Done columns" width="900">
+  <img src="docs/screenshots/board.png" alt="Tasklet All Tasks board with Backlog, Todo, In Progress and Done columns, project and label icons, and the organization switcher in the sidebar" width="900">
 </p>
 
 ---
@@ -26,7 +26,8 @@
 
 Tasklet is a single-player task tracker inspired by the speed and look of tools like Linear, but intentionally
 simpler: no teams, no assignees, no accounts. Everything you create (tasks, projects, labels and quick filters) is stored
-as plain JSON files in a folder on your computer.
+as plain JSON files in a folder on your computer. Keep separate folders as **organizations** (your employer, freelance
+clients, open source) and switch between them in one click.
 
 Put that folder inside OneDrive, Dropbox, Google Drive, iCloud Drive or Syncthing, and your tasks follow you between
 computers without any Tasklet server. If you stop using Tasklet one day, your data is still readable text.
@@ -42,6 +43,8 @@ planned.
 | **Dashboard:** what's overdue, due today and coming up, plus what you finished. | **Detail panel:** every property as a chip; title and description save as you type. |
 | ![Project list layout in the light theme with collapsible status sections](docs/screenshots/list-light.png) | ![New Task dialog with status, priority, dates, labels and project chips](docs/screenshots/new-task.png) |
 | **List layout and light theme:** compact rows grouped by status. | **New Task (Ctrl+N):** type a title, set properties with chips, press Enter. |
+| ![Organization menu listing Acme Corp, Freelance and Open Source with Ctrl+Alt shortcuts, plus New, Open Existing, Edit, Export and Import](docs/screenshots/organizations.png) | ![Icon picker with search, 16 colors and project-related icons grouped by category](docs/screenshots/icon-picker.png) |
+| **Organizations:** each one is its own folder; switch at the top of the sidebar or with Ctrl+Alt+1 … 9. | **Icons and colors:** about 640 project-related icons and 16 colors for projects, labels and quick filters. |
 | ![Export Report dialog with chart preview by status, priority and project](docs/screenshots/reports.png) | |
 | **Reports:** preview charts, then export a prompt for any AI assistant. | |
 
@@ -99,7 +102,7 @@ anywhere.
 ### Make it yours
 - Light, dark or automatic theme.
 - Reorder or hide sidebar items (Settings → Sidebar).
-- A separate Settings window with General, Sidebar, Notifications and Data tabs.
+- A separate Settings window with General, Sidebar, Notifications and Organizations tabs.
 
 ## Download and install
 
@@ -204,16 +207,18 @@ lib/
   data/       the only code that touches files: workspace store, save queue,
               folder watcher, device settings
   state/      app state with Riverpod: workspace controller, boards, clock, undo, reminders
-  ui/         theme, icons, sidebar, board and list, task dialog and panel, pages,
-              settings window
+  ui/         theme, glyphs and the icon catalog, sidebar and organization switcher, board and
+              list, task dialog and panel, pages, settings window
   platform/   menus and shortcuts, windows, tray, notifications, Recycle Bin
-test/         unit tests (core, data) and widget tests
-docs/         SPEC.md (product specification), DECISIONS.md, ROADMAP.md
+test/         unit tests (core, data, state) and widget tests
+tool/         benchmark (tool/bench) and the icon catalog generator (tool/icons)
+docs/         SPEC.md (product specification), DECISIONS.md, ROADMAP.md, DESIGN_SYSTEM.md,
+              SYSTEM_DESIGN.md, PERFORMANCE.md
 installer/    Inno Setup script for the Windows installer
 ```
 
 **Built with:** Flutter, Riverpod, go_router, window_manager, desktop_multi_window, tray_manager,
-flutter_local_notifications, file_picker and watcher.
+flutter_local_notifications, file_picker, watcher and [Lucide](https://lucide.dev) icons.
 
 ## Roadmap
 
