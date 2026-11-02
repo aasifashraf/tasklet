@@ -128,10 +128,7 @@ class WorkspaceController extends Notifier<WorkspaceState> {
       _inFlightSub = store.queue.inFlightChanges.listen((n) {
         if (n == 0 && _refreshPending) unawaited(refresh());
       });
-      final watcher = FolderWatcher(
-        folder,
-        isOwnWrite: store.isOwnWrite,
-      );
+      final watcher = FolderWatcher(folder, isOwnWrite: store.isOwnWrite);
       _watcher = watcher;
       _watchSub = watcher.changes.listen((_) => refresh());
       try {

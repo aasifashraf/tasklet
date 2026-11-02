@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:tasklet/core/board_patch.dart';
 import 'package:tasklet/core/dashboard.dart';
 import 'package:tasklet/core/filters.dart';
 import 'package:tasklet/core/local_date.dart';
@@ -70,6 +71,25 @@ Future<void> main(List<String> args) async {
     ], ViewDisplay()).length,
     runs: 5,
   );
+  final allGroups = groupAndSort(tasks, ViewDisplay());
+  await timed('All Tasks board after one edit (patched)', () async {
+    final t = big.tasks[big.tasks.length ~/ 3];
+    final edited = ops.putTask(
+      big,
+      t.copyWith(priority: Priority.urgent, updatedAt: now),
+      now,
+    );
+    final after = ws.copyWith(
+      projects: [for (final p in ws.projects) p.id == big.id ? edited : p],
+    );
+    final diff = diffTasks(ws, after)!;
+    return patchGroups(
+      allGroups,
+      ViewDisplay(),
+      removed: diff.removed.values,
+      added: diff.added,
+    ).length;
+  }, runs: 5);
   await timed('search "deploy cache" (cold, builds cache)', () async {
     final q = SearchQuery('deploy cache');
     return tasks.where(q.matches).length;

@@ -16,11 +16,12 @@ A > 2x regression on any row blocks a release.
 
 ## 100,000 tasks: Ryzen 7 7735HS, NVMe, Windows 11
 
-| Operation | Before v1.1 (Nov 2, 2026) | After phase 3 | Target |
+| Operation | Before v1.1 (Nov 2, 2026) | Now | Target |
 |---|---|---|---|
 | Open (first read) | 2.2-5.2 s, stall 173-208 ms | unchanged | < 3 s |
 | Refresh, nothing changed | 190-216 ms, stall 173-196 ms | unchanged (phase 2 profiling) | < 50 ms |
-| All Tasks board: filter + group + sort | 117-150 / 135-173 ms | unchanged (phase 6) | p95 < 50 ms |
+| All Tasks board: filter + group + sort | 117-150 / 135-173 ms | 171 / 213 ms, now only when filters, search, sort or day change | p95 < 50 ms |
+| **All Tasks board after an edit** | **same full recompute** | **20 / 54 ms including the edit itself (patched)** | p95 < 50 ms |
 | Largest project board (20k tasks) | 7-11 / 15-23 ms | unchanged | p95 < 50 ms |
 | Search, next keystroke | 144-174 / 162-203 ms | unchanged (phase 6) | p95 < 100 ms |
 | **Dashboard aggregates** | **966-1,241 / 1,014-1,316 ms, every 30 s** | **56-59 / 74-93 ms, only when data, day or filter change** | p95 < 30 ms |
@@ -34,5 +35,9 @@ A > 2x regression on any row blocks a release.
 
 Phase 3 also stopped every visible card from rebuilding when a task panel opens or anything else in the workspace
 changes (cards watch only their own labels and open state), and boards nobody shows are released from memory.
+
+Phase 6: after an edit, a board takes the tasks that changed (`diffTasks`, ~5 ms) and moves just those to their
+sorted places (`patchGroups`, under 1 ms) instead of filtering and sorting every task again. A project-level change
+(rename, archive, labels), more than 200 changed tasks, or a new filter, search, sort or day still recomputes in full.
 
 Earlier measurements at 10k and 500k tasks: [SYSTEM_DESIGN.md](SYSTEM_DESIGN.md) section 3.

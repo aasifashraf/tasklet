@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/board_patch.dart';
 import '../core/filters.dart';
 import '../core/local_date.dart';
 import '../core/models.dart';
@@ -188,52 +189,132 @@ final navCountsProvider = Provider<({int today, int allOpen})>((ref) {
   return (today: todayCount, allOpen: allOpen);
 });
 
-/// Auto-disposed: a board nobody shows doesn't keep its sorted copy of the tasks in memory.
-final boardProvider = Provider.autoDispose.family<BoardData?, BoardKind>((
-  ref,
-  kind,
-) {
-  final ws = ref.watch(workspaceDataProvider);
-  if (ws == null) return null;
-  final today = ref.watch(todayProvider);
-  final prefs = ref.watch(prefsProvider);
-  final view = kind is ViewBoard
-      ? ws.views.where((v) => v.id == kind.viewId).firstOrNull
-      : null;
-  final project = kind is ProjectBoard ? ws.projectById(kind.projectId) : null;
+/// One board's tasks: scope, then filters and search, grouped by status and sorted.
+///
+/// After an edit only a few tasks change, so when the filters, search, display and day are the same as last time it
+/// re-inserts just those tasks (`patchGroups`) instead of sorting everything again: ~200 ms at 100k tasks becomes
+/// ~1 ms. Anything else, or a larger change, recomputes in full. Auto-disposed: a board nobody shows doesn't keep
+/// its sorted copy of the tasks in memory.
+final boardProvider = NotifierProvider.autoDispose
+    .family<BoardNotifier, BoardData?, BoardKind>(BoardNotifier.new);
 
-  final display = kind is ViewBoard
-      ? (view?.display ?? defaultDisplay(kind))
-      : (prefs.boardDisplay(kind.id) ?? defaultDisplay(kind));
-  final rawFilters = kind is ViewBoard
-      ? (view?.filters ?? BoardFilters.empty)
-      : (ref.watch(sessionFiltersProvider)[kind.id] ?? BoardFilters.empty);
-  final search = ref.watch(sessionSearchProvider)[kind.id] ?? '';
+class BoardNotifier extends Notifier<BoardData?> {
+  BoardNotifier(this.kind);
+  final BoardKind kind;
 
-  final labels = boardLabels(ws, kind);
-  final filters = pruneStaleFilters(
-    kind.crossProject ? rawFilters : rawFilters.copyWith(projects: const {}),
-    {noProjectId, for (final p in ws.projects.where((p) => !p.archived)) p.id},
-    {noLabelFilterId, for (final (l, _) in labels) l.id},
-  );
+  /// The inputs and result of the last computation, the base for patching.
+  ({Workspace ws, String inputs, BoardData data})? _last;
 
-  final scope = scopeTasks(ws, kind, today, prefs.todayRules).toList();
-  final query = SearchQuery(search);
-  final matching = scope.where(
-    (e) => matchesFilters(e, filters, today) && query.matches(e),
-  );
-  return BoardData(
-    kind: kind,
-    display: display,
-    filters: filters,
-    search: search,
-    groups: groupAndSort(matching, display),
-    totalInScope: scope.length,
-    availableLabels: labels,
-    project: project,
-    view: view,
-  );
-});
+  @override
+  BoardData? build() {
+    final ws = ref.watch(workspaceDataProvider);
+    if (ws == null) return null;
+    final today = ref.watch(todayProvider);
+    final prefs = ref.watch(prefsProvider);
+    final view = kind is ViewBoard
+        ? ws.views.where((v) => v.id == (kind as ViewBoard).viewId).firstOrNull
+        : null;
+    final project = switch (kind) {
+      ProjectBoard(:final projectId) => ws.projectById(projectId),
+      _ => null,
+    };
+    final display = kind is ViewBoard
+        ? (view?.display ?? defaultDisplay(kind))
+        : (prefs.boardDisplay(kind.id) ?? defaultDisplay(kind));
+    final rawFilters = kind is ViewBoard
+        ? (view?.filters ?? BoardFilters.empty)
+        : (ref.watch(sessionFiltersProvider)[kind.id] ?? BoardFilters.empty);
+    final search = ref.watch(sessionSearchProvider)[kind.id] ?? '';
+    final rules = prefs.todayRules;
+
+    final labels = boardLabels(ws, kind);
+    final filters = pruneStaleFilters(
+      kind.crossProject ? rawFilters : rawFilters.copyWith(projects: const {}),
+      {
+        noProjectId,
+        for (final p in ws.projects.where((p) => !p.archived)) p.id,
+      },
+      {noLabelFilterId, for (final (l, _) in labels) l.id},
+    );
+    final query = SearchQuery(search);
+    BoardData result(Map<TaskStatus, List<ProjectTask>> groups, int total) =>
+        BoardData(
+          kind: kind,
+          display: display,
+          filters: filters,
+          search: search,
+          groups: groups,
+          totalInScope: total,
+          availableLabels: labels,
+          project: project,
+          view: view,
+        );
+
+    // Everything besides the tasks that decides what the board shows.
+    final inputs = [
+      display.toJson(),
+      filters.toJson(),
+      search,
+      today,
+      if (kind is TodayBoard) [for (final r in rules) r.name]..sort(),
+    ].toString();
+    final last = _last;
+    if (last != null && last.inputs == inputs) {
+      final diff = identical(last.ws, ws) ? null : diffTasks(last.ws, ws);
+      if (identical(last.ws, ws) || diff != null) {
+        final data = diff == null
+            ? result(last.data.groups, last.data.totalInScope)
+            : _patched(last.data, diff, today, rules, filters, query, result);
+        _last = (ws: ws, inputs: inputs, data: data);
+        return data;
+      }
+    }
+
+    final scope = scopeTasks(ws, kind, today, rules).toList();
+    final data = result(
+      groupAndSort(
+        scope.where(
+          (e) => matchesFilters(e, filters, today) && query.matches(e),
+        ),
+        display,
+      ),
+      scope.length,
+    );
+    _last = (ws: ws, inputs: inputs, data: data);
+    return data;
+  }
+
+  BoardData _patched(
+    BoardData previous,
+    TaskDiff diff,
+    LocalDate today,
+    Set<TodayRule> rules,
+    BoardFilters filters,
+    SearchQuery query,
+    BoardData Function(Map<TaskStatus, List<ProjectTask>>, int) result,
+  ) {
+    // Same scope rules as [scopeTasks], for one task.
+    bool inScope(ProjectTask e) => switch (kind) {
+      AllTasksBoard() || ViewBoard() => !e.project.archived,
+      TodayBoard() => !e.project.archived && matchesToday(e.task, rules, today),
+      ProjectBoard(:final projectId) => e.project.id == projectId,
+    };
+    final groups = patchGroups(
+      previous.groups,
+      previous.display,
+      removed: diff.removed.values,
+      added: diff.added.where(
+        (e) =>
+            inScope(e) && matchesFilters(e, filters, today) && query.matches(e),
+      ),
+    );
+    final total =
+        previous.totalInScope +
+        diff.added.where(inScope).length -
+        diff.removed.values.where(inScope).length;
+    return result(groups, total);
+  }
+}
 
 /// Writes display/filter changes to the right place: the view for saved views, device prefs/session otherwise.
 class BoardActions {

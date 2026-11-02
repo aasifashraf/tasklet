@@ -52,7 +52,7 @@ MergeResult mergeProject({
       // Missing on disk: created here (keep), or deleted there (keep only if edited here since).
       if (b == null) {
         tasks.add(m.toJson());
-      } else if (!_sameJson(b.toJson(), m.toJson())) {
+      } else if (!jsonEquals(b.toJson(), m.toJson())) {
         tasks.add(m.toJson());
         notes.add(
           '"${m.title}" was deleted on another computer after you changed it here; your version was kept.',
@@ -62,7 +62,7 @@ MergeResult mergeProject({
       // Missing here: created there (keep), or deleted here (keep only if edited there since).
       if (b == null) {
         tasks.add(t.toJson());
-      } else if (!_sameJson(b.toJson(), t.toJson())) {
+      } else if (!jsonEquals(b.toJson(), t.toJson())) {
         tasks.add(t.toJson());
         notes.add(
           '"${t.title}" was changed on another computer after you deleted it here; it was kept.',
@@ -111,8 +111,8 @@ Map<String, Object?> _mergeMaps(
   final result = <String, Object?>{};
   for (final key in {...base.keys, ...mine.keys, ...theirs.keys}) {
     final b = base[key], m = mine[key], t = theirs[key];
-    final mineChanged = !_sameJson(b, m);
-    final theirsChanged = !_sameJson(b, t);
+    final mineChanged = !jsonEquals(b, m);
+    final theirsChanged = !jsonEquals(b, t);
     final value = mineChanged && theirsChanged
         ? (preferMine ? m : t)
         : (mineChanged ? m : t);
@@ -124,19 +124,20 @@ Map<String, Object?> _mergeMaps(
   return result;
 }
 
-bool _sameJson(Object? a, Object? b) {
+/// Deep equality of decoded JSON values (maps, lists, scalars).
+bool jsonEquals(Object? a, Object? b) {
   if (identical(a, b)) return true;
   if (a is Map && b is Map) {
     if (a.length != b.length) return false;
     for (final e in a.entries) {
-      if (!b.containsKey(e.key) || !_sameJson(e.value, b[e.key])) return false;
+      if (!b.containsKey(e.key) || !jsonEquals(e.value, b[e.key])) return false;
     }
     return true;
   }
   if (a is List && b is List) {
     if (a.length != b.length) return false;
     for (var i = 0; i < a.length; i++) {
-      if (!_sameJson(a[i], b[i])) return false;
+      if (!jsonEquals(a[i], b[i])) return false;
     }
     return true;
   }
