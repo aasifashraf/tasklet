@@ -78,7 +78,7 @@ ViewDisplay defaultDisplay(BoardKind kind) => switch (kind) {
   _ => ViewDisplay(),
 };
 
-/// Session-only filters per board (reset on relaunch and in another organization). Saved views keep theirs in the
+/// Session-only filters per board (reset on relaunch and in another workspace). Saved views keep theirs in the
 /// view instead.
 class SessionFilters extends Notifier<Map<String, BoardFilters>> {
   @override

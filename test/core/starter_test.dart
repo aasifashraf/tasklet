@@ -7,7 +7,7 @@ import 'package:tasklet/ui/icons/project_icons.dart';
 
 import '../helpers.dart';
 
-/// What a new organization starts with (docs/DECISIONS.md D16).
+/// What a new workspace starts with (docs/DECISIONS.md D16).
 void main() {
   var n = 0;
   String id() => 'id${n++}';
@@ -66,7 +66,7 @@ void main() {
     expect(back.tasks, hasLength(p.tasks.length));
   });
 
-  test('later organizations get no sample project', () {
+  test('later workspaces get no sample project', () {
     final later = starterContent(newId: id, now: t0, withSampleProject: false);
     expect(later.projects, isEmpty);
     expect(later.labels, hasLength(4));

@@ -111,13 +111,13 @@ sequenceDiagram
 | Entity | Where | Notes |
 |---|---|---|
 | Task | inside its project file | id, number, title, description, status, priority, start/due date, labelIds, sortOrder, created/updated/completedAt, `extra` |
-| Organization | the data folder; identity in `tasklet-workspace.json` | name, icon, color; one open at a time (DECISIONS D15) |
+| Workspace | the data folder; identity in `tasklet-workspace.json` | name, icon, color; one open at a time (DECISIONS D15) |
 | Project | `projects/<id>.json` | key, color, icon, archived, favorite, orders, own labels, nextNumber, tasks, opaque entries |
 | No Project bucket | `projects/no-project.json` | lazy file, key TSK |
 | Label | `labels.json` (workspace) or in a project | 16 colors, optional icon |
 | Quick filter (SavedView) | `views.json` | filters + display, sidebar pin/order, color and icon |
 | Status, Priority | enums | 4 statuses, 5 priorities |
-| Device settings | app-data `settings.json` | theme, sidebar, reminders, per-board display, this computer's organization list |
+| Device settings | app-data `settings.json` | theme, sidebar, reminders, per-board display, this computer's workspace list |
 | Backups | app-data `backups/` | file versions, newest 20 |
 
 Not present today (candidate entities from the brief): subtasks, recurring tasks, attachments, task history, tags
@@ -476,7 +476,7 @@ edit is slow on any service, independent of Tasklet's speed.
 |---|---|---|---|
 | Merge logic bug loses or duplicates tasks | medium | high | pure core function, property tests with random edit sequences, backups before every merge write |
 | Refactor of `WorkspaceController` regresses behaviour | medium | medium | do it before features; widget/unit tests per action; no behaviour change in the same commit |
-| v2 index drifts from JSON | medium | medium (wrong counts) | index is disposable; stamp check per file; `quick_check`; rebuild button in Settings > Organizations |
+| v2 index drifts from JSON | medium | medium (wrong counts) | index is disposable; stamp check per file; `quick_check`; rebuild button in Settings > Workspaces |
 | Native SQLite bundling issues on macOS/Windows | low | medium | `package:sqlite3` build hooks; CI build on both |
 | Chunked file format breaks older versions | certain (by design) | medium | format version bump makes old versions read-only (D2), migration with backup |
 | Over-engineering | medium | medium | every phase has a measured trigger and acceptance number |

@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:tasklet/core/colors.dart';
 import 'package:tasklet/core/models.dart';
-import 'package:tasklet/core/organization.dart';
+import 'package:tasklet/core/workspace_info.dart';
 import 'package:tasklet/core/workspace_ops.dart';
 import 'package:tasklet/data/prefs_store.dart';
 import 'package:tasklet/data/workspace_store.dart';
@@ -15,7 +15,7 @@ import 'package:tasklet/state/workspace.dart';
 
 import '../helpers.dart';
 
-/// Moving a project to another organization (docs/DECISIONS.md D15).
+/// Moving a project to another workspace (docs/DECISIONS.md D15).
 void main() {
   group('projectForTransfer', () {
     final bug = Label(id: 'bug', name: 'bug', color: TaskletColor.red);
@@ -78,7 +78,7 @@ void main() {
         Directory(folder).createSync();
         await WorkspaceStore.initialize(
           folder,
-          organization: OrgInfo(name: name),
+          info: WorkspaceInfo(name: name),
         );
       }
       final store = WorkspaceStore(work);
@@ -120,7 +120,7 @@ void main() {
 
     test('writes it there, then removes it here', () async {
       final controller = container.read(workspaceProvider.notifier);
-      final error = await controller.moveProjectToOrganization('billing', oss);
+      final error = await controller.moveProjectToWorkspace('billing', oss);
       expect(error, isNull);
 
       expect(container.read(workspaceDataProvider)!.projects, isEmpty);
@@ -155,10 +155,7 @@ void main() {
           jsonEncode({'app': 'tasklet', 'formatVersion': 99}),
         );
         final controller = container.read(workspaceProvider.notifier);
-        final error = await controller.moveProjectToOrganization(
-          'billing',
-          oss,
-        );
+        final error = await controller.moveProjectToWorkspace('billing', oss);
         expect(error, contains('newer version'));
         expect(container.read(workspaceDataProvider)!.projects, hasLength(1));
         expect(
@@ -171,11 +168,11 @@ void main() {
 
     test('a missing folder is reported', () async {
       final controller = container.read(workspaceProvider.notifier);
-      final error = await controller.moveProjectToOrganization(
+      final error = await controller.moveProjectToWorkspace(
         'billing',
         p.join(root.path, 'gone'),
       );
-      expect(error, "Can't find that organization's folder.");
+      expect(error, "Can't find that workspace's folder.");
       expect(container.read(workspaceDataProvider)!.projects, hasLength(1));
     });
   });

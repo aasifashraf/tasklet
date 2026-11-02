@@ -1,9 +1,9 @@
 import 'colors.dart';
 
-/// An organization is one data folder (docs/DECISIONS.md D15). Its name, icon and color live in that folder's
+/// A workspace is one data folder (docs/DECISIONS.md D15). Its name, icon and color live in that folder's
 /// marker file (`tasklet-workspace.json`), so they sync with the folder.
-class OrgInfo {
-  const OrgInfo({
+class WorkspaceInfo {
+  const WorkspaceInfo({
     required this.name,
     this.icon = defaultIcon,
     this.color = TaskletColor.blue,
@@ -13,11 +13,14 @@ class OrgInfo {
   static const maxNameLength = 60;
 
   /// Reads the identity from a marker's JSON. Anything missing or invalid falls back: the name to [folderName], so
-  /// a folder from before organizations shows under its own name.
-  factory OrgInfo.fromMarker(Map<String, Object?>? marker, String folderName) {
+  /// a folder from before workspaces shows under its own name.
+  factory WorkspaceInfo.fromMarker(
+    Map<String, Object?>? marker,
+    String folderName,
+  ) {
     final name = marker?['name'];
     final icon = marker?['icon'];
-    return OrgInfo(
+    return WorkspaceInfo(
       name: name is String && name.trim().isNotEmpty ? name.trim() : folderName,
       // Missing: the default icon; null: the user picked the plain cube.
       icon: icon is String
@@ -28,8 +31,8 @@ class OrgInfo {
   }
 
   /// Device prefs keep the same fields as the marker (a cache for the switcher).
-  factory OrgInfo.fromJson(Object? json, String folderName) =>
-      OrgInfo.fromMarker(
+  factory WorkspaceInfo.fromJson(Object? json, String folderName) =>
+      WorkspaceInfo.fromMarker(
         json is Map<String, Object?> ? json : null,
         folderName,
       );
@@ -40,12 +43,12 @@ class OrgInfo {
   final String? icon;
   final TaskletColor color;
 
-  OrgInfo copyWith({
+  WorkspaceInfo copyWith({
     String? name,
     String? icon,
     bool clearIcon = false,
     TaskletColor? color,
-  }) => OrgInfo(
+  }) => WorkspaceInfo(
     name: name ?? this.name,
     icon: clearIcon ? null : (icon ?? this.icon),
     color: color ?? this.color,
@@ -59,7 +62,10 @@ class OrgInfo {
 
   /// [marker] with only the fields that differ from [before] replaced, so values from a newer version (an unknown
   /// color, other keys) survive a rename.
-  Map<String, Object?> applyTo(Map<String, Object?> marker, OrgInfo before) {
+  Map<String, Object?> applyTo(
+    Map<String, Object?> marker,
+    WorkspaceInfo before,
+  ) {
     final result = {...marker};
     if (name != before.name) result['name'] = name;
     if (icon != before.icon) result['icon'] = icon;
@@ -69,7 +75,7 @@ class OrgInfo {
 
   @override
   bool operator ==(Object other) =>
-      other is OrgInfo &&
+      other is WorkspaceInfo &&
       other.name == name &&
       other.icon == icon &&
       other.color == color;
@@ -78,7 +84,7 @@ class OrgInfo {
   int get hashCode => Object.hash(name, icon, color);
 }
 
-/// The last part of a folder path ("D:\Work\Acme" → "Acme"), for an organization without a stored name.
+/// The last part of a folder path ("D:\Work\Acme" → "Acme"), for a workspace without a stored name.
 String folderName(String path) {
   final parts = path.split(RegExp(r'[\\/]'))..removeWhere((s) => s.isEmpty);
   return parts.isEmpty ? path : parts.last;

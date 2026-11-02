@@ -86,8 +86,8 @@ Project? stripLabel(Project project, String labelId, DateTime now) {
   );
 }
 
-/// [project] as it should be written into another organization's folder (docs/DECISIONS.md D15). Workspace labels
-/// its tasks use ([workspaceLabels], from the organization it leaves) come along as the project's own labels, so
+/// [project] as it should be written into another workspace's folder (docs/DECISIONS.md D15). Workspace labels
+/// its tasks use ([workspaceLabels], from the workspace it leaves) come along as the project's own labels, so
 /// the other folder's labels.json is never touched. It keeps its key unless a project there already has it, keeps
 /// every task number, and goes to the end of the Projects (and Favorites) list.
 Project projectForTransfer(

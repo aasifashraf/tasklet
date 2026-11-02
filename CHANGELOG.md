@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1, November 2026
+
+- Organizations are now called workspaces everywhere (the Workspace menu, New Workspace…, Settings > Workspaces,
+  Ctrl+Alt+1 to 9), matching the word Tasklet already used for a data folder and its workspace labels. Folders,
+  settings and `.tasklet.json` exports from 1.1.0 keep working; new exports are marked as workspace exports
+
 ## 1.1.0, November 2026
 
 - Organizations: each one is its own data folder with its own projects, labels and quick filters, so work,

@@ -33,18 +33,25 @@ class ReleaseNotes {
 /// `pubspec.yaml` version has none. The sheet shows the newest release first and earlier ones below it.
 const releases = <ReleaseNotes>[
   ReleaseNotes(
+    version: '1.1.1',
+    month: 'November 2026',
+    fixes: [
+      'Organizations are now called workspaces, the word Tasklet already used for a data folder: the Workspace menu, New Workspace and Settings > Workspaces. Your folders, settings and exports work as before.',
+    ],
+  ),
+  ReleaseNotes(
     version: '1.1.0',
     month: 'November 2026',
     features: [
       ReleaseFeature(
-        Icons.domain,
-        'Organizations',
-        'Keep work, freelance and open source apart. Each organization has its own projects, labels and quick filters in its own folder, so each can sync through a different service. Switch at the top of the sidebar or with Ctrl+Alt+1 to 9.',
+        Icons.workspaces_outlined,
+        'Workspaces',
+        'Keep work, freelance and open source apart. Each workspace has its own projects, labels and quick filters in its own folder, so each can sync through a different service. Switch at the top of the sidebar or with Ctrl+Alt+1 to 9.',
       ),
       ReleaseFeature(
         Icons.drive_file_move_outlined,
         'Move, export and import',
-        'Move a project to another organization from its menu. Export an organization to one file and import it as a new organization, from the Organization menu.',
+        'Move a project to another workspace from its menu. Export a workspace to one file and import it as a new workspace, from the Workspace menu.',
       ),
       ReleaseFeature(
         Icons.palette_outlined,
@@ -54,7 +61,7 @@ const releases = <ReleaseNotes>[
       ReleaseFeature(
         Icons.rocket_launch_outlined,
         'A head start',
-        'A new organization comes with bug, feature, refactor and security labels and everyday quick filters like Overdue, Due Soon and High Priority. Your first one also has a sample Tasklet project with our plan.',
+        'A new workspace comes with bug, feature, refactor and security labels and everyday quick filters like Overdue, Due Soon and High Priority. Your first one also has a sample Tasklet project with our plan.',
       ),
       ReleaseFeature(
         Icons.speed,

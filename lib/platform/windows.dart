@@ -16,15 +16,15 @@ abstract final class MainCommands {
   static const sendTestNotification = 'sendTestNotification';
   static const chooseFolder = 'chooseFolder';
 
-  // Organizations (docs/DECISIONS.md D15): the main window owns the open folder, so Settings asks it.
-  static const switchOrganization = 'switchOrganization';
+  // Workspaces (docs/DECISIONS.md D15): the main window owns the open folder, so Settings asks it.
+  static const switchWorkspace = 'switchWorkspace';
 
   /// Arguments: `{folder, name, icon, color}`.
-  static const updateOrganization = 'updateOrganization';
-  static const removeOrganization = 'removeOrganization';
+  static const updateWorkspaceInfo = 'updateWorkspaceInfo';
+  static const removeWorkspace = 'removeWorkspace';
 
   /// Arguments: `{folder, delta}` (-1 up, 1 down).
-  static const moveOrganization = 'moveOrganization';
+  static const moveWorkspace = 'moveWorkspace';
 }
 
 const _settingsArgument = 'settings';

@@ -50,8 +50,8 @@ class _AppShellState extends ConsumerState<AppShell> with WindowListener {
     super.initState();
     windowManager.addListener(this);
     ref.listenManual(
-      workspaceDataProvider.select((w) => w?.organization.name),
-      (_, name) => AppLifecycle.instance.showOrganization(name),
+      workspaceDataProvider.select((w) => w?.info.name),
+      (_, name) => AppLifecycle.instance.showWorkspace(name),
       fireImmediately: true,
     );
     // Show release notes once after an update brings new ones (fresh installs just get the sidebar entry).

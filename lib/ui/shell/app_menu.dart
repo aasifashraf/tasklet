@@ -16,7 +16,7 @@ import '../../state/toast.dart';
 import '../../state/ui_state.dart';
 import '../../state/workspace.dart';
 import '../board/task_tiles.dart';
-import '../organizations.dart';
+import '../workspaces.dart';
 import '../task/new_task_dialog.dart';
 import '../theme.dart';
 import '../whats_new.dart';
@@ -36,7 +36,7 @@ class AppCommand {
   final SingleActivator? shortcut;
   final bool enabled;
 
-  /// Shows a check mark (the open organization).
+  /// Shows a check mark (the open workspace).
   final bool checked;
 }
 
@@ -175,37 +175,31 @@ List<CommandGroup> buildCommands(BuildContext context, WidgetRef ref) {
           shortcut: i < digits.length ? accel(digits[i]) : null,
         ),
     ]),
-    CommandGroup('Organization', [
-      for (final (i, o) in prefs.organizations.indexed)
+    CommandGroup('Workspace', [
+      for (final (i, o) in prefs.workspaces.indexed)
         AppCommand(
           o.info.name,
-          () => switchToOrganization(context, ref, o.folder),
-          shortcut: organizationShortcut(i),
+          () => switchToWorkspace(context, ref, o.folder),
+          shortcut: workspaceShortcut(i),
           checked: ws != null && sameFolder(o.folder, ws.folder),
         ),
       null,
-      AppCommand('New Organization…', () => newOrganization(context, ref)),
-      AppCommand('Open Existing Folder…', () => openExistingOrganization(ref)),
+      AppCommand('New Workspace…', () => newWorkspace(context, ref)),
+      AppCommand('Open Existing Folder…', () => openExistingWorkspace(ref)),
       if (ws != null)
         AppCommand(
-          'Edit Organization…',
-          () => editOrganization(context, ref, (
-            folder: ws.folder,
-            info: ws.organization,
-          )),
+          'Edit Workspace…',
+          () => editWorkspace(context, ref, (folder: ws.folder, info: ws.info)),
           enabled: !readOnly,
         ),
       null,
       AppCommand(
-        'Export Organization…',
-        () => exportOrganization(ref),
+        'Export Workspace…',
+        () => exportWorkspace(ref),
         enabled: ws != null,
       ),
-      AppCommand(
-        'Import Organization…',
-        () => importOrganization(context, ref),
-      ),
-      AppCommand('Manage Organizations…', openSettingsWindow),
+      AppCommand('Import Workspace…', () => importWorkspace(context, ref)),
+      AppCommand('Manage Workspaces…', openSettingsWindow),
     ]),
     CommandGroup('Window', [AppCommand('Settings', openSettingsWindow)]),
     CommandGroup('Help', [

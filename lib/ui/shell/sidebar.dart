@@ -11,7 +11,7 @@ import '../../state/ui_state.dart';
 import '../../state/workspace.dart';
 import '../glyphs.dart';
 import '../icon_picker.dart';
-import '../organizations.dart';
+import '../workspaces.dart';
 import '../pages/restore_dialog.dart';
 import '../task/new_task_dialog.dart';
 import '../theme.dart';
@@ -60,7 +60,7 @@ class _SidebarState extends ConsumerState<Sidebar> {
             padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
             child: Row(
               children: [
-                const Expanded(child: OrganizationSwitcher()),
+                const Expanded(child: WorkspaceSwitcher()),
                 const SizedBox(width: 4),
                 IconBtn(
                   icon: Icons.edit_square,
@@ -257,7 +257,7 @@ class _SidebarState extends ConsumerState<Sidebar> {
         kind: GlyphKind.project,
         onPick: (icon, color) => _controller.setProjectIcon(p.id, icon, color),
       ),
-      ?moveToOrganizationMenu(context, ref, p),
+      ?moveToWorkspaceMenu(context, ref, p),
       menuItem(
         'New Project…',
         onPressed: () {

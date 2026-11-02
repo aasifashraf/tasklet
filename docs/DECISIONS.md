@@ -80,8 +80,8 @@ and the destructive button is red. Task deletion never confirms (SPEC §7.4).
 
 ## D9. Creating a new data folder
 
-"Create Organization…" (SPEC §10's "Create New Folder…", D15) asks for the organization's name and uses the native
-folder picker to choose *where*; the folder is named after the organization and must not exist yet. A native save-file dialog was rejected: it writes a file at the chosen
+"Create Workspace…" (SPEC §10's "Create New Folder…", D15) asks for the workspace's name and uses the native
+folder picker to choose *where*; the folder is named after the workspace and must not exist yet. A native save-file dialog was rejected: it writes a file at the chosen
 path, and confirming its "replace existing file?" prompt would destroy whatever file had that name.
 
 ## D10. macOS sandbox
@@ -154,55 +154,63 @@ have an icon, and there are 16 colors.
 - Quick filters have icons too (D16); their default glyph is a filter (funnel) instead of SPEC §8.5's stacked layers,
   and the Quick Filters nav item uses a filter icon to match.
 
-## D15. Organizations are data folders
+## D15. Workspaces are data folders
 
 SPEC §1 has one workspace (one folder). People who work for an employer, freelance and contribute to open source
-want those kept apart, sometimes on the same day. An **organization** is one Tasklet data folder; the app opens one at
-a time and switches between them from the sidebar header, the Organization menu or Ctrl+Alt+1 … 9.
+want those kept apart, sometimes on the same day. A **workspace** is one Tasklet data folder; the app opens one at
+a time and switches between them from the sidebar header, the Workspace menu or Ctrl+Alt+1 … 9.
 
-- Why folders, not an organization field inside one folder: complete separation for free (projects, labels, quick
+- Name: 1.1.0 called them **organizations**; 1.1.1 renamed them **workspaces** in the app, code and docs. A
+  freelance or personal space isn't an organization, the folder marker and the code already said "workspace", the
+  Labels page's "workspace labels" now mean exactly that, and Linear-style apps use the word for a separate space
+  switched from the sidebar. "Organization" stays free for a future level above workspaces (sharing, teams). Nothing
+  stored changed meaning: the device setting moved from `organizations` to `workspaces` (the old key is still read
+  and removed once the new one is written), and exports are marked `"kind": "workspace"` while 1.1.0's
+  `"organization"` exports still import.
+
+- Why folders, not a workspace field inside one folder: complete separation for free (projects, labels, quick
   filters, No Project, keys, backups, Today, dashboard, reports and reminders all already work per folder); each
-  organization can sync through a different service, so work data can stay in the company's cloud; no data-format
-  migration; an organization moves, backs up or is shared as a plain folder.
+  workspace can sync through a different service, so work data can stay in the company's cloud; no data-format
+  migration; a workspace moves, backs up or is shared as a plain folder.
 - Identity: `name`, `icon` and `color` in the folder's marker (`tasklet-workspace.json`), so they sync with it. A
-  marker without a name (a folder from before organizations) shows the folder's name. Saving replaces only the fields
+  marker without a name (a folder from before workspaces) shows the folder's name. Saving replaces only the fields
   the user changed, so values from a newer version and unknown keys survive. Older versions only read the marker's
   `formatVersion` and never rewrite it, so the format version stays 1.
-- This computer's list: the `organizations` device pref holds the folders in the user's order, with each one's name,
+- This computer's list: the `workspaces` device pref holds the folders in the user's order, with each one's name,
   icon and color cached for the switcher; it refreshes whenever that folder opens. `dataFolder` stays the open one,
-  so older settings files still work: their folder becomes the first organization. The list isn't synced: on a new
-  computer, add each folder with Open Existing Folder… (its name comes from its marker). Removing an organization
+  so older settings files still work: their folder becomes the first workspace. The list isn't synced: on a new
+  computer, add each folder with Open Existing Folder… (its name comes from its marker). Removing a workspace
   only forgets it on this computer; its folder is never deleted.
 - Switching saves pending edits into the current folder first. Board filters and searches, the open task, Undo and
   repair notices belong to the folder and start empty in the other one. Reminders, badges and the tray follow the
-  open organization only. Board layout preferences for All Tasks and Today stay per computer, not per organization
+  open workspace only. Board layout preferences for All Tasks and Today stay per computer, not per workspace
   (a personal preference, and project and quick-filter boards are already per folder).
-- The window title and tray tooltip name the open organization ("Acme Corp - Tasklet").
-- Settings → Organizations lists them; its changes go to the main window, which owns the open folder.
-- Move to Organization (a project's menu) writes the project into the other folder first and only then removes it
+- The window title and tray tooltip name the open workspace ("Acme Corp - Tasklet").
+- Settings → Workspaces lists them; its changes go to the main window, which owns the open folder.
+- Move to Workspace (a project's menu) writes the project into the other folder first and only then removes it
   here (Recycle Bin or `.trash`), so a failure never leaves it in neither. Workspace labels its tasks use go along
   as the project's own labels (the other folder's labels.json is never touched); task numbers stay; the key changes
   only if a project there already has it. A folder saved by a newer version refuses it.
-- Export Organization writes one `<name>.tasklet.json` (`app`, `kind: "organization"`, `formatVersion: 1`, the
+- Export Workspace writes one `<name>.tasklet.json` (`app`, `kind: "workspace"`, `formatVersion: 1`, the
   identity, and labels, quick filters and project files as stored, so newer-version fields survive). It refuses
-  while a file can't be read rather than export a partial organization. Import Organization reads it whole (512 MB
+  while a file can't be read rather than export a partial workspace. Import Workspace reads it whole (512 MB
   at most, parsed off the UI thread), refuses another kind or a newer format, checks every project parses and has a
-  safe id, then writes it into a new, empty folder chosen in the New Organization dialog; on any failure that folder
+  safe id, then writes it into a new, empty folder chosen in the New Workspace dialog; on any failure that folder
   is emptied again. Ids are kept: a new folder can't clash.
 
-## D16. Starter content in new organizations
+## D16. Starter content in new workspaces
 
-SPEC §10 says "No demo data, ever". An empty organization made people build the basics by hand, so a new one now
+SPEC §10 says "No demo data, ever". An empty workspace made people build the basics by hand, so a new one now
 starts with a few things that are useful in any line of work, all of which can be renamed or deleted:
 
 - Four workspace labels with icons: bug, feature, refactor, security.
 - Five quick filters built only from status, priority and due date, so they fit any field: Overdue, Due Soon and High
   Priority (pinned to the sidebar), In Progress and No Due Date. They never reference labels or projects.
-- Only in the first organization on a computer (first launch): a sample "Tasklet" project whose tasks are Tasklet's
-  own plan, done, in progress, todo and backlog, with a welcome task explaining it. Later organizations (a client, an
+- Only in the first workspace on a computer (first launch): a sample "Tasklet" project whose tasks are Tasklet's
+  own plan, done, in progress, todo and backlog, with a welcome task explaining it. Later workspaces (a client, an
   employer) start without it.
 
 It is written only into a fresh folder: no marker, labels.json, views.json or project file yet. A folder that already
-has Tasklet data, an imported organization (D15) and the development data-folder override never get it, so existing
+has Tasklet data, an imported workspace (D15) and the development data-folder override never get it, so existing
 data is never added to or changed. The content lives in `lib/core/starter.dart`.
 

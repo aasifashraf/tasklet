@@ -6,7 +6,7 @@ import '../../core/reminder.dart';
 import '../../platform/native.dart';
 import '../../platform/windows.dart';
 import '../../state/prefs.dart';
-import '../organizations.dart';
+import '../workspaces.dart';
 import '../startup.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -34,7 +34,7 @@ enum _Tab {
   general('General', Icons.tune),
   sidebar('Sidebar', Icons.view_sidebar_outlined),
   notifications('Notifications', Icons.notifications_none),
-  organizations('Organizations', Icons.domain);
+  workspaces('Workspaces', Icons.workspaces_outlined);
 
   const _Tab(this.label, this.icon);
   final String label;
@@ -112,7 +112,7 @@ class _SettingsPageState extends State<_SettingsPage> {
               _Tab.general => const _GeneralTab(),
               _Tab.sidebar => const _SidebarTab(),
               _Tab.notifications => const _NotificationsTab(),
-              _Tab.organizations => const _OrganizationsTab(),
+              _Tab.workspaces => const _WorkspacesTab(),
             },
           ),
         ],
@@ -512,56 +512,56 @@ class _NotificationsTabState extends ConsumerState<_NotificationsTab> {
   }
 }
 
-/// Organizations on this computer (docs/DECISIONS.md D15). Changes go to the main window, which owns the open
+/// Workspaces on this computer (docs/DECISIONS.md D15). Changes go to the main window, which owns the open
 /// folder; the list here follows the shared prefs file.
-class _OrganizationsTab extends ConsumerWidget {
-  const _OrganizationsTab();
+class _WorkspacesTab extends ConsumerWidget {
+  const _WorkspacesTab();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final prefs = ref.watch(prefsProvider);
-    final orgs = prefs.organizations;
+    final workspaces = prefs.workspaces;
     final open = prefs.dataFolder;
     return _tabBody([
       Text(
-        'Each organization is its own folder of plain JSON files, with its own projects, labels and quick filters. '
-        'Add one with New Organization… or Open Existing Folder… in the Organization menu or at the top of the '
+        'Each workspace is its own folder of plain JSON files, with its own projects, labels and quick filters. '
+        'Add one with New Workspace… or Open Existing Folder… in the Workspace menu or at the top of the '
         'sidebar.',
         style: TextStyles.bodySecondary(context),
       ),
       const SizedBox(height: 12),
-      for (final (i, o) in orgs.indexed)
-        _OrganizationRow(
+      for (final (i, o) in workspaces.indexed)
+        _WorkspaceRow(
           entry: o,
           isOpen: open != null && sameFolder(o.folder, open),
           first: i == 0,
-          last: i == orgs.length - 1,
+          last: i == workspaces.length - 1,
         ),
     ]);
   }
 }
 
-class _OrganizationRow extends StatelessWidget {
-  const _OrganizationRow({
+class _WorkspaceRow extends StatelessWidget {
+  const _WorkspaceRow({
     required this.entry,
     required this.isOpen,
     required this.first,
     required this.last,
   });
-  final OrgEntry entry;
+  final WorkspaceEntry entry;
   final bool isOpen;
   final bool first;
   final bool last;
 
   Future<void> _move(int delta) => sendToMainWindow<void>(
-    MainCommands.moveOrganization,
+    MainCommands.moveWorkspace,
     {'folder': entry.folder, 'delta': delta},
   );
 
   Future<void> _edit(BuildContext context) async {
-    final info = await showEditOrganizationDialog(context, entry.info);
+    final info = await showEditWorkspaceDialog(context, entry.info);
     if (info != null && info != entry.info) {
-      await sendToMainWindow<void>(MainCommands.updateOrganization, {
+      await sendToMainWindow<void>(MainCommands.updateWorkspaceInfo, {
         'folder': entry.folder,
         ...info.toJson(),
       });
@@ -578,10 +578,7 @@ class _OrganizationRow extends StatelessWidget {
       confirmLabel: 'Remove',
     );
     if (ok) {
-      await sendToMainWindow<void>(
-        MainCommands.removeOrganization,
-        entry.folder,
-      );
+      await sendToMainWindow<void>(MainCommands.removeWorkspace, entry.folder);
     }
   }
 
@@ -608,7 +605,7 @@ class _OrganizationRow extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.only(top: 1),
-            child: OrgGlyph(entry.info, size: 16),
+            child: WorkspaceGlyph(entry.info, size: 16),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -641,7 +638,7 @@ class _OrganizationRow extends StatelessWidget {
           if (!isOpen)
             TextButton(
               onPressed: () => sendToMainWindow<void>(
-                MainCommands.switchOrganization,
+                MainCommands.switchWorkspace,
                 entry.folder,
               ),
               child: const Text('Open'),

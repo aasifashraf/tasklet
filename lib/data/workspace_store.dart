@@ -7,8 +7,8 @@ import 'package:path/path.dart' as p;
 import '../core/colors.dart';
 import '../core/merge.dart';
 import '../core/models.dart';
-import '../core/org_bundle.dart';
-import '../core/organization.dart';
+import '../core/workspace_bundle.dart';
+import '../core/workspace_info.dart';
 import '../core/project_keys.dart';
 import '../core/starter.dart';
 import '../core/task_ops.dart'
@@ -84,7 +84,7 @@ class WorkspaceStore {
   final DateTime Function() _now;
 
   bool _readOnly = false;
-  OrgInfo _organization = const OrgInfo(name: '');
+  WorkspaceInfo _info = const WorkspaceInfo(name: '');
   bool _labelsReadable = true;
   bool _viewsReadable = true;
   List<Object?> _opaqueLabels = const [];
@@ -128,12 +128,12 @@ class WorkspaceStore {
   String get _markerPath => p.join(folder, markerFileName);
 
   /// Prepares an existing folder for use: writes the marker file (once) and the projects directory. Used when the
-  /// user chooses or creates a folder. A new marker gets [organization] as the folder's identity (D15); an existing
+  /// user chooses or creates a folder. A new marker gets [workspace] as the folder's identity (D15); an existing
   /// one is left alone. [starter] content (D16) is written only into a fresh folder: no marker, labels, quick
   /// filters or project files yet, so nothing that exists is ever added to or changed.
   static Future<void> initialize(
     String folder, {
-    OrgInfo? organization,
+    WorkspaceInfo? info,
     StarterContent? starter,
   }) async {
     if (!await Directory(folder).exists()) throw WorkspaceFolderMissing(folder);
@@ -145,7 +145,7 @@ class WorkspaceStore {
         encodeJson({
           'app': 'tasklet',
           'formatVersion': formatVersion,
-          ...?organization?.toJson(),
+          ...?info?.toJson(),
         }),
       );
     }
@@ -196,7 +196,7 @@ class WorkspaceStore {
     final signature = StringBuffer();
     final (:readOnly, :marker) = await _readMarker();
     _readOnly = readOnly;
-    _organization = OrgInfo.fromMarker(marker, folderName(folder));
+    _info = WorkspaceInfo.fromMarker(marker, folderName(folder));
 
     final (labels, labelsReadable) = await _readList(
       labelsPath,
@@ -370,7 +370,7 @@ class WorkspaceStore {
       readOnly: _readOnly,
       hiddenEntryCount: hidden,
       repairs: repairs,
-      organization: _organization,
+      info: _info,
     );
     // Self-heal writes change files, so that read is never reused.
     _last = healed.isEmpty ? workspace : null;
@@ -701,26 +701,26 @@ class WorkspaceStore {
     }
   }
 
-  /// Saves an organization's identity into [folder]'s marker, replacing only the fields that differ from [before]
+  /// Saves a workspace's identity into [folder]'s marker, replacing only the fields that differ from [before]
   /// (what the user saw), so anything else there (a newer version's values, another computer's change to another
-  /// field) survives. For an organization that isn't open; the open one saves through [writeOrganization].
-  static Future<void> writeOrganizationAt(
+  /// field) survives. For a workspace that isn't open; the open one saves through [writeWorkspaceInfo].
+  static Future<void> writeWorkspaceInfoAt(
     String folder,
-    OrgInfo organization, {
-    required OrgInfo before,
+    WorkspaceInfo info, {
+    required WorkspaceInfo before,
   }) async {
     if (!await Directory(folder).exists()) throw WorkspaceFolderMissing(folder);
     final (:readOnly, :marker) = await _readMarkerAt(folder);
     if (readOnly) {
       throw const UnsafeWriteException(
-        "Not saving the organization: its folder was saved by a newer version of Tasklet, or its marker file can't "
+        "Not saving the info: its folder was saved by a newer version of Tasklet, or its marker file can't "
         'be read right now.',
       );
     }
     await writeFileAtomic(
       p.join(folder, markerFileName),
       encodeJson(
-        organization.applyTo(
+        info.applyTo(
           marker ?? {'app': 'tasklet', 'formatVersion': formatVersion},
           before,
         ),
@@ -730,18 +730,18 @@ class WorkspaceStore {
 
   /// [ws] (this folder's last read, plus edits) as one export (D15). Entries this version can't show are included
   /// as stored. Refuses while a file couldn't be read (mid-sync or damaged): the export would silently miss it.
-  OrgBundle exportBundle(Workspace ws, DateTime now) {
+  WorkspaceBundle exportBundle(Workspace ws, DateTime now) {
     if (!ws.labelsReadable ||
         !ws.viewsReadable ||
         _unreadableProjects.isNotEmpty) {
       throw const UnsafeWriteException(
-        "Can't export yet: some files in this organization's folder can't be read right now (still syncing, or "
+        "Can't export yet: some files in this workspace's folder can't be read right now (still syncing, or "
         'damaged). Try again in a moment.',
       );
     }
     final noProject = ws.noProject;
-    return OrgBundle(
-      organization: ws.organization,
+    return WorkspaceBundle(
+      info: ws.info,
       exportedAt: now,
       labels: [for (final l in ws.labels) l.toJson(), ..._opaqueLabels],
       views: [for (final v in ws.views) v.toJson(), ..._opaqueViews],
@@ -753,22 +753,22 @@ class WorkspaceStore {
     );
   }
 
-  /// Writes [bundle] into [folder], which must exist and be empty (New Organization creates it), as a new
-  /// organization named [organization]. On failure the files written so far are removed again.
+  /// Writes [bundle] into [folder], which must exist and be empty (New Workspace creates it), as a new
+  /// workspace named [workspace]. On failure the files written so far are removed again.
   static Future<void> importBundle(
     String folder,
-    OrgBundle bundle,
-    OrgInfo organization,
+    WorkspaceBundle bundle,
+    WorkspaceInfo info,
   ) async {
     final dir = Directory(folder);
     if (!await dir.exists()) throw WorkspaceFolderMissing(folder);
     if (!await dir.list().isEmpty) {
       throw const UnsafeWriteException(
-        'Import needs a new, empty folder for the organization.',
+        'Import needs a new, empty folder for the workspace.',
       );
     }
     try {
-      await initialize(folder, organization: organization);
+      await initialize(folder, info: info);
       if (bundle.labels.isNotEmpty) {
         await writeFileAtomic(
           p.join(folder, labelsFileName),
@@ -799,13 +799,13 @@ class WorkspaceStore {
     }
   }
 
-  /// Saves the open organization's name, icon and color into the marker (D15); see [writeOrganizationAt].
-  Future<void> writeOrganization(OrgInfo organization) {
+  /// Saves the open workspace's name, icon and color into the marker (D15); see [writeWorkspaceInfoAt].
+  Future<void> writeWorkspaceInfo(WorkspaceInfo info) {
     _checkWritable();
-    final before = _organization;
+    final before = _info;
     return queue.enqueue(_markerPath, () async {
-      await writeOrganizationAt(folder, organization, before: before);
-      _organization = organization;
+      await writeWorkspaceInfoAt(folder, info, before: before);
+      _info = info;
       _remember(_markerPath);
     });
   }

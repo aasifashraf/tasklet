@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../platform/native.dart';
 import '../state/workspace.dart';
-import 'organizations.dart';
+import 'workspaces.dart';
 import 'theme.dart';
 
 /// Native folder picker for an existing folder. Returns null if cancelled.
@@ -77,7 +77,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
               Text(
                 'Tasklet keeps your tasks as plain files in a folder you choose. No account, no server. '
                 'Pick a folder inside OneDrive, Dropbox, Google Drive or iCloud Drive and your tasks will sync '
-                'across your computers. Each folder is an organization; add more later (work, freelance, '
+                'across your computers. Each folder is a workspace; add more later (work, freelance, '
                 'open source) and switch between them at the top of the sidebar.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 13, color: t.secondary, height: 1.5),
@@ -100,13 +100,11 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                 child: OutlinedButton(
                   onPressed: _busy == null
                       ? () => _run('create', () async {
-                          final created = await showNewOrganizationDialog(
-                            context,
-                          );
+                          final created = await showNewWorkspaceDialog(context);
                           if (created != null) {
                             await ref
                                 .read(workspaceProvider.notifier)
-                                .addOrganization(
+                                .addWorkspace(
                                   created.folder,
                                   identity: created.info,
                                 );
@@ -115,7 +113,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                         })
                       : null,
                   child: Text(
-                    _busy == 'create' ? 'Creating…' : 'Create Organization…',
+                    _busy == 'create' ? 'Creating…' : 'Create Workspace…',
                   ),
                 ),
               ),

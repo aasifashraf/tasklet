@@ -3,18 +3,18 @@ import 'models.dart';
 import 'ordering.dart';
 import 'project_keys.dart';
 
-// What a brand-new organization starts with (docs/DECISIONS.md D16): four labels and quick filters that make sense
-// in any line of work, plus, in the very first organization only, a sample "Tasklet" project showing Tasklet's own
+// What a brand-new workspace starts with (docs/DECISIONS.md D16): four labels and quick filters that make sense
+// in any line of work, plus, in the very first workspace only, a sample "Tasklet" project showing Tasklet's own
 // plan. Written only into an empty folder; existing data is never touched.
 
-/// Content written into a new, empty organization folder.
+/// Content written into a new, empty workspace folder.
 typedef StarterContent = ({
   List<Label> labels,
   List<SavedView> views,
   List<Project> projects,
 });
 
-/// The starter content. [withSampleProject] adds the Tasklet project (first organization only). [newId] makes ids;
+/// The starter content. [withSampleProject] adds the Tasklet project (first workspace only). [newId] makes ids;
 /// [now] stamps everything.
 StarterContent starterContent({
   required String Function() newId,
@@ -154,7 +154,7 @@ Project starterProject(
         'bug, feature, refactor and security labels, whenever you like.',
   );
   add(
-    'Organizations: one folder each for work, freelance and open source',
+    'Workspaces: one folder each for work, freelance and open source',
     TaskStatus.done,
     label: 'feature',
     doneDaysAgo: 0,

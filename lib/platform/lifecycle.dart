@@ -51,8 +51,8 @@ class AppLifecycle with WindowListener {
       ..setVisible(true);
   }
 
-  /// Names the open organization in the window title and tray tooltip ("Acme Corp - Tasklet").
-  Future<void> showOrganization(String? name) async {
+  /// Names the open workspace in the window title and tray tooltip ("Acme Corp - Tasklet").
+  Future<void> showWorkspace(String? name) async {
     final title = name == null ? 'Tasklet' : '$name - Tasklet';
     _tray?.setTooltip(title);
     try {

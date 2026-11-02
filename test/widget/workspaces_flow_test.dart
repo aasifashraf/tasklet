@@ -6,23 +6,21 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:tasklet/app.dart';
 import 'package:tasklet/core/colors.dart';
-import 'package:tasklet/core/organization.dart';
+import 'package:tasklet/core/workspace_info.dart';
 import 'package:tasklet/data/prefs_store.dart';
 import 'package:tasklet/data/workspace_store.dart';
 import 'package:tasklet/state/boards.dart';
 import 'package:tasklet/state/prefs.dart';
 import 'package:tasklet/state/ui_state.dart';
 import 'package:tasklet/state/workspace.dart';
-import 'package:tasklet/ui/organizations.dart';
+import 'package:tasklet/ui/workspaces.dart';
 
 import '../helpers.dart';
 import 'app_flow_test.dart' show settle;
 
-/// Switching organizations (docs/DECISIONS.md D15) shows the other folder and starts its session fresh.
+/// Switching workspaces (docs/DECISIONS.md D15) shows the other folder and starts its session fresh.
 void main() {
-  testWidgets('the sidebar switcher opens the other organization', (
-    tester,
-  ) async {
+  testWidgets('the sidebar switcher opens the other workspace', (tester) async {
     tester.view.physicalSize = const Size(1400, 900);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -32,15 +30,15 @@ void main() {
     final work = p.join(root.path, 'Work'), oss = p.join(root.path, 'OSS');
     final prefs = await tester.runAsync(() async {
       for (final (folder, info, name) in [
-        (work, const OrgInfo(name: 'Acme Corp'), 'Billing API'),
+        (work, const WorkspaceInfo(name: 'Acme Corp'), 'Billing API'),
         (
           oss,
-          const OrgInfo(name: 'Open Source', color: TaskletColor.green),
+          const WorkspaceInfo(name: 'Open Source', color: TaskletColor.green),
           'Tasklet Plugin',
         ),
       ]) {
         Directory(folder).createSync();
-        await WorkspaceStore.initialize(folder, organization: info);
+        await WorkspaceStore.initialize(folder, info: info);
         final store = WorkspaceStore(folder);
         await store.read();
         await store.writeProject(
@@ -69,17 +67,17 @@ void main() {
     expect(find.text('Acme Corp'), findsOneWidget);
     expect(find.text('Billing API'), findsWidgets);
     // Opening it once lists it on this computer.
-    expect(prefs!.values[PrefKeys.organizations], isNotNull);
+    expect(prefs!.values[PrefKeys.workspaces], isNotNull);
 
     // Add the second one, then leave some session state behind in the first.
     await tester.runAsync(
       () => container
           .read(workspaceProvider.notifier)
-          .addOrganization(oss)
+          .addWorkspace(oss)
           .then(
             (_) => container
                 .read(workspaceProvider.notifier)
-                .switchOrganization(work),
+                .switchWorkspace(work),
           ),
     );
     await settle(tester);
@@ -88,7 +86,7 @@ void main() {
         .read(openTaskProvider.notifier)
         .open(const TaskRef('billing-api', 'nope'));
 
-    await tester.tap(find.byType(OrganizationSwitcher));
+    await tester.tap(find.byType(WorkspaceSwitcher));
     await tester.pumpAndSettle();
     expect(find.text('Open Source'), findsOneWidget);
     await tester.runAsync(() async {
@@ -101,8 +99,11 @@ void main() {
     expect(find.text('Billing API'), findsNothing);
     expect(container.read(sessionSearchProvider), isEmpty);
     expect(container.read(openTaskProvider), isNull);
-    final orgs = container.read(prefsProvider).organizations;
-    expect([for (final o in orgs) o.info.name], ['Acme Corp', 'Open Source']);
+    final workspaces = container.read(prefsProvider).workspaces;
+    expect(
+      [for (final o in workspaces) o.info.name],
+      ['Acme Corp', 'Open Source'],
+    );
     expect(container.read(prefsProvider).dataFolder, oss);
 
     // Close the app so its folder watcher lets go of the temp folders.

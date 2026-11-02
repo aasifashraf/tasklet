@@ -1,23 +1,26 @@
 import 'models.dart';
-import 'organization.dart';
+import 'workspace_info.dart';
 
-/// One file holding a whole organization (docs/DECISIONS.md D15): Export Organization writes it, Import
-/// Organization makes a new organization folder from it. Labels, quick filters and projects are kept as their file
+/// One file holding a whole workspace (docs/DECISIONS.md D15): Export Workspace writes it, Import
+/// Workspace makes a new workspace folder from it. Labels, quick filters and projects are kept as their file
 /// JSON, so fields from newer versions and entries this version can't show survive the round trip.
-class OrgBundle {
-  OrgBundle({
-    required this.organization,
+class WorkspaceBundle {
+  WorkspaceBundle({
+    required this.info,
     required this.exportedAt,
     required this.labels,
     required this.views,
     required this.projects,
   });
 
-  static const kind = 'organization';
+  static const kind = 'workspace';
+
+  /// What 1.1.0 wrote (workspaces were called organizations then); still imported.
+  static const legacyKind = 'organization';
   static const formatVersion = 1;
   static const fileExtension = '.tasklet.json';
 
-  final OrgInfo organization;
+  final WorkspaceInfo info;
   final DateTime exportedAt;
 
   /// labels.json and views.json, as stored.
@@ -37,23 +40,23 @@ class OrgBundle {
     'kind': kind,
     'formatVersion': formatVersion,
     'exportedAt': exportedAt.toUtc().toIso8601String(),
-    'organization': organization.toJson(),
+    'workspace': info.toJson(),
     'labels': labels,
     'views': views,
     'projects': projects,
   };
 
-  /// Reads a bundle. Anything that isn't a Tasklet organization export, comes from a newer format, or has a
+  /// Reads a bundle. Anything that isn't a Tasklet workspace export, comes from a newer format, or has a
   /// project that can't be read throws a [FormatException] whose message can be shown as is. [isSafeId] checks a
   /// project id is usable as a file name.
-  factory OrgBundle.fromJson(
+  factory WorkspaceBundle.fromJson(
     Object? json, {
     required bool Function(String id) isSafeId,
   }) {
     if (json is! Map<String, Object?> ||
         json['app'] != 'tasklet' ||
-        json['kind'] != kind) {
-      throw const FormatException("This isn't a Tasklet organization export.");
+        (json['kind'] != kind && json['kind'] != legacyKind)) {
+      throw const FormatException("This isn't a Tasklet workspace export.");
     }
     final version = json['formatVersion'];
     if (version is! num || version != version.truncate()) {
@@ -90,13 +93,12 @@ class OrgBundle {
       read.add(p);
     }
     final exported = DateTime.tryParse('${json['exportedAt']}');
-    return OrgBundle(
-      organization: OrgInfo.fromMarker(
-        json['organization'] is Map<String, Object?>
-            ? json['organization']! as Map<String, Object?>
-            : null,
-        'Imported Organization',
-      ),
+    return WorkspaceBundle(
+      info: WorkspaceInfo.fromMarker(switch (json['workspace'] ??
+          json['organization']) {
+        final Map<String, Object?> info => info,
+        _ => null,
+      }, 'Imported Workspace'),
       exportedAt:
           exported ?? DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
       labels: labels,

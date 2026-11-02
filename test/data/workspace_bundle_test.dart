@@ -5,21 +5,21 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:tasklet/core/colors.dart';
 import 'package:tasklet/core/models.dart';
-import 'package:tasklet/core/org_bundle.dart';
-import 'package:tasklet/core/organization.dart';
+import 'package:tasklet/core/workspace_bundle.dart';
+import 'package:tasklet/core/workspace_info.dart';
 import 'package:tasklet/data/workspace_store.dart';
 
 import '../helpers.dart';
 
-/// Export and import of a whole organization (docs/DECISIONS.md D15).
+/// Export and import of a whole workspace (docs/DECISIONS.md D15).
 void main() {
-  OrgBundle parse(Object? json) => OrgBundle.fromJson(
+  WorkspaceBundle parse(Object? json) => WorkspaceBundle.fromJson(
     jsonDecode(jsonEncode(json)),
     isSafeId: WorkspaceStore.isSafeProjectId,
   );
 
-  Map<String, Object?> valid() => OrgBundle(
-    organization: const OrgInfo(name: 'Acme', color: TaskletColor.teal),
+  Map<String, Object?> valid() => WorkspaceBundle(
+    info: const WorkspaceInfo(name: 'Acme', color: TaskletColor.teal),
     exportedAt: t0,
     labels: const [],
     views: const [],
@@ -29,11 +29,21 @@ void main() {
   ).toJson();
 
   group('reading an export', () {
+    test('an export from 1.1.0 (an "organization") still imports', () {
+      final old = {...valid()}
+        ..['kind'] = 'organization'
+        ..['organization'] = valid()['workspace']
+        ..remove('workspace');
+      final b = parse(old);
+      expect(b.info.name, 'Acme');
+      expect(b.projects.single['id'], 'p1');
+    });
+
     test('round-trips', () {
       final b = parse(valid());
       expect(
-        b.organization,
-        const OrgInfo(name: 'Acme', color: TaskletColor.teal),
+        b.info,
+        const WorkspaceInfo(name: 'Acme', color: TaskletColor.teal),
       );
       expect(b.projects.single['id'], 'p1');
       expect(b.taskCount, 1);
@@ -51,7 +61,7 @@ void main() {
           ),
         ),
       );
-      refuses([1, 2], "isn't a Tasklet organization export");
+      refuses([1, 2], "isn't a Tasklet workspace export");
       refuses({...valid(), 'kind': 'report'}, "isn't a Tasklet");
       refuses({...valid(), 'formatVersion': 2}, 'newer version');
       refuses({...valid(), 'formatVersion': 'x'}, "can't be read");
@@ -81,13 +91,13 @@ void main() {
     tearDown(() => root.deleteSync(recursive: true));
 
     test(
-      'export then import gives the same organization, unknown fields included',
+      'export then import gives the same workspace, unknown fields included',
       () async {
         final from = p.join(root.path, 'Acme');
         Directory(from).createSync();
         await WorkspaceStore.initialize(
           from,
-          organization: const OrgInfo(name: 'Acme'),
+          info: const WorkspaceInfo(name: 'Acme'),
         );
         final store = WorkspaceStore(from);
         await store.read();
@@ -122,11 +132,11 @@ void main() {
         await WorkspaceStore.importBundle(
           to,
           bundle,
-          const OrgInfo(name: 'Acme copy', icon: 'rocket'),
+          const WorkspaceInfo(name: 'Acme copy', icon: 'rocket'),
         );
         final copy = await WorkspaceStore(to).read();
-        expect(copy.organization.name, 'Acme copy');
-        expect(copy.organization.icon, 'rocket');
+        expect(copy.info.name, 'Acme copy');
+        expect(copy.info.icon, 'rocket');
         expect(copy.projects.single.name, 'Billing');
         expect(copy.projects.single.tasks.single.number, 4);
         expect(copy.projects.single.extra['future'], 'kept');
@@ -144,13 +154,17 @@ void main() {
         Directory(busy).createSync();
         File(p.join(busy, 'notes.txt')).writeAsStringSync('mine');
         await expectLater(
-          WorkspaceStore.importBundle(busy, bundle, const OrgInfo(name: 'X')),
+          WorkspaceStore.importBundle(
+            busy,
+            bundle,
+            const WorkspaceInfo(name: 'X'),
+          ),
           throwsA(isA<UnsafeWriteException>()),
         );
         expect(File(p.join(busy, 'notes.txt')).readAsStringSync(), 'mine');
 
-        final bad = OrgBundle(
-          organization: const OrgInfo(name: 'X'),
+        final bad = WorkspaceBundle(
+          info: const WorkspaceInfo(name: 'X'),
           exportedAt: t0,
           labels: const [],
           views: const [],
@@ -162,7 +176,11 @@ void main() {
         final empty = p.join(root.path, 'Empty');
         Directory(empty).createSync();
         await expectLater(
-          WorkspaceStore.importBundle(empty, bad, const OrgInfo(name: 'X')),
+          WorkspaceStore.importBundle(
+            empty,
+            bad,
+            const WorkspaceInfo(name: 'X'),
+          ),
           throwsA(isA<UnsafeWriteException>()),
         );
         expect(Directory(empty).listSync(), isEmpty);

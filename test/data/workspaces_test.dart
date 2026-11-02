@@ -4,28 +4,28 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:tasklet/core/colors.dart';
-import 'package:tasklet/core/organization.dart';
+import 'package:tasklet/core/workspace_info.dart';
 import 'package:tasklet/data/workspace_store.dart';
 import 'package:tasklet/state/prefs.dart';
 
-/// Organizations are folders; their identity is in the marker file (docs/DECISIONS.md D15).
+/// Workspaces are folders; their identity is in the marker file (docs/DECISIONS.md D15).
 void main() {
-  group('OrgInfo', () {
-    test('a marker from before organizations is named after its folder', () {
-      final info = OrgInfo.fromMarker({
+  group('WorkspaceInfo', () {
+    test('a marker from before workspaces is named after its folder', () {
+      final info = WorkspaceInfo.fromMarker({
         'app': 'tasklet',
         'formatVersion': 1,
       }, 'Work');
-      expect(info, const OrgInfo(name: 'Work'));
-      expect(info.icon, OrgInfo.defaultIcon);
-      expect(OrgInfo.fromMarker(null, 'Work').name, 'Work');
-      expect(OrgInfo.fromMarker({'name': '  '}, 'Work').name, 'Work');
+      expect(info, const WorkspaceInfo(name: 'Work'));
+      expect(info.icon, WorkspaceInfo.defaultIcon);
+      expect(WorkspaceInfo.fromMarker(null, 'Work').name, 'Work');
+      expect(WorkspaceInfo.fromMarker({'name': '  '}, 'Work').name, 'Work');
     });
 
     test(
       'reads name, icon (null = plain cube) and color; bad values fall back',
       () {
-        final info = OrgInfo.fromMarker({
+        final info = WorkspaceInfo.fromMarker({
           'name': ' Acme ',
           'icon': null,
           'color': 'teal',
@@ -34,14 +34,14 @@ void main() {
         expect(info.icon, isNull);
         expect(info.color, TaskletColor.teal);
         expect(
-          OrgInfo.fromMarker({'name': 3, 'color': 'ultraviolet'}, 'x'),
-          const OrgInfo(name: 'x'),
+          WorkspaceInfo.fromMarker({'name': 3, 'color': 'ultraviolet'}, 'x'),
+          const WorkspaceInfo(name: 'x'),
         );
       },
     );
 
     test('applyTo replaces only changed fields and keeps everything else', () {
-      const before = OrgInfo(name: 'Acme', icon: 'rocket');
+      const before = WorkspaceInfo(name: 'Acme', icon: 'rocket');
       final marker = {
         'app': 'tasklet',
         'formatVersion': 1,
@@ -76,25 +76,25 @@ void main() {
       File(p.join(dir.path, WorkspaceStore.markerFileName)).readAsStringSync(),
     ) as Map<String, Object?>;
 
-    test('a new organization gets its identity in the marker', () async {
-      const acme = OrgInfo(
+    test('a new workspace gets its identity in the marker', () async {
+      const acme = WorkspaceInfo(
         name: 'Acme',
         icon: 'briefcase',
         color: TaskletColor.indigo,
       );
-      await WorkspaceStore.initialize(dir.path, organization: acme);
+      await WorkspaceStore.initialize(dir.path, info: acme);
       expect(marker()['formatVersion'], WorkspaceStore.formatVersion);
-      expect((await WorkspaceStore(dir.path).read()).organization, acme);
+      expect((await WorkspaceStore(dir.path).read()).info, acme);
 
       // An existing marker is never replaced by initialize.
       await WorkspaceStore.initialize(
         dir.path,
-        organization: const OrgInfo(name: 'Other'),
+        info: const WorkspaceInfo(name: 'Other'),
       );
       expect(marker()['name'], 'Acme');
     });
 
-    test('renaming the open organization keeps unknown marker fields and shows on the next read', () async {
+    test('renaming the open workspace keeps unknown marker fields and shows on the next read', () async {
       await WorkspaceStore.initialize(dir.path);
       final file = File(p.join(dir.path, WorkspaceStore.markerFileName));
       file.writeAsStringSync(
@@ -102,28 +102,28 @@ void main() {
       );
       final store = WorkspaceStore(dir.path);
       final before = await store.read();
-      expect(before.organization.name, p.basename(dir.path));
+      expect(before.info.name, p.basename(dir.path));
 
-      final renamed = before.organization.copyWith(name: 'Freelance');
-      await store.writeOrganization(renamed);
+      final renamed = before.info.copyWith(name: 'Freelance');
+      await store.writeWorkspaceInfo(renamed);
       await store.queue.drain();
       expect(marker()['name'], 'Freelance');
       expect(marker()['future'], isTrue);
       expect(marker()['color'], 'ultraviolet');
       expect(store.isOwnWrite(file.path), isTrue);
       final after = await store.read();
-      expect(after.organization.name, 'Freelance');
+      expect(after.info.name, 'Freelance');
       expect(identical(after, before), isFalse);
     });
 
-    test('an organization saved by a newer version is not written', () async {
+    test('a workspace saved by a newer version is not written', () async {
       await WorkspaceStore.initialize(dir.path);
       File(
         p.join(dir.path, WorkspaceStore.markerFileName),
       ).writeAsStringSync(jsonEncode({'app': 'tasklet', 'formatVersion': 99}));
-      final info = OrgInfo(name: p.basename(dir.path));
+      final info = WorkspaceInfo(name: p.basename(dir.path));
       await expectLater(
-        WorkspaceStore.writeOrganizationAt(
+        WorkspaceStore.writeWorkspaceInfoAt(
           dir.path,
           info.copyWith(name: 'New'),
           before: info,
@@ -136,36 +136,56 @@ void main() {
   });
 
   group('prefs', () {
-    test('a settings file from before organizations lists its folder', () {
-      final orgs = Prefs({PrefKeys.dataFolder: r'D:\Tasks\Tasklet'})
-          .organizations;
-      expect(orgs, hasLength(1));
-      expect(orgs.single.folder, r'D:\Tasks\Tasklet');
-      expect(orgs.single.info.name, 'Tasklet');
+    test('the list 1.1.0 kept under "organizations" is still read', () {
+      final legacy = Prefs({
+        PrefKeys.legacyWorkspaces: [
+          {'folder': '/acme', 'name': 'Acme', 'color': 'teal'},
+        ],
+      }).workspaces;
+      expect(legacy.single.info.name, 'Acme');
+      expect(legacy.single.info.color, TaskletColor.teal);
+      // Once written under the new key, that one wins.
+      final both = Prefs({
+        PrefKeys.workspaces: [
+          {'folder': '/new', 'name': 'New'},
+        ],
+        PrefKeys.legacyWorkspaces: [
+          {'folder': '/acme', 'name': 'Acme'},
+        ],
+      }).workspaces;
+      expect([for (final w in both) w.info.name], ['New']);
+    });
+
+    test('a settings file from before workspaces lists its folder', () {
+      final workspaces = Prefs({PrefKeys.dataFolder: r'D:\Tasks\Tasklet'})
+          .workspaces;
+      expect(workspaces, hasLength(1));
+      expect(workspaces.single.folder, r'D:\Tasks\Tasklet');
+      expect(workspaces.single.info.name, 'Tasklet');
     });
 
     test(
       'the list round-trips, keeps its order and lists each folder once',
       () {
-        final stored = encodeOrganizations([
+        final stored = encodeWorkspaces([
           (
             folder: '/b',
-            info: const OrgInfo(name: 'B', color: TaskletColor.pink),
+            info: const WorkspaceInfo(name: 'B', color: TaskletColor.pink),
           ),
-          (folder: '/a', info: const OrgInfo(name: 'A', icon: null)),
+          (folder: '/a', info: const WorkspaceInfo(name: 'A', icon: null)),
         ]);
-        final orgs = Prefs({
-          PrefKeys.organizations: [
+        final workspaces = Prefs({
+          PrefKeys.workspaces: [
             ...jsonDecode(jsonEncode(stored)) as List<Object?>,
             {'folder': '/b', 'name': 'B again'},
             'junk',
             {'name': 'no folder'},
           ],
           PrefKeys.dataFolder: '/a',
-        }).organizations;
-        expect([for (final o in orgs) o.info.name], ['B', 'A']);
-        expect(orgs.first.info.color, TaskletColor.pink);
-        expect(orgs.last.info.icon, isNull);
+        }).workspaces;
+        expect([for (final o in workspaces) o.info.name], ['B', 'A']);
+        expect(workspaces.first.info.color, TaskletColor.pink);
+        expect(workspaces.last.info.icon, isNull);
       },
     );
   });

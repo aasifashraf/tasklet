@@ -169,22 +169,22 @@ extension WorkspaceActions on WorkspaceController {
     await _save((s) => s.deleteProject(project, moveToTrash: trash));
   }
 
-  /// The open organization as one export (docs/DECISIONS.md D15), with every pending edit saved first. Throws
+  /// The open workspace as one export (docs/DECISIONS.md D15), with every pending edit saved first. Throws
   /// [UnsafeWriteException] while some file can't be read.
-  Future<OrgBundle> exportOrganization() async {
+  Future<WorkspaceBundle> exportWorkspace() async {
     await flushSaves();
     final store = _store;
     final ws = workspace;
     if (store == null || ws == null) {
-      throw const UnsafeWriteException('No organization is open.');
+      throw const UnsafeWriteException('No workspace is open.');
     }
     return store.exportBundle(ws, _now);
   }
 
-  /// Moves a project with its tasks into the organization at [folder] (docs/DECISIONS.md D15). It is written
+  /// Moves a project with its tasks into the workspace at [folder] (docs/DECISIONS.md D15). It is written
   /// there first and only then removed here (to the Recycle Bin or `.trash`), so a failure never leaves it in
   /// neither. Returns why it couldn't move, or null.
-  Future<String?> moveProjectToOrganization(
+  Future<String?> moveProjectToWorkspace(
     String projectId,
     String folder,
   ) async {
@@ -192,11 +192,11 @@ extension WorkspaceActions on WorkspaceController {
     final ws = workspace;
     var project = ws?.projectById(projectId);
     if (ws == null || project == null || project.isNoProject) return null;
-    if (ws.readOnly) return "This organization can't be changed right now.";
+    if (ws.readOnly) return "This workspace can't be changed right now.";
     try {
       final target = WorkspaceStore(folder);
       final there = await target.read();
-      final name = there.organization.name;
+      final name = there.info.name;
       if (there.readOnly) {
         return "$name can't be changed right now: it was saved by a newer version of Tasklet, or is mid-sync.";
       }
@@ -219,11 +219,11 @@ extension WorkspaceActions on WorkspaceController {
         project = identical(latest, moving) ? null : latest;
       }
     } on WorkspaceFolderMissing {
-      return "Can't find that organization's folder.";
+      return "Can't find that workspace's folder.";
     } on UnsafeWriteException catch (e) {
       return e.message;
     } on FileSystemException catch (e) {
-      return "Couldn't write to that organization: ${e.message}";
+      return "Couldn't write to that info: ${e.message}";
     }
     await deleteProject(projectId);
     return null;

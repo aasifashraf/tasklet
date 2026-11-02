@@ -89,7 +89,7 @@ void main() {
     }
   });
 
-  test('the first organization gets the sample project, later ones only labels and filters', () async {
+  test('the first workspace gets the sample project, later ones only labels and filters', () async {
     final prefs = await PrefsStore.open(p.join(root.path, 'prefs.json'));
     final container = ProviderContainer(
       overrides: [prefsStoreProvider.overrideWithValue(prefs)],
@@ -102,15 +102,15 @@ void main() {
         if (ws != null) return ws;
         await Future<void>.delayed(const Duration(milliseconds: 20));
       }
-      fail('the organization did not open');
+      fail('the workspace did not open');
     }
 
-    await controller.addOrganization(folder('First'));
+    await controller.addWorkspace(folder('First'));
     final first = await opened();
     expect(first.projects.single.name, 'Tasklet');
     expect(first.labels, hasLength(4));
 
-    await controller.addOrganization(folder('Second'));
+    await controller.addWorkspace(folder('Second'));
     final second = await opened();
     expect(second.folder, endsWith('Second'));
     expect(second.projects, isEmpty);
@@ -120,7 +120,7 @@ void main() {
     // A folder that already has Tasklet data gets nothing.
     final existing = folder('Existing');
     await WorkspaceStore.initialize(existing);
-    await controller.addOrganization(existing);
+    await controller.addWorkspace(existing);
     final third = await opened();
     expect(third.folder, endsWith('Existing'));
     expect(third.labels, isEmpty);

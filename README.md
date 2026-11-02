@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/board.png" alt="Tasklet All Tasks board with Backlog, Todo, In Progress and Done columns, project and label icons, and the organization switcher in the sidebar" width="900">
+  <img src="docs/screenshots/board.png" alt="Tasklet All Tasks board with Backlog, Todo, In Progress and Done columns, project and label icons, and the workspace switcher in the sidebar" width="900">
 </p>
 
 ---
@@ -26,7 +26,7 @@
 
 Tasklet is a single-player task tracker inspired by the speed and look of tools like Linear, but intentionally
 simpler: no teams, no assignees, no accounts. Everything you create (tasks, projects, labels and quick filters) is stored
-as plain JSON files in a folder on your computer. Keep separate folders as **organizations** (your employer, freelance
+as plain JSON files in a folder on your computer. Keep separate folders as **workspaces** (your employer, freelance
 clients, open source) and switch between them in one click.
 
 Put that folder inside OneDrive, Dropbox, Google Drive, iCloud Drive or Syncthing, and your tasks follow you between
@@ -43,18 +43,18 @@ planned.
 | **Dashboard:** what's overdue, due today and coming up, plus what you finished. | **Detail panel:** every property as a chip; title and description save as you type. |
 | ![Project list layout in the light theme with collapsible status sections](docs/screenshots/list-light.png) | ![New Task dialog with status, priority, dates, labels and project chips](docs/screenshots/new-task.png) |
 | **List layout and light theme:** compact rows grouped by status. | **New Task (Ctrl+N):** type a title, set properties with chips, press Enter. |
-| ![Organization menu listing Acme Corp, Freelance and Open Source with Ctrl+Alt shortcuts, plus New, Open Existing, Edit, Export and Import](docs/screenshots/organizations.png) | ![Icon picker with search, 16 colors and project-related icons grouped by category](docs/screenshots/icon-picker.png) |
-| **Organizations:** each one is its own folder; switch at the top of the sidebar or with Ctrl+Alt+1 … 9. | **Icons and colors:** about 640 project-related icons and 16 colors for projects, labels and quick filters. |
+| ![Workspace menu listing Acme Corp, Freelance and Open Source with Ctrl+Alt shortcuts, plus New, Open Existing, Edit, Export and Import](docs/screenshots/workspaces.png) | ![Icon picker with search, 16 colors and project-related icons grouped by category](docs/screenshots/icon-picker.png) |
+| **Workspaces:** each one is its own folder; switch at the top of the sidebar or with Ctrl+Alt+1 … 9. | **Icons and colors:** about 640 project-related icons and 16 colors for projects, labels and quick filters. |
 | ![Export Report dialog with chart preview by status, priority and project](docs/screenshots/reports.png) | |
 | **Reports:** preview charts, then export a prompt for any AI assistant. | |
 
 ## Features
 
 ### Organize
-- **Organizations** keep separate lives apart: your employer, freelance clients, open source. Each one is its own
+- **Workspaces** keep separate lives apart: your employer, freelance clients, open source. Each one is its own
   folder with its own projects, labels and quick filters, so each can sync through a different service (the company
   OneDrive, your personal Dropbox). Switch at the top of the sidebar or with Ctrl+Alt+1 … 9, move a project
-  to another organization from its menu, and export or import a whole organization as one file.
+  to another workspace from its menu, and export or import a whole workspace as one file.
 - **Projects** with a short, permanent key, so every task gets an ID like `WEB-12` that never changes, even after a
   rename.
 - **Tasks without a project** are allowed and get IDs like `TSK-3`.
@@ -102,7 +102,7 @@ anywhere.
 ### Make it yours
 - Light, dark or automatic theme.
 - Reorder or hide sidebar items (Settings → Sidebar).
-- A separate Settings window with General, Sidebar, Notifications and Organizations tabs.
+- A separate Settings window with General, Sidebar, Notifications and Workspaces tabs.
 
 ## Download and install
 
@@ -119,9 +119,9 @@ The installer isn't code-signed yet, so Windows SmartScreen may show a warning t
 ## Getting started
 
 1. Start Tasklet. On first launch it asks where to keep your data.
-2. Choose **Create Organization…** (name it, then pick where its folder goes, for example inside your OneDrive
+2. Choose **Create Workspace…** (name it, then pick where its folder goes, for example inside your OneDrive
    folder) or **Choose Existing Folder…** to open a folder you already use with Tasklet on another computer.
-   Add more organizations later from the top of the sidebar or the **Organization** menu. A new organization
+   Add more workspaces later from the top of the sidebar or the **Workspace** menu. A new workspace
    starts with four labels (bug, feature, refactor, security) and everyday quick filters (Overdue, Due Soon, High
    Priority, In Progress, No Due Date); your first one also has a sample **Tasklet** project showing Tasklet's own
    plan. Rename or delete any of it.
@@ -136,7 +136,7 @@ The installer isn't code-signed yet, so Windows SmartScreen may show a warning t
 | Search the current board | Ctrl+F |
 | Delete the selected or open task | Delete or Ctrl+Backspace |
 | Go to Dashboard, Today, All Tasks, … (sidebar order) | Ctrl+1 … Ctrl+7 |
-| Switch to the first nine organizations | Ctrl+Alt+1 … Ctrl+Alt+9 |
+| Switch to the first nine workspaces | Ctrl+Alt+1 … Ctrl+Alt+9 |
 | Settings | Ctrl+, |
 | Refresh from disk | F5 |
 | Close the detail panel or cancel a drag | Esc |
@@ -145,11 +145,11 @@ On macOS, use ⌘ instead of Ctrl.
 
 ## Your data
 
-Each organization is one folder:
+Each workspace is one folder:
 
 ```text
-<organization folder>/
-  tasklet-workspace.json     marker file: format version, and the organization's name, icon and color
+<workspace folder>/
+  tasklet-workspace.json     marker file: format version, and the workspace's name, icon and color
   labels.json                workspace labels
   views.json                 quick filters
   projects/
@@ -207,7 +207,7 @@ lib/
   data/       the only code that touches files: workspace store, save queue,
               folder watcher, device settings
   state/      app state with Riverpod: workspace controller, boards, clock, undo, reminders
-  ui/         theme, glyphs and the icon catalog, sidebar and organization switcher, board and
+  ui/         theme, glyphs and the icon catalog, sidebar and workspace switcher, board and
               list, task dialog and panel, pages, settings window
   platform/   menus and shortcuts, windows, tray, notifications, Recycle Bin
 test/         unit tests (core, data, state) and widget tests

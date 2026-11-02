@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 
 import '../core/models.dart';
-import '../core/organization.dart';
+import '../core/workspace_info.dart';
 import '../core/today_rules.dart';
 import '../data/prefs_store.dart';
 
@@ -86,17 +86,17 @@ class ReminderSettings {
   );
 }
 
-/// An organization on this computer: its folder and (cached) identity.
-typedef OrgEntry = ({String folder, OrgInfo info});
+/// A workspace on this computer: its folder and (cached) identity.
+typedef WorkspaceEntry = ({String folder, WorkspaceInfo info});
 
 /// Whether two paths name the same folder (case-insensitive on Windows and macOS).
 bool sameFolder(String a, String b) =>
     p.canonicalize(a).toLowerCase() == p.canonicalize(b).toLowerCase();
 
-/// The stored form of [organizations] for [PrefKeys.organizations].
-List<Map<String, Object?>> encodeOrganizations(List<OrgEntry> organizations) =>
+/// The stored form of [workspaces] for [PrefKeys.workspaces].
+List<Map<String, Object?>> encodeWorkspaces(List<WorkspaceEntry> workspaces) =>
     [
-      for (final o in organizations) {'folder': o.folder, ...o.info.toJson()},
+      for (final o in workspaces) {'folder': o.folder, ...o.info.toJson()},
     ];
 
 /// Keys of the device-local prefs file.
@@ -117,7 +117,10 @@ abstract final class PrefKeys {
   static const reminderEnabledSince = 'reminderEnabledSince';
   static const whatsNewSeen = 'whatsNewSeen';
   static const recentIcons = 'recentIcons';
-  static const organizations = 'organizations';
+  static const workspaces = 'workspaces';
+
+  /// Where 1.1.0 kept the list (they were called organizations then); read when [workspaces] is missing.
+  static const legacyWorkspaces = 'organizations';
   static String boardDisplay(String boardId) => 'display:$boardId';
   static String collapsedGroups(String boardId) => 'collapsed:$boardId';
 }
@@ -137,29 +140,30 @@ class Prefs {
         if (e is String) e,
   ];
 
-  /// The open organization's folder.
+  /// The open workspace's folder.
   String? get dataFolder => _get<String>(PrefKeys.dataFolder);
 
-  /// Organizations on this computer in the user's order, each folder once (docs/DECISIONS.md D15). The open folder
-  /// is always listed, so a settings file from before organizations shows it as the first organization. Names,
+  /// Workspaces on this computer in the user's order, each folder once (docs/DECISIONS.md D15). The open folder
+  /// is always listed, so a settings file from before workspaces shows it as the first workspace. Names,
   /// icons and colors are a cache of each folder's marker, refreshed when it opens.
-  List<OrgEntry> get organizations {
-    final list = <OrgEntry>[];
-    void add(String folder, OrgInfo info) {
+  List<WorkspaceEntry> get workspaces {
+    final list = <WorkspaceEntry>[];
+    void add(String folder, WorkspaceInfo info) {
       if (!list.any((o) => sameFolder(o.folder, folder))) {
         list.add((folder: folder, info: info));
       }
     }
 
-    if (_v[PrefKeys.organizations] case final List<Object?> stored) {
+    if (_v[PrefKeys.workspaces] ?? _v[PrefKeys.legacyWorkspaces]
+        case final List<Object?> stored) {
       for (final e in stored) {
         if (e case {'folder': final String folder}) {
-          add(folder, OrgInfo.fromJson(e, folderName(folder)));
+          add(folder, WorkspaceInfo.fromJson(e, folderName(folder)));
         }
       }
     }
     if (dataFolder case final current?) {
-      add(current, OrgInfo(name: folderName(current)));
+      add(current, WorkspaceInfo(name: folderName(current)));
     }
     return list;
   }
