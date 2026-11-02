@@ -1,4 +1,4 @@
-/// The 8 named colors shared by projects, labels, and views (SPEC §8.2).
+/// The 16 named colors shared by projects, labels, and views (SPEC §8.2; 8 more in docs/DECISIONS.md D14).
 ///
 /// `neutral` is a deliberate "no color" choice and is never auto-assigned.
 enum TaskletColor {
@@ -9,6 +9,14 @@ enum TaskletColor {
   red,
   yellow,
   magenta,
+  teal,
+  cyan,
+  indigo,
+  pink,
+  lime,
+  amber,
+  brown,
+  slate,
   neutral;
 
   static TaskletColor? tryParse(Object? value) {
@@ -29,6 +37,14 @@ enum TaskletColor {
     red,
     yellow,
     magenta,
+    teal,
+    indigo,
+    pink,
+    lime,
+    cyan,
+    amber,
+    brown,
+    slate,
   ];
 
   /// The first rotation color not in [used]; cycles from the start when all are used.

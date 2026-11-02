@@ -332,7 +332,7 @@ Widget labelsChipContent(
   }
   if (labels.length == 1) {
     return PropChip(
-      icon: ColorDot(color: t.named(labels.single.color)),
+      icon: LabelGlyph(labels.single),
       label: labels.single.name,
       onTap: onTap,
     );
@@ -385,7 +385,7 @@ List<Widget> labelMenuItems(
   final workspaceLabels = available.where((e) => e.$2 == null).toList();
   Widget item(Label l) => _ToggleItem(
     label: l.name,
-    leading: ColorDot(color: t.named(l.color)),
+    leading: LabelGlyph(l),
     initiallyChecked: selected.contains(l.id),
     onToggle: () => onToggle(l),
   );
@@ -455,9 +455,10 @@ class ProjectPicker extends StatelessWidget {
       enabled: enabled,
       menuChildren: () => projectMenuItems(options, project.id, onPick, t),
       chip: (onTap) => PropChip(
-        icon: CubeIcon(
-          color: project.isNoProject ? t.tertiary : t.named(project.color),
+        icon: ProjectGlyph(
+          project,
           size: 12,
+          color: project.isNoProject ? t.tertiary : null,
         ),
         label: project.name,
         onTap: onTap,
@@ -476,9 +477,10 @@ List<Widget> projectMenuItems(
     checkItem(
       p.name,
       checked: p.id == currentId,
-      leading: CubeIcon(
-        color: p.isNoProject ? t.tertiary : t.named(p.color),
+      leading: ProjectGlyph(
+        p,
         size: 12,
+        color: p.isNoProject ? t.tertiary : null,
       ),
       onPressed: () => onPick(p),
     ),

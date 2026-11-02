@@ -299,7 +299,7 @@ Widget checkItem(
   },
 );
 
-/// An 8-color picker grid inside a menu (projects, labels, views).
+/// The color picker grid inside a menu (quick filters), 9 colors per row.
 class ColorGrid extends StatelessWidget {
   const ColorGrid({
     super.key,
@@ -316,35 +316,40 @@ class ColorGrid extends StatelessWidget {
     final t = Tokens.of(context);
     return Padding(
       padding: const EdgeInsets.all(8),
-      child: Wrap(
-        spacing: 4,
-        runSpacing: 4,
-        children: [
-          for (final c in TaskletColor.values)
-            Tooltip(
-              message: c.name[0].toUpperCase() + c.name.substring(1),
-              child: Hoverable(
-                cursor: SystemMouseCursors.click,
-                builder: (context, hovered) => GestureDetector(
-                  onTap: () {
-                    onPick(c);
-                    MenuController.maybeOf(context)?.close();
-                  },
-                  child: Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: c == selected
-                          ? t.selected
-                          : (hovered ? t.hover : Colors.transparent),
-                      borderRadius: BorderRadius.circular(6),
+      child: SizedBox(
+        width: 9 * 28 + 8 * 4,
+        child: Wrap(
+          spacing: 4,
+          runSpacing: 4,
+          children: [
+            for (final c in TaskletColor.values)
+              Tooltip(
+                message: c.name[0].toUpperCase() + c.name.substring(1),
+                child: Hoverable(
+                  cursor: SystemMouseCursors.click,
+                  builder: (context, hovered) => GestureDetector(
+                    onTap: () {
+                      onPick(c);
+                      MenuController.maybeOf(context)?.close();
+                    },
+                    child: Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: c == selected
+                            ? t.selected
+                            : (hovered ? t.hover : Colors.transparent),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Center(
+                        child: ColorDot(color: t.named(c), size: 12),
+                      ),
                     ),
-                    child: Center(child: ColorDot(color: t.named(c), size: 12)),
                   ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -590,7 +595,7 @@ class _TrianglePainter extends CustomPainter {
   bool shouldRepaint(_TrianglePainter old) => old.color != color;
 }
 
-/// "Change Color ▸" submenu with the 8-color grid, for the ⋯ / right-click menus of projects, labels and views, so
+/// "Change Color ▸" submenu with the color grid, for the ⋯ / right-click menus of quick filters, so
 /// recoloring is discoverable, not only by clicking the color icon.
 Widget colorSubmenu({
   required TaskletColor selected,

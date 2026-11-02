@@ -10,7 +10,7 @@ import '../../core/project_keys.dart';
 import '../../state/prefs.dart';
 import '../../state/ui_state.dart';
 import '../../state/workspace.dart';
-import '../glyphs.dart';
+import '../icon_picker.dart';
 import '../shell/sidebar.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -30,6 +30,7 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage> {
   bool _creating = false;
   String? _renaming;
   TaskletColor _newColor = TaskletColor.blue;
+  String? _newIcon;
   String _draftName = '';
   int _seenRequest = 0;
 
@@ -38,6 +39,7 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage> {
   void _startCreate() => setState(() {
     _creating = true;
     _draftName = '';
+    _newIcon = null;
     _newColor =
         TaskletColor.rotation[Random().nextInt(TaskletColor.rotation.length)];
   });
@@ -125,14 +127,14 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage> {
 
   Widget _createRow(BuildContext context, Workspace ws, Tokens t) =>
       ListRowShell(
-        leading: TapMenu(
-          menuChildren: [
-            ColorGrid(
-              selected: _newColor,
-              onPick: (c) => setState(() => _newColor = c),
-            ),
-          ],
-          child: CubeIcon(color: t.named(_newColor), size: 15),
+        leading: IconPickerButton(
+          icon: _newIcon,
+          color: _newColor,
+          kind: GlyphKind.project,
+          onPick: (icon, color) => setState(() {
+            _newIcon = icon;
+            _newColor = color;
+          }),
         ),
         title: InlineEditField(
           initial: '',
@@ -140,7 +142,7 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage> {
           onChanged: (v) => setState(() => _draftName = v),
           onCommit: (name) async {
             setState(() => _creating = false);
-            await _controller.createProject(name, _newColor);
+            await _controller.createProject(name, _newColor, icon: _newIcon);
           },
           onCancel: () => setState(() => _creating = false),
         ),
@@ -157,15 +159,12 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage> {
     final done = p.tasks.where((x) => x.isDone).length;
     final readOnly = ref.read(workspaceDataProvider)?.readOnly ?? true;
     return ListRowShell(
-      leading: TapMenu(
+      leading: IconPickerButton(
         enabled: !readOnly,
-        menuChildren: [
-          ColorGrid(
-            selected: p.color,
-            onPick: (c) => _controller.setProjectColor(p.id, c),
-          ),
-        ],
-        child: CubeIcon(color: t.named(p.color), size: 15),
+        icon: p.icon,
+        color: p.color,
+        kind: GlyphKind.project,
+        onPick: (icon, color) => _controller.setProjectIcon(p.id, icon, color),
       ),
       title: _renaming == p.id
           ? InlineEditField(
@@ -212,9 +211,13 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage> {
                 'Rename',
                 onPressed: () => setState(() => _renaming = p.id),
               ),
-              colorSubmenu(
-                selected: p.color,
-                onPick: (c) => _controller.setProjectColor(p.id, c),
+              iconMenuItem(
+                context,
+                icon: p.icon,
+                color: p.color,
+                kind: GlyphKind.project,
+                onPick: (icon, color) =>
+                    _controller.setProjectIcon(p.id, icon, color),
               ),
               menuItem(
                 p.archived ? 'Unarchive' : 'Archive',

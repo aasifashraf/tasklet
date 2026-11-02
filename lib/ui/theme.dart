@@ -86,17 +86,40 @@ class Tokens extends ThemeExtension<Tokens> {
   static Tokens of(BuildContext context) =>
       Theme.of(context).extension<Tokens>()!;
 
-  /// The 8 named colors; neutral renders as plain secondary text color (SPEC §8.2).
-  Color named(TaskletColor color) => switch (color) {
-    TaskletColor.blue => const Color(0xFF3E7BFA),
-    TaskletColor.purple => const Color(0xFF8E5CF6),
-    TaskletColor.green => const Color(0xFF2EA44F),
-    TaskletColor.orange => const Color(0xFFF2780C),
-    TaskletColor.red => const Color(0xFFE5484D),
-    TaskletColor.yellow => const Color(0xFFE2B203),
-    TaskletColor.magenta => const Color(0xFFD946C6),
-    TaskletColor.neutral => secondary,
-  };
+  /// The 16 named colors; neutral renders as plain secondary text color (SPEC §8.2). Each is at least 3:1 against
+  /// every surface as a glyph (test/ui/design_system_test.dart), so some are darker in the light theme.
+  Color named(TaskletColor color) {
+    final dark = identical(this, Tokens.dark);
+    return switch (color) {
+      TaskletColor.blue => const Color(0xFF3E7BFA),
+      TaskletColor.purple => const Color(0xFF8E5CF6),
+      TaskletColor.green =>
+        dark ? const Color(0xFF2EA44F) : const Color(0xFF22913F),
+      TaskletColor.orange =>
+        dark ? const Color(0xFFF2780C) : const Color(0xFFDD6A04),
+      TaskletColor.red => const Color(0xFFE5484D),
+      TaskletColor.yellow =>
+        dark ? const Color(0xFFE2B203) : const Color(0xFFA67C00),
+      TaskletColor.magenta => const Color(0xFFD946C6),
+      TaskletColor.teal =>
+        dark ? const Color(0xFF2DD4BF) : const Color(0xFF0D9488),
+      TaskletColor.cyan =>
+        dark ? const Color(0xFF22D3EE) : const Color(0xFF0891B2),
+      TaskletColor.indigo =>
+        dark ? const Color(0xFF818CF8) : const Color(0xFF4F46E5),
+      TaskletColor.pink =>
+        dark ? const Color(0xFFF472B6) : const Color(0xFFDB2777),
+      TaskletColor.lime =>
+        dark ? const Color(0xFFA3E635) : const Color(0xFF4D7C0F),
+      TaskletColor.amber =>
+        dark ? const Color(0xFFFBBF24) : const Color(0xFFB45309),
+      TaskletColor.brown =>
+        dark ? const Color(0xFFC08A5B) : const Color(0xFF8B5E3C),
+      TaskletColor.slate =>
+        dark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+      TaskletColor.neutral => secondary,
+    };
+  }
 
   Color status(TaskStatus status) => switch (status) {
     TaskStatus.backlog || TaskStatus.todo => tertiary,

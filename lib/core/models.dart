@@ -160,6 +160,15 @@ List<String> _strings(Object? value) => value is List
   throw FormatException('Invalid color: $raw');
 }
 
+/// A project or label icon name; any other value (from a newer version) stays in `extra`, see [_iconKnown].
+String? _icon(Map<String, Object?> json) => switch (json['icon']) {
+  final String name => name,
+  _ => null,
+};
+
+Set<String> _iconKnown(Map<String, Object?> json, Set<String> known) =>
+    json['icon'] is String ? {...known, 'icon'} : known;
+
 /// Entries of a JSON list that parse with [parse] and have a unique id, plus every other entry verbatim.
 class LenientList<T> {
   LenientList(this.items, this.opaque);
@@ -337,6 +346,7 @@ class Label {
     required this.name,
     required this.color,
     this.unknownColor,
+    this.icon,
     Map<String, Object?> extra = const {},
   }) : extra = Map.unmodifiable(extra);
 
@@ -350,7 +360,8 @@ class Label {
       name: _req<String>(json, 'name'),
       color: color,
       unknownColor: unknownColor,
-      extra: _extra(json, _known),
+      icon: _icon(json),
+      extra: _extra(json, _iconKnown(json, _known)),
     );
   }
 
@@ -360,13 +371,23 @@ class Label {
 
   /// A color value from a newer version, written back until the user picks a color.
   final String? unknownColor;
+
+  /// A Lucide icon name (lib/ui/icons); null draws the dot. A name this version doesn't know also draws the dot
+  /// and is written back unchanged.
+  final String? icon;
   final Map<String, Object?> extra;
 
-  Label copyWith({String? name, TaskletColor? color}) => Label(
+  Label copyWith({
+    String? name,
+    TaskletColor? color,
+    String? icon,
+    bool clearIcon = false,
+  }) => Label(
     id: id,
     name: name ?? this.name,
     color: color ?? this.color,
     unknownColor: color == null ? unknownColor : null,
+    icon: clearIcon ? null : (icon ?? this.icon),
     extra: extra,
   );
 
@@ -375,6 +396,7 @@ class Label {
     'id': id,
     'name': name,
     'color': unknownColor ?? color.toJson(),
+    if (icon != null) 'icon': icon,
   };
 }
 
@@ -385,6 +407,7 @@ class Project {
     required this.key,
     this.color = TaskletColor.blue,
     this.unknownColor,
+    this.icon,
     this.archived = false,
     this.favorite = false,
     this.sortOrder = 0,
@@ -449,6 +472,7 @@ class Project {
       key: _opt(json, 'key', ''),
       color: color,
       unknownColor: unknownColor,
+      icon: _icon(json),
       archived: _opt(json, 'archived', false),
       favorite: _opt(json, 'favorite', false),
       sortOrder: _double(json, 'sortOrder'),
@@ -462,7 +486,7 @@ class Project {
           : _time(json, 'updatedAt'),
       tasks: tasks.items,
       opaqueTasks: tasks.opaque,
-      extra: _extra(json, _known),
+      extra: _extra(json, _iconKnown(json, _known)),
     );
   }
 
@@ -475,6 +499,10 @@ class Project {
 
   /// A color value from a newer version, written back until the user picks a color.
   final String? unknownColor;
+
+  /// A Lucide icon name (lib/ui/icons); null draws the cube. A name this version doesn't know also draws the cube
+  /// and is written back unchanged.
+  final String? icon;
   final bool archived;
   final bool favorite;
   final double sortOrder;
@@ -508,6 +536,8 @@ class Project {
     String? name,
     String? key,
     TaskletColor? color,
+    String? icon,
+    bool clearIcon = false,
     bool? archived,
     bool? favorite,
     double? sortOrder,
@@ -522,6 +552,7 @@ class Project {
     key: key ?? this.key,
     color: color ?? this.color,
     unknownColor: color == null ? unknownColor : null,
+    icon: clearIcon ? null : (icon ?? this.icon),
     archived: archived ?? this.archived,
     favorite: favorite ?? this.favorite,
     sortOrder: sortOrder ?? this.sortOrder,
@@ -542,6 +573,7 @@ class Project {
     'name': name,
     'key': key,
     'color': unknownColor ?? color.toJson(),
+    if (icon != null) 'icon': icon,
     'archived': archived,
     'favorite': favorite,
     'sortOrder': sortOrder,

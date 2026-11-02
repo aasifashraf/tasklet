@@ -51,7 +51,9 @@ planned.
 - **Projects** with a short, permanent key, so every task gets an ID like `WEB-12` that never changes, even after a
   rename.
 - **Tasks without a project** are allowed and get IDs like `TSK-3`.
-- **Labels** for the whole workspace or for one project, each with one of eight colors.
+- **Labels** for the whole workspace or for one project.
+- **Icons and colors** for projects and labels: about 640 project-related icons (Lucide) with search, and 16
+  colors.
 - **Favorites** pinned at the top of the sidebar, and an **archive** for finished projects.
 - **Quick filters**: save any combination of filters and open it in one click, optionally pinned to the sidebar. A
   quick filter's filters and display settings are stored in your data folder, so it looks the same on every computer.

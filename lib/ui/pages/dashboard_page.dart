@@ -39,9 +39,7 @@ class DashboardPage extends ConsumerWidget {
       actions: [
         PillMenuButton(
           label: project?.name ?? 'All Projects',
-          leading: project == null
-              ? null
-              : CubeIcon(color: t.named(project.color), size: 12),
+          leading: project == null ? null : ProjectGlyph(project, size: 12),
           menuChildren: [
             checkItem(
               'All Projects',
@@ -53,7 +51,7 @@ class DashboardPage extends ConsumerWidget {
               checkItem(
                 p.name,
                 checked: project?.id == p.id,
-                leading: CubeIcon(color: t.named(p.color), size: 12),
+                leading: ProjectGlyph(p, size: 12),
                 onPressed: () => setFilter(p.id),
               ),
           ],
@@ -277,7 +275,7 @@ class _TaskRows extends ConsumerWidget {
                             ),
                           ),
                           if (showProject && !e.project.isNoProject) ...[
-                            CubeIcon(color: t.named(e.project.color), size: 12),
+                            ProjectGlyph(e.project, size: 12),
                             const SizedBox(width: 5),
                             ConstrainedBox(
                               constraints: const BoxConstraints(maxWidth: 140),

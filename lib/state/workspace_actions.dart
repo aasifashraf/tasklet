@@ -5,12 +5,17 @@ part of 'workspace.dart';
 extension WorkspaceActions on WorkspaceController {
   // ---------------------------------------------------------------- projects
 
-  Future<Project> createProject(String name, TaskletColor color) async {
+  Future<Project> createProject(
+    String name,
+    TaskletColor color, {
+    String? icon,
+  }) async {
     final ws = _ws;
     final project = wops.newProject(
       id: newId(),
       name: name,
       color: color,
+      icon: icon,
       existing: ws.projects,
       now: _now,
     );
@@ -31,6 +36,18 @@ extension WorkspaceActions on WorkspaceController {
 
   Future<void> setProjectColor(String id, TaskletColor color) =>
       updateProject(id, (p) => p.copyWith(color: color));
+
+  /// Sets the icon (null: the default cube) and color together, as the icon picker does. An unchanged color is
+  /// left alone, so a color from a newer version survives picking only an icon.
+  Future<void> setProjectIcon(String id, String? icon, TaskletColor color) =>
+      updateProject(
+        id,
+        (p) => p.copyWith(
+          icon: icon,
+          clearIcon: icon == null,
+          color: color == p.color ? null : color,
+        ),
+      );
 
   Future<void> setArchived(String id, bool archived) =>
       updateProject(id, (p) => p.copyWith(archived: archived));
@@ -342,9 +359,15 @@ extension WorkspaceActions on WorkspaceController {
   Future<Label> createLabel(
     String name,
     TaskletColor color, {
+    String? icon,
     String? projectId,
   }) async {
-    final label = Label(id: newId(), name: name.trim(), color: color);
+    final label = Label(
+      id: newId(),
+      name: name.trim(),
+      color: color,
+      icon: icon,
+    );
     if (projectId == null) {
       final labels = [..._ws.labels, label];
       _set(_ws.copyWith(labels: labels));

@@ -149,7 +149,7 @@ class TaskCard extends ConsumerWidget {
           display.shows(DisplayProperty.project) &&
           !entry.project.isNoProject)
         PropChip(
-          icon: CubeIcon(color: t.named(entry.project.color), size: 12),
+          icon: ProjectGlyph(entry.project, size: 12),
           label: entry.project.name,
           maxLabelWidth: 120,
         ),
@@ -347,10 +347,7 @@ class TaskRow extends ConsumerWidget {
                       !entry.project.isNoProject) ...[
                     const SizedBox(width: 6),
                     PropChip(
-                      icon: CubeIcon(
-                        color: t.named(entry.project.color),
-                        size: 12,
-                      ),
+                      icon: ProjectGlyph(entry.project, size: 12),
                       label: entry.project.name,
                       maxLabelWidth: 120,
                     ),

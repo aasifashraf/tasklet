@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tasklet/core/colors.dart';
 import 'package:tasklet/ui/theme.dart';
 
 /// Guards for the design system (docs/DESIGN_SYSTEM.md): readable text tokens and house style in UI strings.
@@ -19,6 +20,18 @@ void main() {
         expect(contrast(t.primary, bg), greaterThanOrEqualTo(7));
         expect(contrast(t.secondary, bg), greaterThanOrEqualTo(4.5));
         expect(contrast(t.tertiary, bg), greaterThanOrEqualTo(3));
+      }
+    });
+
+    test('$name project and label colors read as glyphs on every surface', () {
+      for (final c in TaskletColor.values) {
+        for (final bg in [t.background, t.sidebar, t.surface, t.raised]) {
+          expect(
+            contrast(t.named(c), bg),
+            greaterThanOrEqualTo(3),
+            reason: '${c.name} on $bg',
+          );
+        }
       }
     });
   }

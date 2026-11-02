@@ -11,6 +11,7 @@ Project newProject({
   required String id,
   required String name,
   required TaskletColor color,
+  String? icon,
   required List<Project> existing,
   required DateTime now,
 }) => Project(
@@ -18,6 +19,7 @@ Project newProject({
   name: name.trim(),
   key: keyForNewProject(name, existing),
   color: color,
+  icon: icon,
   sortOrder: existing.isEmpty
       ? 0
       : existing.map((p) => p.sortOrder).reduce((a, b) => a > b ? a : b) +

@@ -1,0 +1,100 @@
+# Project and label icons offered in the picker, by category (Lucide names, https://lucide.dev/icons).
+# Regenerate lib/ui/icons/project_icons.g.dart after editing: python -I tool/icons/gen_catalog.py
+# Never remove a name that may be in use: a removed icon shows as the default glyph. Brand icons (GitHub, Figma...)
+# aren't offered: Lucide no longer draws them.
+
+## Development
+code code-xml braces brackets terminal square-terminal git-branch git-commit-horizontal git-merge git-pull-request
+git-fork bug bug-off cpu server server-cog database database-zap cloud cloud-cog container box
+boxes package package-2 blocks puzzle plug plug-zap webhook binary bot cog settings wrench hammer
+file-code file-json file-terminal folder-code folder-git braces workflow network router hard-drive memory-stick
+microchip monitor laptop smartphone tablet app-window layout-dashboard layout-grid layout-template layers-3
+component command keyboard mouse-pointer bug-play test-tube flask-conical shield shield-check lock key-round
+fingerprint scan-eye radar activity gauge zap rocket satellite globe link unplug wifi bluetooth qr-code
+regex variable function-square sigma infinity atom
+circuit-board pc-case computer cable ethernet-port gpu cpu-ai antenna nfc logs curly-braces parentheses lambda globe-code robot-arm drone spool tool-case toolbox merge waypoints combine inspection-panel
+
+## Design
+palette paintbrush brush pen-tool pencil pencil-ruler ruler shapes square circle triangle hexagon diamond star
+heart sparkles wand-sparkles image images camera aperture frame crop scissors type baseline
+swatch-book paint-bucket pipette spline vector-square layers move contrast sun-moon eye droplet blend
+grid-3x3 align-left component pen-line drafting-compass scan sticker smile
+origami eraser spray-can wand vector-polygon lens squircle pentagon ratio proportions ellipse scale-3d axis-3d
+
+## Product & Business
+briefcase briefcase-business building building-2 store landmark factory warehouse handshake target goal flag
+trophy award medal crown rocket lightbulb chart-line chart-bar chart-pie chart-column trending-up
+presentation clipboard clipboard-list clipboard-check kanban list-todo list-checks square-check-big circle-check
+calendar calendar-days calendar-check clock timer hourglass alarm-clock milestone map signpost compass route
+users user user-round users-round contact id-card badge badge-check stamp megaphone scale gavel scroll-text
+receipt-text package-check truck ship shopping-cart shopping-bag tag tags percent ticket gift
+hard-hat construction forklift briefcase-conveyor-belt id-card-lanyard verified podium lectern vote calendars form timeline graph-star summary building-complex
+
+## Communication
+message-circle message-square messages-square mail mail-open inbox send at-sign phone phone-call video
+voicemail bell bell-ring rss podcast radio mic megaphone speech quote reply share-2 hash atom user-plus
+heart-handshake hand-helping hand-heart thumbs-up party-popper
+mails messages-circle headset ear mouth closed-caption subtitles
+
+## Writing & Docs
+book book-open book-marked book-text library notebook notebook-pen notepad-text file file-text files
+folder folder-open folder-kanban archive newspaper scroll pen pen-line feather highlighter sticky-note
+letter-text heading text-quote list list-ordered bookmark printer languages spell-check whole-word
+signature file-pen-line clipboard-pen
+notebook-text letters ligature library-big save-pen
+
+## Data & Science
+chart-area chart-scatter chart-candlestick chart-network chart-spline table table-2 sheet database
+calculator binary sigma pi brain brain-circuit microscope telescope flask-round test-tubes dna atom orbit
+magnet thermometer gauge radiation biohazard earth satellite-dish waves zap battery-charging
+lightbulb search scan-search filter funnel
+binoculars galaxy germ virus lens-concave omega phi radical beaker
+
+## Money
+wallet credit-card banknote coins piggy-bank landmark receipt hand-coins circle-dollar-sign
+badge-dollar-sign euro pound-sterling indian-rupee japanese-yen bitcoin chart-candlestick trending-down
+calculator percent scale vault gem diamond-percent
+dollar-sign russian-ruble swiss-franc philippine-peso saudi-riyal nepali-rupee turkish-lira credit-card-reader
+
+## Education
+graduation-cap school book-open-check library backpack pencil ruler notebook-tabs lightbulb brain
+puzzle shapes award presentation languages map microscope apple
+chess-knight chess-king chess-queen chess-rook chess-pawn lectern
+
+## Media
+music music-2 headphones disc-3 guitar piano drum mic-vocal radio tv film clapperboard video camera
+image play circle-play podcast gamepad-2 joystick dices
+ticket popcorn book-headphones audio-lines
+album disc-2 disc-album music-3 music-4 cassette-tape videotape turntable boom-box keyboard-music audio-waveform clef-treble metronome guitar-electric drama theater spotlight gamepad gamepad-directional playing-cards tic-tac-toe ferris-wheel roller-coaster
+
+## Home & Personal
+house house-plus sofa bed lamp key armchair bath shower-head washing-machine refrigerator microwave
+cooking-pot chef-hat utensils coffee cup-soda wine beer pizza cake cookie apple carrot salad sandwich
+shopping-basket baby dog cat bird fish paw-print rabbit shirt glasses watch gift party-popper heart smile
+user-round calendar-heart flower flower-2 sprout hammer wrench paintbrush trash-2 recycle
+bed-double door-open faucet toilet blender broom mop shelving-unit toothbrush plant-pot birdhouse panda rat worm handbag perfume-bottle hat-glasses rocking-chair groceries ice-cream-cone donut croissant banana egg soup ham hamburger cupcake balloon
+
+## Health & Fitness
+heart-pulse activity dumbbell bike footprints person-standing stethoscope pill syringe hospital
+cross ambulance brain apple salad droplets moon bed alarm-clock timer trophy medal mountain waves
+smile leaf
+biceps-flexed bandage pill-bottle briefcase-medical sport-shoe volleyball rugby-ball whistle kayak hiking-stick iv-bag germ accessibility
+
+## Travel & Places
+plane plane-takeoff car bus train-front tram-front ship sailboat bike map map-pin map-pinned compass
+globe earth luggage tent tent-tree mountain mountain-snow palmtree trees castle church landmark
+building hotel fuel parking-meter navigation route milestone flag sun umbrella-off camera ticket-check
+motorbike scooter helicopter caravan van cable-car tractor lighthouse bridge road mosque park ferris-wheel traffic-cone ev-charger houses dome
+
+## Nature
+leaf trees tree-pine tree-deciduous sprout flower flower-2 clover cherry citrus grape shell bug bird fish
+snail squirrel turtle sun moon star cloud cloud-sun cloud-rain snowflake rainbow zap flame droplet
+waves wind mountain earth sunrise sunset
+shrub rose leafy-green wheat bubbles tornado eclipse haze shrimp
+
+## Objects
+box archive package key lock unlock bell lamp lightbulb flashlight battery plug clock watch hourglass
+anchor magnet paperclip pin scissors umbrella glasses gem crown gift shopping-bag tag trophy
+hammer wrench axe shovel pickaxe flag flag-triangle-right bookmark ticket dice-5 puzzle rocket
+toy-brick cuboid cylinder cone pyramid torus circle-dot target crosshair infinity hash
+anvil drill bolt screw stone fire-extinguisher amphora barrel siren bomb skull ghost life-buoy hourglass-cog

@@ -89,10 +89,10 @@ void main() {
 
   group('unknown colors', () {
     test('show as neutral and are written back unchanged', () {
-      final json = {...project('p1').toJson(), 'color': 'teal'};
+      final json = {...project('p1').toJson(), 'color': 'ultraviolet'};
       final p = Project.fromJson(json);
       expect(p.color, TaskletColor.neutral);
-      expect(p.copyWith(name: 'x').toJson()['color'], 'teal');
+      expect(p.copyWith(name: 'x').toJson()['color'], 'ultraviolet');
       expect(
         p.copyWith(color: TaskletColor.green).toJson()['color'],
         'green',
@@ -101,14 +101,28 @@ void main() {
     });
 
     test('labels and views keep unknown colors too', () {
-      final label = Label.fromJson({'id': 'l', 'name': 'L', 'color': 'teal'});
-      expect(label.toJson()['color'], 'teal');
+      final label = Label.fromJson({
+        'id': 'l',
+        'name': 'L',
+        'color': 'ultraviolet',
+      });
+      expect(label.toJson()['color'], 'ultraviolet');
       expect(label.copyWith(color: TaskletColor.red).toJson()['color'], 'red');
       final view = SavedView.fromJson({
         ...SavedView(id: 'v', name: 'V', createdAt: t0, updatedAt: t0).toJson(),
-        'color': 'teal',
+        'color': 'ultraviolet',
       });
-      expect(view.toJson()['color'], 'teal');
+      expect(view.toJson()['color'], 'ultraviolet');
+    });
+
+    test('the 8 colors added in 1.1 round-trip', () {
+      for (final c in TaskletColor.values) {
+        final p = Project.fromJson(
+          roundTrip(project('p').copyWith(color: c).toJson()),
+        );
+        expect(p.color, c);
+        expect(p.unknownColor, isNull);
+      }
     });
 
     test('a non-string color is invalid', () {
@@ -116,6 +130,46 @@ void main() {
         () => Label.fromJson({'id': 'l', 'name': 'L', 'color': 3}),
         throwsFormatException,
       );
+    });
+  });
+
+  group('icons', () {
+    test('projects and labels keep their icon; none is not written', () {
+      final p = Project.fromJson(
+        roundTrip(project('p').copyWith(icon: 'rocket').toJson()),
+      );
+      expect(p.icon, 'rocket');
+      expect(p.copyWith(name: 'x').icon, 'rocket');
+      expect(p.copyWith(clearIcon: true).toJson().containsKey('icon'), isFalse);
+      expect(project('p').toJson().containsKey('icon'), isFalse);
+
+      final l = Label.fromJson({
+        'id': 'l',
+        'name': 'L',
+        'color': 'red',
+        'icon': 'bug',
+      });
+      expect(l.icon, 'bug');
+      expect(l.copyWith(color: TaskletColor.blue).toJson()['icon'], 'bug');
+      expect(l.copyWith(clearIcon: true).toJson().containsKey('icon'), isFalse);
+    });
+
+    test('an icon name this version lacks is kept and written back', () {
+      final p = Project.fromJson({
+        ...project('p').toJson(),
+        'icon': 'quantum-widget',
+      });
+      expect(p.copyWith(name: 'x').toJson()['icon'], 'quantum-widget');
+    });
+
+    test('a non-string icon from a newer version is kept as is', () {
+      final icon = {'set': 'emoji', 'value': 'rocket'};
+      final p = Project.fromJson({...project('p').toJson(), 'icon': icon});
+      expect(p.icon, isNull);
+      expect(p.toJson()['icon'], icon);
+      final l = Label.fromJson({'id': 'l', 'name': 'L', 'icon': icon});
+      expect(l.icon, isNull);
+      expect(l.toJson()['icon'], icon);
     });
   });
 }

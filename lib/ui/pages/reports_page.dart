@@ -303,8 +303,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
         ),
         item(noProjectId, 'No Project', CubeIcon(color: t.tertiary, size: 12)),
         if (active.isNotEmpty) const Divider(),
-        for (final p in active)
-          item(p.id, p.name, CubeIcon(color: t.named(p.color), size: 12)),
+        for (final p in active) item(p.id, p.name, ProjectGlyph(p, size: 12)),
         if (_filters.includeArchived && archived.isNotEmpty) ...[
           const Divider(),
           Padding(
@@ -312,7 +311,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
             child: Text('Archived', style: TextStyles.meta(context)),
           ),
           for (final p in archived)
-            item(p.id, p.name, CubeIcon(color: t.named(p.color), size: 12)),
+            item(p.id, p.name, ProjectGlyph(p, size: 12)),
         ],
       ],
     );
@@ -341,7 +340,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
             checkItem(
               l.name,
               checked: _filters.labelIds.contains(l.id),
-              leading: ColorDot(color: t.named(l.color)),
+              leading: LabelGlyph(l),
               onPressed: () => _setFilters(
                 _with(labelIds: _toggle(_filters.labelIds, l.id)),
                 ws,

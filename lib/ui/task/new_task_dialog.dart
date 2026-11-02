@@ -289,7 +289,7 @@ class _NewTaskDialogState extends ConsumerState<_NewTaskDialog> {
                   Row(
                     children: [
                       if (!project.isNoProject) ...[
-                        CubeIcon(color: t.named(project.color), size: 13),
+                        ProjectGlyph(project, size: 13),
                         const SizedBox(width: 6),
                         Text(
                           project.key,

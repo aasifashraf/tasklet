@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../core/models.dart';
+import 'icons/project_icons.dart';
 import 'theme.dart';
 
 /// Status glyphs (SPEC §8.3): dashed circle, outline circle, half-filled circle, filled check.
@@ -264,6 +265,71 @@ class _LayersPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_LayersPainter old) => old.color != color;
+}
+
+/// A project's glyph: its icon (docs/DECISIONS.md D14) or the cube, tinted the project color unless [color] is
+/// given. Use this, not [CubeIcon], wherever a project is shown.
+class ProjectGlyph extends StatelessWidget {
+  const ProjectGlyph(this.project, {super.key, this.size = 14, this.color});
+  final Project project;
+  final double size;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) => TaskletIcon(
+    icon: project.icon,
+    color: color ?? Tokens.of(context).named(project.color),
+    size: size,
+    fallback: CubeIcon.new,
+  );
+}
+
+/// A label's glyph: its icon, or the solid dot ([dotSize]) when it has none.
+class LabelGlyph extends StatelessWidget {
+  const LabelGlyph(
+    this.label, {
+    super.key,
+    this.size = 12,
+    this.dotSize = 8,
+    this.border,
+  });
+  final Label label;
+  final double size;
+  final double dotSize;
+
+  /// A ring around the dot, as on overlapping dots; icons have none.
+  final Color? border;
+
+  @override
+  Widget build(BuildContext context) => TaskletIcon(
+    icon: label.icon,
+    color: Tokens.of(context).named(label.color),
+    size: size,
+    fallback: ({key, required color, size = 0}) =>
+        ColorDot(key: key, color: color, size: dotSize, border: border),
+  );
+}
+
+/// [icon] (a catalog name) at [size] in [color]; [fallback] for none or a name this version doesn't have.
+class TaskletIcon extends StatelessWidget {
+  const TaskletIcon({
+    super.key,
+    required this.icon,
+    required this.color,
+    required this.fallback,
+    this.size = 14,
+  });
+  final String? icon;
+  final Color color;
+  final double size;
+  final Widget Function({Key? key, required Color color, double size}) fallback;
+
+  @override
+  Widget build(BuildContext context) {
+    final data = iconFor(icon)?.data;
+    if (data == null) return fallback(color: color, size: size);
+    return Icon(data, size: size, color: color);
+  }
 }
 
 /// A small solid color dot (labels).

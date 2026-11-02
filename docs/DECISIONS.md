@@ -134,3 +134,21 @@ computer's change landing right after a local save is picked up. Deletion marker
 last-read version already tells "deleted here" from "created there". They would only be needed to merge the sync
 service's conflict copies, which stay listed and untouched (D3). Refresh still waits while any save is running:
 typical saves take 6-15 ms, so per-file tracking would add complexity without a measurable benefit.
+
+## D14. Icons for projects and labels, 16 colors
+
+SPEC §8.2 and §8.5 give projects a tinted cube and labels a dot in one of 8 colors. Projects and labels can now also
+have an icon, and there are 16 colors.
+
+- Icons come from Lucide (MIT/ISC, `lucide_icons_flutter`, pinned). The picker offers a curated set of about 640
+  project-related icons in 14 categories, with search by name, Lucide's tags and category. The list is
+  `tool/icons/catalog.txt`; `tool/icons/gen_catalog.py` turns it into const `IconData` (so release builds keep only
+  these glyphs) and refuses names the font lacks or draws empty (Lucide dropped its brand icons).
+- Stored as `"icon": "<lucide name>"` on the project or label, omitted when there is none. No icon, or a name this
+  version doesn't know, draws the cube or dot; the name is written back unchanged (like an unknown color, D1). A
+  non-string value from a newer version stays in `extra`.
+- Several labels on one card still show overlapping dots (§8.5): icons don't read when stacked.
+- New colors: teal, cyan, indigo, pink, lime, amber, brown, slate. Older versions show them as neutral and keep
+  them (D1). Every color must reach 3:1 against every surface as a glyph, so green, orange and yellow (and the new
+  colors) use darker shades in the light theme; `test/ui/design_system_test.dart` checks this.
+- Quick filters keep their stacked-layers glyph with the 16 colors.

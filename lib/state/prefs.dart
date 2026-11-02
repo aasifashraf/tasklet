@@ -101,6 +101,7 @@ abstract final class PrefKeys {
   static const lastReminderDay = 'lastReminderDay';
   static const reminderEnabledSince = 'reminderEnabledSince';
   static const whatsNewSeen = 'whatsNewSeen';
+  static const recentIcons = 'recentIcons';
   static String boardDisplay(String boardId) => 'display:$boardId';
   static String collapsedGroups(String boardId) => 'collapsed:$boardId';
 }
@@ -193,6 +194,10 @@ class Prefs {
   String? get reminderEnabledSince =>
       _get<String>(PrefKeys.reminderEnabledSince);
   String? get whatsNewSeen => _get<String>(PrefKeys.whatsNewSeen);
+
+  /// Icons picked most recently in the icon picker, newest first (at most [maxRecentIcons]).
+  List<String> get recentIcons => _list(PrefKeys.recentIcons);
+  static const maxRecentIcons = 16;
 
   ViewDisplay? boardDisplay(String boardId) =>
       _v[PrefKeys.boardDisplay(boardId)] is Map<String, Object?>

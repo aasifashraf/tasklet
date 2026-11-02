@@ -12,6 +12,7 @@ import '../board/kanban.dart';
 import '../board/task_list.dart';
 import '../board/toolbar.dart';
 import '../glyphs.dart';
+import '../icon_picker.dart';
 import '../task/new_task_dialog.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -49,9 +50,14 @@ class ProjectBoardPage extends ConsumerWidget {
     return BoardPage(
       kind: ProjectBoard(projectId),
       title: project.name,
-      leading: CubeIcon(
-        color: Tokens.of(context).named(project.color),
-        size: 15,
+      leading: IconPickerButton(
+        enabled: !(ref.watch(workspaceDataProvider)?.readOnly ?? true),
+        icon: project.icon,
+        color: project.color,
+        kind: GlyphKind.project,
+        onPick: (icon, color) => ref
+            .read(workspaceProvider.notifier)
+            .setProjectIcon(project.id, icon, color),
       ),
     );
   }

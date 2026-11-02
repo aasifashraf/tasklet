@@ -44,6 +44,7 @@ bool _sameProjectFields(Project a, Project b) =>
     a.key == b.key &&
     a.color == b.color &&
     a.unknownColor == b.unknownColor &&
+    a.icon == b.icon &&
     a.archived == b.archived &&
     a.favorite == b.favorite &&
     a.sortOrder == b.sortOrder &&
@@ -57,7 +58,8 @@ bool _sameLabels(List<Label> a, List<Label> b) {
   for (var i = 0; i < a.length; i++) {
     if (a[i].id != b[i].id ||
         a[i].name != b[i].name ||
-        a[i].color != b[i].color) {
+        a[i].color != b[i].color ||
+        a[i].icon != b[i].icon) {
       return false;
     }
   }

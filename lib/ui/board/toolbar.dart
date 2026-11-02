@@ -327,7 +327,7 @@ class _FilterButton extends ConsumerWidget {
             for (final p in projects)
               _LiveCheck(
                 label: p.name,
-                leading: CubeIcon(color: t.named(p.color), size: 12),
+                leading: ProjectGlyph(p, size: 12),
                 isChecked: (r) => watched(r).projects.contains(p.id),
                 onToggle: (r) => update(
                   r,
@@ -352,7 +352,7 @@ class _FilterButton extends ConsumerWidget {
           for (final (l, p) in projectLabels)
             _LiveCheck(
               label: kind.crossProject ? '${l.name} (${p!.name})' : l.name,
-              leading: ColorDot(color: t.named(l.color)),
+              leading: LabelGlyph(l),
               isChecked: (r) => watched(r).labels.contains(l.id),
               onToggle: (r) => update(
                 r,
@@ -364,7 +364,7 @@ class _FilterButton extends ConsumerWidget {
           for (final (l, _) in workspaceLabels)
             _LiveCheck(
               label: l.name,
-              leading: ColorDot(color: t.named(l.color)),
+              leading: LabelGlyph(l),
               isChecked: (r) => watched(r).labels.contains(l.id),
               onToggle: (r) => update(
                 r,

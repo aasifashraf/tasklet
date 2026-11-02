@@ -10,6 +10,7 @@ import '../../state/prefs.dart';
 import '../../state/ui_state.dart';
 import '../../state/workspace.dart';
 import '../glyphs.dart';
+import '../icon_picker.dart';
 import '../pages/restore_dialog.dart';
 import '../task/new_task_dialog.dart';
 import '../theme.dart';
@@ -235,7 +236,6 @@ class _SidebarState extends ConsumerState<Sidebar> {
     String path, {
     required bool favoritesList,
   }) {
-    final t = Tokens.of(context);
     final key = 'project:${p.id}';
     final selected = path == '/projects/${p.id}';
     final index = section.indexOf(p);
@@ -249,9 +249,12 @@ class _SidebarState extends ConsumerState<Sidebar> {
         onPressed: () => _controller.setFavorite(p.id, !p.favorite),
       ),
       menuItem('Rename', onPressed: () => setState(() => _renaming = key)),
-      colorSubmenu(
-        selected: p.color,
-        onPick: (c) => _controller.setProjectColor(p.id, c),
+      iconMenuItem(
+        context,
+        icon: p.icon,
+        color: p.color,
+        kind: GlyphKind.project,
+        onPick: (icon, color) => _controller.setProjectIcon(p.id, icon, color),
       ),
       menuItem(
         'New Project…',
@@ -304,7 +307,7 @@ class _SidebarState extends ConsumerState<Sidebar> {
       menuChildren: menu,
       child: _renaming == key
           ? _RenameRow(
-              icon: CubeIcon(color: t.named(p.color)),
+              icon: ProjectGlyph(p),
               initial: p.name,
               onDone: (name) {
                 setState(() => _renaming = null);
@@ -312,7 +315,7 @@ class _SidebarState extends ConsumerState<Sidebar> {
               },
             )
           : _Row(
-              icon: CubeIcon(color: t.named(p.color)),
+              icon: ProjectGlyph(p),
               label: p.name,
               selected: selected,
               onTap: () => context.go('/projects/${p.id}'),

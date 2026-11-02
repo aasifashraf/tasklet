@@ -7,6 +7,7 @@ import '../../state/prefs.dart';
 import '../../state/toast.dart';
 import '../../state/workspace.dart';
 import '../glyphs.dart';
+import '../icon_picker.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'restore_dialog.dart';
@@ -24,6 +25,10 @@ class LabelsPage extends ConsumerStatefulWidget {
 class _LabelsPageState extends ConsumerState<LabelsPage> {
   bool _creating = false;
   String? _renaming;
+
+  // Icon and color picked in the create row before the label exists; null color: the next unused one.
+  String? _newIcon;
+  TaskletColor? _newColor;
 
   WorkspaceController get _controller => ref.read(workspaceProvider.notifier);
 
@@ -68,7 +73,7 @@ class _LabelsPageState extends ConsumerState<LabelsPage> {
           label: scopeProject?.name ?? 'Workspace',
           leading: scopeProject == null
               ? null
-              : CubeIcon(color: t.named(scopeProject.color), size: 12),
+              : ProjectGlyph(scopeProject, size: 12),
           menuChildren: [
             checkItem(
               'Workspace',
@@ -80,7 +85,7 @@ class _LabelsPageState extends ConsumerState<LabelsPage> {
               checkItem(
                 p.name,
                 checked: scopeProject?.id == p.id,
-                leading: CubeIcon(color: t.named(p.color), size: 12),
+                leading: ProjectGlyph(p, size: 12),
                 onPressed: () => setScope(p.id),
               ),
           ],
@@ -146,21 +151,54 @@ class _LabelsPageState extends ConsumerState<LabelsPage> {
     );
   }
 
+  void _endCreate() => setState(() {
+    _creating = false;
+    _newIcon = null;
+    _newColor = null;
+  });
+
+  /// The picker's icon and color for an existing label; an unchanged color is left alone (see setProjectIcon).
+  void _setIcon(Label l, String? icon, TaskletColor color, Project? project) =>
+      _controller.updateLabel(
+        l.id,
+        (x) => x.copyWith(
+          icon: icon,
+          clearIcon: icon == null,
+          color: color == x.color ? null : color,
+        ),
+        projectId: project?.id,
+      );
+
   Widget _createRow(List<Label> scope, Project? project, Tokens t) {
-    final color = TaskletColor.nextUnused(scope.map((l) => l.color));
+    final color =
+        _newColor ?? TaskletColor.nextUnused(scope.map((l) => l.color));
     return ListRowShell(
-      leading: ColorDot(color: t.named(color), size: 10),
+      leading: IconPickerButton(
+        icon: _newIcon,
+        color: color,
+        kind: GlyphKind.label,
+        onPick: (icon, c) => setState(() {
+          _newIcon = icon;
+          _newColor = c;
+        }),
+      ),
       title: InlineEditField(
         initial: '',
         hint: 'Label name',
         maxLength: Label.maxNameLength,
         onCommit: (name) {
-          setState(() => _creating = false);
+          final icon = _newIcon;
+          _endCreate();
           if (_validate(name, scope)) {
-            _controller.createLabel(name, color, projectId: project?.id);
+            _controller.createLabel(
+              name,
+              color,
+              icon: icon,
+              projectId: project?.id,
+            );
           }
         },
-        onCancel: () => setState(() => _creating = false),
+        onCancel: _endCreate,
       ),
     );
   }
@@ -176,19 +214,13 @@ class _LabelsPageState extends ConsumerState<LabelsPage> {
     final usage = ref.read(workspaceDataProvider)?.labelUsage[l.id] ?? 0;
     return ListRowShell(
       dimmed: locked,
-      leading: TapMenu(
+      leading: IconPickerButton(
         enabled: !locked,
-        menuChildren: [
-          ColorGrid(
-            selected: l.color,
-            onPick: (c) => _controller.updateLabel(
-              l.id,
-              (x) => x.copyWith(color: c),
-              projectId: project?.id,
-            ),
-          ),
-        ],
-        child: ColorDot(color: t.named(l.color), size: 10),
+        icon: l.icon,
+        color: l.color,
+        kind: GlyphKind.label,
+        size: 14,
+        onPick: (icon, c) => _setIcon(l, icon, c, project),
       ),
       title: _renaming == l.id
           ? InlineEditField(
@@ -228,13 +260,12 @@ class _LabelsPageState extends ConsumerState<LabelsPage> {
                 'Rename',
                 onPressed: () => setState(() => _renaming = l.id),
               ),
-              colorSubmenu(
-                selected: l.color,
-                onPick: (c) => _controller.updateLabel(
-                  l.id,
-                  (x) => x.copyWith(color: c),
-                  projectId: project?.id,
-                ),
+              iconMenuItem(
+                context,
+                icon: l.icon,
+                color: l.color,
+                kind: GlyphKind.label,
+                onPick: (icon, c) => _setIcon(l, icon, c, project),
               ),
               const Divider(),
               menuItem(
