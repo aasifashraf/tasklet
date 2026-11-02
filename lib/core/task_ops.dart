@@ -65,6 +65,45 @@ Task withStatus(Task task, TaskStatus status, DateTime now) {
   );
 }
 
+/// The result of editing [current] with [change]: `updatedAt` bumped, `completedAt` set or cleared when the status
+/// changes (SPEC §2.2). Null when the edit would put the start date after the due date; data that already arrived
+/// that way (from sync) stays editable.
+Task? editTask(Task current, Task Function(Task t) change, DateTime now) {
+  var next = change(current).copyWith(updatedAt: now);
+  if (!datesInOrder(next.startDate, next.dueDate) &&
+      datesInOrder(current.startDate, current.dueDate)) {
+    return null;
+  }
+  if (next.status != current.status) {
+    next = next.copyWith(completedAt: next.isDone ? now : null);
+  }
+  return next;
+}
+
+/// Undo of a project move (SPEC §7.3): [snapshot] goes back into [original] with its old number if that's still
+/// free there (otherwise the next number) and leaves [current]. Returns the updated (original, current).
+(Project, Project) restoreMovedTask(
+  Project original,
+  Project current,
+  Task snapshot,
+  DateTime now,
+) {
+  final numberFree = isNumberFree(
+    original,
+    snapshot.number,
+    exceptTaskId: snapshot.id,
+  );
+  final restored = numberFree
+      ? snapshot
+      : snapshot.copyWith(number: original.nextNumber);
+  return (
+    putTask(original, restored, now).copyWith(
+      nextNumber: numberFree ? original.nextNumber : original.nextNumber + 1,
+    ),
+    removeTask(current, snapshot.id, now),
+  );
+}
+
 /// Replaces the task with the same id (inserting it if absent, e.g. for undo of a delete).
 Project putTask(Project project, Task task, DateTime now) {
   final tasks = [...project.tasks];
