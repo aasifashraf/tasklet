@@ -95,3 +95,20 @@ The spec calls saved filter sets "Views". With a Board/List view switch on every
 ambiguous, and "Saved Views" still didn't say what the page does. The app calls them **Quick Filters** everywhere a
 user reads it: the sidebar item and section, the page, menus, What's New and Settings → Sidebar. Routes (`/views`),
 `views.json`, its fields and code names (`SavedView`) are unchanged, so existing data folders keep working.
+
+## D12. Local backups and data repairs after sync
+
+The data folder is the only copy of the user's work and may be rewritten by a sync client, another computer or a
+bug. Two additions protect it:
+
+- **Backups.** Before a project, labels or views file is overwritten, its current version is copied to
+  `<app support>/backups/<workspace key>/<file>/`, at most once per 10 minutes per file, keeping the newest 20. They
+  live outside the data folder on purpose: they don't sync, don't clutter a shared folder and survive damage to it.
+  "Restore Previous Version…" on a project replaces it with a backup after backing up the current version, keeps the
+  project's current key and never lowers `nextNumber`, so task numbers are still never reused (SPEC §2.4). Backups
+  are per computer and are not a replacement for the sync service's own version history.
+- **Repairs on read**, like the project-key self-heal in SPEC §2.4: duplicate task numbers in one project (two
+  computers both creating WEB-13 offline) are renumbered, oldest task first; stored keys that aren't valid keys are
+  regenerated; a marker without `formatVersion` (or `1.0`) counts as version 1; files over 100 MB are treated as
+  unreadable. Manual order (SPEC §5.1) re-spaces only the neighbours around a drop when they share a position, so a
+  card always lands where it's dropped.

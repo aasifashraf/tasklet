@@ -11,6 +11,7 @@ import '../../state/prefs.dart';
 import '../../state/ui_state.dart';
 import '../../state/workspace.dart';
 import '../glyphs.dart';
+import '../pages/restore_dialog.dart';
 import '../task/new_task_dialog.dart';
 import '../theme.dart';
 import '../whats_new.dart';
@@ -290,6 +291,10 @@ class _SidebarState extends ConsumerState<Sidebar> {
               ),
       ),
       const Divider(),
+      menuItem(
+        'Restore Previous Version…',
+        onPressed: () => showRestoreProjectDialog(context, ref, p),
+      ),
       menuItem(
         p.archived ? 'Unarchive' : 'Archive',
         onPressed: () => _controller.setArchived(p.id, !p.archived),

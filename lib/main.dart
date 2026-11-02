@@ -32,7 +32,12 @@ Future<void> main(List<String> args) async {
     p.join(prefsDir.isEmpty ? support.path : prefsDir, 'settings.json'),
   );
   await prefs.watch();
-  final overrides = [prefsStoreProvider.overrideWithValue(prefs)];
+  final overrides = [
+    prefsStoreProvider.overrideWithValue(prefs),
+    backupDirProvider.overrideWithValue(
+      p.join(prefsDir.isEmpty ? support.path : prefsDir, 'backups'),
+    ),
+  ];
 
   // The Settings window runs in its own engine (SPEC §11).
   if (isSettingsWindow(args)) {

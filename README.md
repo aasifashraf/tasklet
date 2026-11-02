@@ -150,6 +150,10 @@ Tasklet is careful with these files because they may live in a syncing folder:
 - **Forward compatible:** fields or items written by a newer version of Tasklet are kept and written back unchanged.
   A folder saved by a newer, incompatible version opens read-only.
 - **Deleted projects** go to the Recycle Bin (or a hidden `.trash` folder on drives without one).
+- **Local backups:** before a project changes, its previous version is kept on this computer (at most one every 10
+  minutes, the newest 20). **Restore Previous Version…** in a project's ⋯ menu brings one back.
+- **Self-repair after syncing:** if two computers both created the same task number offline, the newer task gets
+  the next free number, like duplicate project keys.
 - **Missing folder:** if the folder disappears (for example a drive is unplugged), Tasklet tells you instead of
   starting an empty workspace.
 

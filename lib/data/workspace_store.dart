@@ -9,6 +9,7 @@ import '../core/models.dart';
 import '../core/project_keys.dart';
 import '../core/task_ops.dart' show resolveDuplicateNumbers;
 import 'atomic_file.dart';
+import 'backups.dart';
 import 'save_queue.dart';
 
 /// The chosen data folder doesn't exist (deleted, renamed, drive unplugged, sync not ready). Never treated as an
@@ -41,8 +42,12 @@ class WorkspaceStore {
     SaveQueue? queue,
     DateTime Function()? clock,
     this.maxFileBytes = 100 * 1024 * 1024,
+    this.backups,
   }) : queue = queue ?? SaveQueue(clock: clock),
        _now = clock ?? DateTime.now;
+
+  /// Local version history taken before files are overwritten; null keeps none (tests, read-only tools).
+  final Backups? backups;
 
   /// Larger project, label or view files are treated as unreadable: never loaded (protects memory against a huge
   /// or hostile file in a shared folder) and never overwritten.
@@ -356,7 +361,8 @@ class WorkspaceStore {
       : Future.value(encodeJson(project.toJson()));
 
   /// Saves one project file atomically. The No-Project file is only created once it has a task (SPEC §2.3).
-  Future<void> writeProject(Project project) async {
+  /// The version being replaced goes to [backups] first ([backupFirst]: even if a recent backup exists).
+  Future<void> writeProject(Project project, {bool backupFirst = false}) async {
     _checkWritable();
     if (!isSafeProjectId(project.id)) {
       throw UnsafeWriteException('Invalid project id: ${project.id}');
@@ -384,9 +390,29 @@ class WorkspaceStore {
         throw WorkspaceFolderMissing(folder);
       }
       await Directory(_projectsDir).create();
+      await _backUp(path, force: backupFirst);
       await writeFileAtomic(path, await _encodeProject(project));
     });
   }
+
+  /// Keeps the current version of [path] in [backups]. A backup failure never blocks the save itself.
+  Future<void> _backUp(String path, {bool force = false}) async {
+    try {
+      await backups?.beforeOverwrite(path, force: force);
+    } on FileSystemException {
+      // Out of space or locked: saving the user's change matters more than the history.
+    }
+  }
+
+  /// Earlier versions of a project's file, newest first.
+  Future<List<Backup>> projectBackups(String projectId) async =>
+      await backups?.list(projectPath(projectId)) ?? const [];
+
+  /// Reads a backup taken by [projectBackups]; null if it can't be parsed.
+  Future<Project?> readBackup(Backup backup) async =>
+      backup.bytes > _isolateParseBytes
+      ? (await _parseOnIsolate([backup.path])).single
+      : await _readProject(File(backup.path));
 
   Future<void> writeLabels(List<Label> labels) {
     _checkWritable();
@@ -396,10 +422,10 @@ class WorkspaceStore {
       );
     }
     final json = [for (final l in labels) l.toJson(), ..._opaqueLabels];
-    return queue.enqueue(
-      labelsPath,
-      () => writeFileAtomic(labelsPath, encodeJson(json)),
-    );
+    return queue.enqueue(labelsPath, () async {
+      await _backUp(labelsPath);
+      await writeFileAtomic(labelsPath, encodeJson(json));
+    });
   }
 
   Future<void> writeViews(List<SavedView> views) {
@@ -410,10 +436,10 @@ class WorkspaceStore {
       );
     }
     final json = [for (final v in views) v.toJson(), ..._opaqueViews];
-    return queue.enqueue(
-      viewsPath,
-      () => writeFileAtomic(viewsPath, encodeJson(json)),
-    );
+    return queue.enqueue(viewsPath, () async {
+      await _backUp(viewsPath);
+      await writeFileAtomic(viewsPath, encodeJson(json));
+    });
   }
 
   /// Deletes a project (SPEC §4.5): its file (and any sync conflict copies of it, so it doesn't reappear from

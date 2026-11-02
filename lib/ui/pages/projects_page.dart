@@ -16,6 +16,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'list_parts.dart';
 import 'page_scaffold.dart';
+import 'restore_dialog.dart';
 
 /// Projects list (SPEC §4.5).
 class ProjectsPage extends ConsumerStatefulWidget {
@@ -218,6 +219,10 @@ class _ProjectsPageState extends ConsumerState<ProjectsPage> {
               menuItem(
                 p.archived ? 'Unarchive' : 'Archive',
                 onPressed: () => _controller.setArchived(p.id, !p.archived),
+              ),
+              menuItem(
+                'Restore Previous Version…',
+                onPressed: () => showRestoreProjectDialog(context, ref, p),
               ),
               const Divider(),
               menuItem(

@@ -10,6 +10,7 @@ import '../core/models.dart';
 import '../core/ordering.dart';
 import '../core/project_keys.dart';
 import '../core/task_ops.dart' as ops;
+import '../data/backups.dart';
 import '../data/folder_watcher.dart';
 import '../data/workspace_store.dart';
 import '../platform/trash.dart';
@@ -111,7 +112,11 @@ class WorkspaceController extends Notifier<WorkspaceState> {
     state = LoadingState(folder);
     try {
       if (initialize) await WorkspaceStore.initialize(folder);
-      final store = WorkspaceStore(folder);
+      final backupRoot = ref.read(backupDirProvider);
+      final store = WorkspaceStore(
+        folder,
+        backups: backupRoot == null ? null : Backups(backupRoot, folder),
+      );
       final ws = await store.read();
       if (generation != _generation) return;
       _store = store;
@@ -352,6 +357,51 @@ class WorkspaceController extends Notifier<WorkspaceState> {
           ? p.copyWith(favoriteOrder: value)
           : p.copyWith(sortOrder: value),
     );
+  }
+
+  /// Earlier versions of a project kept by the local backups (docs/DECISIONS.md D12), newest first.
+  Future<List<Backup>> projectBackups(String projectId) async =>
+      await _store?.projectBackups(projectId) ?? const [];
+
+  /// Replaces a project with an earlier version. The current version is backed up first, so this can itself be
+  /// restored. The project keeps its current key and never hands out a task number again (SPEC §2.4). Tasks that
+  /// have since moved to another project stay there (restoring them would put one task in two projects).
+  ///
+  /// Returns how many such tasks were left out, or null if the backup can't be read or belongs to another project.
+  Future<int?> restoreProjectBackup(String projectId, Backup backup) async {
+    final store = _store;
+    final current = workspace?.projectById(projectId);
+    if (store == null || current == null) return null;
+    final restored = await store.readBackup(backup);
+    final ws = workspace;
+    if (ws == null || restored == null || restored.id != projectId) return null;
+    final elsewhere = {
+      for (final p in ws.allProjects)
+        if (p.id != projectId)
+          for (final t in p.tasks) t.id,
+    };
+    final tasks = [
+      for (final t in restored.tasks)
+        if (!elsewhere.contains(t.id)) t,
+    ];
+    final project = restored.copyWith(
+      key: current.key,
+      tasks: tasks,
+      nextNumber: restored.nextNumber > current.nextNumber
+          ? restored.nextNumber
+          : current.nextNumber,
+      updatedAt: _now,
+    );
+    _set(
+      ws.copyWith(
+        projects: [
+          for (final p in ws.projects) p.id == projectId ? project : p,
+        ],
+        noProject: projectId == noProjectId ? project : ws.noProject,
+      ),
+    );
+    await _save((s) => s.writeProject(project, backupFirst: true));
+    return restored.tasks.length - tasks.length;
   }
 
   /// Deletes a project file (to the Recycle Bin/Trash; see docs/DECISIONS.md D4). Callers confirm first.
@@ -718,6 +768,9 @@ class WorkspaceController extends Notifier<WorkspaceState> {
     return updateView(id, (v) => v.copyWith(sidebarOrder: value));
   }
 }
+
+/// Where local backups of workspace files are kept (`<app support>/backups`); overridden in main(). Null = none.
+final backupDirProvider = Provider<String?>((ref) => null);
 
 final workspaceProvider = NotifierProvider<WorkspaceController, WorkspaceState>(
   WorkspaceController.new,
