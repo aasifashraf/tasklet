@@ -49,7 +49,12 @@ const releases = <ReleaseNotes>[
       ReleaseFeature(
         Icons.palette_outlined,
         'Icons and 16 colors',
-        'Give projects and labels an icon from about 640 project-related icons, with search, and pick from 16 colors. Click a project or label icon to change it.',
+        'Give projects, labels and quick filters an icon from about 640 project-related icons, with search, and pick from 16 colors. Click an icon to change it.',
+      ),
+      ReleaseFeature(
+        Icons.rocket_launch_outlined,
+        'A head start',
+        'A new organization comes with bug, feature, refactor and security labels and everyday quick filters like Overdue, Due Soon and High Priority. Your first one also has a sample Tasklet project with our plan.',
       ),
       ReleaseFeature(
         Icons.speed,

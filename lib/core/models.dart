@@ -807,6 +807,7 @@ class SavedView {
     required this.name,
     this.color = TaskletColor.blue,
     this.unknownColor,
+    this.icon,
     BoardFilters? filters,
     this.display,
     this.inSidebar = false,
@@ -837,6 +838,7 @@ class SavedView {
       name: _req<String>(json, 'name'),
       color: color,
       unknownColor: unknownColor,
+      icon: _icon(json),
       filters: BoardFilters.fromJson(json['filters']),
       display: json['display'] is Map<String, Object?>
           ? ViewDisplay.fromJson(json['display']! as Map<String, Object?>)
@@ -847,7 +849,7 @@ class SavedView {
       updatedAt: json['updatedAt'] == null
           ? createdAt
           : _time(json, 'updatedAt'),
-      extra: _extra(json, _known),
+      extra: _extra(json, _iconKnown(json, _known)),
     );
   }
 
@@ -857,6 +859,10 @@ class SavedView {
 
   /// A color value from a newer version, written back until the user picks a color.
   final String? unknownColor;
+
+  /// A Lucide icon name (lib/ui/icons); null draws the filter (funnel) glyph. A name this version doesn't know
+  /// also draws it and is written back unchanged.
+  final String? icon;
   final BoardFilters filters;
 
   /// Null means "use the defaults".
@@ -870,6 +876,8 @@ class SavedView {
   SavedView copyWith({
     String? name,
     TaskletColor? color,
+    String? icon,
+    bool clearIcon = false,
     BoardFilters? filters,
     Object? display = _unset,
     bool? inSidebar,
@@ -880,6 +888,7 @@ class SavedView {
     name: name ?? this.name,
     color: color ?? this.color,
     unknownColor: color == null ? unknownColor : null,
+    icon: clearIcon ? null : (icon ?? this.icon),
     filters: filters ?? this.filters,
     display: display == _unset ? this.display : display as ViewDisplay?,
     inSidebar: inSidebar ?? this.inSidebar,
@@ -894,6 +903,7 @@ class SavedView {
     'id': id,
     'name': name,
     'color': unknownColor ?? color.toJson(),
+    if (icon != null) 'icon': icon,
     'filters': filters.toJson(),
     'display': display?.toJson(),
     'inSidebar': inSidebar,

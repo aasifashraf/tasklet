@@ -10,8 +10,8 @@ import 'icons/project_icons.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
-/// What the picker's "Default" glyph looks like.
-enum GlyphKind { project, label }
+/// What the picker's "Default" glyph looks like: cube, dot, or filter (quick filters).
+enum GlyphKind { project, label, view }
 
 /// Opens the icon and color picker under the widget of [context] (the glyph that was clicked), or centered when
 /// [anchored] is false (opened from a menu, whose item is gone by then). [onPick] runs on every change: picking a
@@ -57,6 +57,7 @@ Widget iconMenuItem(
     fallback: switch (kind) {
       GlyphKind.project => CubeIcon.new,
       GlyphKind.label => ColorDot.new,
+      GlyphKind.view => FunnelIcon.new,
     },
   ),
   onPressed: () => showIconPicker(
@@ -102,6 +103,7 @@ class IconPickerButton extends StatelessWidget {
           color: color,
           size: dotSize,
         ),
+        GlyphKind.view => FunnelIcon.new,
       },
     );
     if (!enabled) return glyph;
@@ -239,6 +241,7 @@ class _IconPickerState extends ConsumerState<IconPicker> {
       child: switch (widget.kind) {
         GlyphKind.project => CubeIcon(color: tint, size: 16),
         GlyphKind.label => ColorDot(color: tint, size: 10),
+        GlyphKind.view => FunnelIcon(color: tint, size: 16),
       },
     );
 

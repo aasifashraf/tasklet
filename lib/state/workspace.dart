@@ -11,6 +11,7 @@ import '../core/models.dart';
 import '../core/org_bundle.dart';
 import '../core/ordering.dart';
 import '../core/organization.dart';
+import '../core/starter.dart';
 import '../core/task_ops.dart' as ops;
 import '../core/workspace_ops.dart' as wops;
 import '../data/backups.dart';
@@ -109,9 +110,18 @@ class WorkspaceController extends Notifier<WorkspaceState> {
           sameFolder(o.folder, current) ? (folder: folder, info: o.info) : o,
       ]);
     }
+    final starter = _starter();
     await ref.read(prefsProvider.notifier).set(PrefKeys.dataFolder, folder);
-    await _open(folder, initialize: true);
+    await _open(folder, initialize: true, starter: starter);
   }
+
+  /// Starter content for a folder about to become an organization (docs/DECISIONS.md D16); the store writes it only
+  /// if the folder is empty. The sample project goes only into the first organization on this computer.
+  StarterContent _starter() => starterContent(
+    newId: newId,
+    now: _now,
+    withSampleProject: _organizations.isEmpty,
+  );
 
   // ---------------------------------------------------------------- organizations (docs/DECISIONS.md D15)
 
@@ -133,7 +143,11 @@ class WorkspaceController extends Notifier<WorkspaceState> {
   /// Makes [folder] an organization on this computer and opens it: a new folder gets [identity] in its marker; an
   /// existing Tasklet folder keeps its own. Throws if the folder can't be prepared.
   Future<void> addOrganization(String folder, {OrgInfo? identity}) async {
-    await WorkspaceStore.initialize(folder, organization: identity);
+    await WorkspaceStore.initialize(
+      folder,
+      organization: identity,
+      starter: _starter(),
+    );
     final orgs = _organizations;
     if (!orgs.any((o) => sameFolder(o.folder, folder))) {
       await _saveOrganizations([
@@ -230,7 +244,11 @@ class WorkspaceController extends Notifier<WorkspaceState> {
     if (folder != null) await _open(folder);
   }
 
-  Future<void> _open(String folder, {bool initialize = false}) async {
+  Future<void> _open(
+    String folder, {
+    bool initialize = false,
+    StarterContent? starter,
+  }) async {
     await _closeFolder();
     if (_openFolder == null || !sameFolder(_openFolder!, folder)) {
       _resetSession();
@@ -239,7 +257,9 @@ class WorkspaceController extends Notifier<WorkspaceState> {
     final generation = ++_generation;
     state = LoadingState(folder);
     try {
-      if (initialize) await WorkspaceStore.initialize(folder);
+      if (initialize) {
+        await WorkspaceStore.initialize(folder, starter: starter);
+      }
       final backupRoot = ref.read(backupDirProvider);
       final store = WorkspaceStore(
         folder,

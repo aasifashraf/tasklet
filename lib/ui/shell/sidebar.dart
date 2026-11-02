@@ -332,15 +332,16 @@ class _SidebarState extends ConsumerState<Sidebar> {
     List<SavedView> section,
     String path,
   ) {
-    final t = Tokens.of(context);
     final key = 'view:${v.id}';
     final index = section.indexOf(v);
     List<Widget> menu() => [
       menuItem('Rename', onPressed: () => setState(() => _renaming = key)),
-      colorSubmenu(
-        selected: v.color,
-        onPick: (c) =>
-            _controller.updateView(v.id, (x) => x.copyWith(color: c)),
+      iconMenuItem(
+        context,
+        icon: v.icon,
+        color: v.color,
+        kind: GlyphKind.view,
+        onPick: (icon, color) => _controller.setViewIcon(v.id, icon, color),
       ),
       menuItem(
         'Unpin from Sidebar',
@@ -381,7 +382,7 @@ class _SidebarState extends ConsumerState<Sidebar> {
       menuChildren: menu,
       child: _renaming == key
           ? _RenameRow(
-              icon: LayersIcon(color: t.named(v.color)),
+              icon: ViewGlyph(v),
               initial: v.name,
               onDone: (name) {
                 setState(() => _renaming = null);
@@ -391,7 +392,7 @@ class _SidebarState extends ConsumerState<Sidebar> {
               },
             )
           : _Row(
-              icon: LayersIcon(color: t.named(v.color)),
+              icon: ViewGlyph(v),
               label: v.name,
               selected: path == '/views/${v.id}',
               onTap: () => context.go('/views/${v.id}'),

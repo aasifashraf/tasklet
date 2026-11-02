@@ -20,7 +20,7 @@ enum NavItem {
   today('Today', '/today', Icons.wb_sunny_outlined),
   allTasks('All Tasks', '/my-tasks', Icons.checklist_rounded),
   projects('Projects', '/projects', Icons.view_in_ar_outlined),
-  views('Quick Filters', '/views', Icons.layers_outlined),
+  views('Quick Filters', '/views', Icons.filter_alt_outlined),
   labels('Labels', '/labels', Icons.label_outline_rounded),
   reports('Reports', '/reports', Icons.description_outlined);
 

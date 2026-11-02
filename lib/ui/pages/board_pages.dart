@@ -11,10 +11,8 @@ import '../../state/workspace.dart';
 import '../board/kanban.dart';
 import '../board/task_list.dart';
 import '../board/toolbar.dart';
-import '../glyphs.dart';
 import '../icon_picker.dart';
 import '../task/new_task_dialog.dart';
-import '../theme.dart';
 import '../widgets.dart';
 import 'page_scaffold.dart';
 
@@ -86,9 +84,14 @@ class ViewBoardPage extends ConsumerWidget {
     return BoardPage(
       kind: ViewBoard(viewId),
       title: view.name,
-      leading: LayersIcon(
-        color: Tokens.of(context).named(view.color),
-        size: 15,
+      leading: IconPickerButton(
+        enabled: !(ref.watch(workspaceDataProvider)?.readOnly ?? true),
+        icon: view.icon,
+        color: view.color,
+        kind: GlyphKind.view,
+        onPick: (icon, color) => ref
+            .read(workspaceProvider.notifier)
+            .setViewIcon(view.id, icon, color),
       ),
     );
   }

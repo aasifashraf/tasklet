@@ -219,54 +219,6 @@ class _CubePainter extends CustomPainter {
   bool shouldRepaint(_CubePainter old) => old.color != color;
 }
 
-/// Saved-view glyph: stacked layers, tinted the view color.
-class LayersIcon extends StatelessWidget {
-  const LayersIcon({super.key, required this.color, this.size = 14});
-  final Color color;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) =>
-      CustomPaint(size: Size.square(size), painter: _LayersPainter(color));
-}
-
-class _LayersPainter extends CustomPainter {
-  _LayersPainter(this.color);
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final s = size.width;
-    final p = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.3
-      ..strokeJoin = StrokeJoin.round
-      ..strokeCap = StrokeCap.round;
-    canvas.drawPath(
-      Path()
-        ..moveTo(s * 0.5, s * 0.1)
-        ..lineTo(s * 0.92, s * 0.32)
-        ..lineTo(s * 0.5, s * 0.54)
-        ..lineTo(s * 0.08, s * 0.32)
-        ..close(),
-      p,
-    );
-    for (final y in [0.54, 0.76]) {
-      canvas.drawPath(
-        Path()
-          ..moveTo(s * 0.08, s * y)
-          ..lineTo(s * 0.5, s * (y + 0.22))
-          ..lineTo(s * 0.92, s * y),
-        p,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(_LayersPainter old) => old.color != color;
-}
-
 /// A project's glyph: its icon (docs/DECISIONS.md D14) or the cube, tinted the project color unless [color] is
 /// given. Use this, not [CubeIcon], wherever a project is shown.
 class ProjectGlyph extends StatelessWidget {
@@ -308,6 +260,33 @@ class LabelGlyph extends StatelessWidget {
     fallback: ({key, required color, size = 0}) =>
         ColorDot(key: key, color: color, size: dotSize, border: border),
   );
+}
+
+/// A quick filter's glyph: its icon, or a filter (funnel) by default, tinted the quick filter's color.
+class ViewGlyph extends StatelessWidget {
+  const ViewGlyph(this.view, {super.key, this.size = 14});
+  final SavedView view;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => TaskletIcon(
+    icon: view.icon,
+    color: Tokens.of(context).named(view.color),
+    size: size,
+    fallback: FunnelIcon.new,
+  );
+}
+
+/// The default quick-filter glyph (Lucide "funnel").
+class FunnelIcon extends StatelessWidget {
+  const FunnelIcon({super.key, required this.color, this.size = 14});
+  final Color color;
+  final double size;
+
+  static final _data = iconFor('funnel')!.data;
+
+  @override
+  Widget build(BuildContext context) => Icon(_data, size: size, color: color);
 }
 
 /// [icon] (a catalog name) at [size] in [color]; [fallback] for none or a name this version doesn't have.

@@ -162,6 +162,19 @@ void main() {
       expect(p.copyWith(name: 'x').toJson()['icon'], 'quantum-widget');
     });
 
+    test('quick filters keep their icon, and one this version lacks', () {
+      final v = SavedView(
+        id: 'v',
+        name: 'V',
+        createdAt: t0,
+        updatedAt: t0,
+      ).copyWith(icon: 'flag');
+      expect(SavedView.fromJson(roundTrip(v.toJson())).icon, 'flag');
+      expect(v.copyWith(clearIcon: true).toJson().containsKey('icon'), isFalse);
+      final future = SavedView.fromJson({...v.toJson(), 'icon': 'quantum'});
+      expect(future.copyWith(name: 'W').toJson()['icon'], 'quantum');
+    });
+
     test('a non-string icon from a newer version is kept as is', () {
       final icon = {'set': 'emoji', 'value': 'rocket'};
       final p = Project.fromJson({...project('p').toJson(), 'icon': icon});

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../core/colors.dart';
-import 'glyphs.dart';
 import 'theme.dart';
 
 /// Rebuilds [builder] with the current hover state.
@@ -299,62 +297,6 @@ Widget checkItem(
   },
 );
 
-/// The color picker grid inside a menu (quick filters), 9 colors per row.
-class ColorGrid extends StatelessWidget {
-  const ColorGrid({
-    super.key,
-    required this.selected,
-    required this.onPick,
-    this.dots = false,
-  });
-  final TaskletColor selected;
-  final ValueChanged<TaskletColor> onPick;
-  final bool dots;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = Tokens.of(context);
-    return Padding(
-      padding: const EdgeInsets.all(8),
-      child: SizedBox(
-        width: 9 * 28 + 8 * 4,
-        child: Wrap(
-          spacing: 4,
-          runSpacing: 4,
-          children: [
-            for (final c in TaskletColor.values)
-              Tooltip(
-                message: c.name[0].toUpperCase() + c.name.substring(1),
-                child: Hoverable(
-                  cursor: SystemMouseCursors.click,
-                  builder: (context, hovered) => GestureDetector(
-                    onTap: () {
-                      onPick(c);
-                      MenuController.maybeOf(context)?.close();
-                    },
-                    child: Container(
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        color: c == selected
-                            ? t.selected
-                            : (hovered ? t.hover : Colors.transparent),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Center(
-                        child: ColorDot(color: t.named(c), size: 12),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 /// A single-line text field that commits on Enter/blur and cancels on Escape (SPEC §4.5 inline create/rename).
 /// [onCommit] receives the trimmed text; [onCancel] runs when Escape is pressed or the text is empty/unchanged on
 /// blur.
@@ -594,19 +536,3 @@ class _TrianglePainter extends CustomPainter {
   @override
   bool shouldRepaint(_TrianglePainter old) => old.color != color;
 }
-
-/// "Change Color ▸" submenu with the color grid, for the ⋯ / right-click menus of quick filters, so
-/// recoloring is discoverable, not only by clicking the color icon.
-Widget colorSubmenu({
-  required TaskletColor selected,
-  required ValueChanged<TaskletColor> onPick,
-}) => Builder(
-  builder: (context) => SubmenuButton(
-    leadingIcon: SizedBox(
-      width: 16,
-      child: ColorDot(color: Tokens.of(context).named(selected), size: 9),
-    ),
-    menuChildren: [ColorGrid(selected: selected, onPick: onPick)],
-    child: const Text('Change Color', style: TextStyle(fontSize: 12)),
-  ),
-);

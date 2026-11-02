@@ -10,6 +10,7 @@ import '../core/models.dart';
 import '../core/org_bundle.dart';
 import '../core/organization.dart';
 import '../core/project_keys.dart';
+import '../core/starter.dart';
 import '../core/task_ops.dart'
     show resolveDuplicateNumbers, resolveDuplicateTaskIds;
 import 'atomic_file.dart';
@@ -127,11 +128,17 @@ class WorkspaceStore {
   String get _markerPath => p.join(folder, markerFileName);
 
   /// Prepares an existing folder for use: writes the marker file (once) and the projects directory. Used when the
-  /// user chooses or creates a folder. Adds no demo data (SPEC §10). A new marker gets [organization] as the
-  /// folder's identity (D15); an existing one is left alone.
-  static Future<void> initialize(String folder, {OrgInfo? organization}) async {
+  /// user chooses or creates a folder. A new marker gets [organization] as the folder's identity (D15); an existing
+  /// one is left alone. [starter] content (D16) is written only into a fresh folder: no marker, labels, quick
+  /// filters or project files yet, so nothing that exists is ever added to or changed.
+  static Future<void> initialize(
+    String folder, {
+    OrgInfo? organization,
+    StarterContent? starter,
+  }) async {
     if (!await Directory(folder).exists()) throw WorkspaceFolderMissing(folder);
     final marker = File(p.join(folder, markerFileName));
+    final fresh = starter != null && await _isFresh(folder);
     if (!await marker.exists()) {
       await writeFileAtomic(
         marker.path,
@@ -143,6 +150,31 @@ class WorkspaceStore {
       );
     }
     await Directory(p.join(folder, projectsDirName)).create();
+    if (!fresh) return;
+    await writeFileAtomic(
+      p.join(folder, labelsFileName),
+      encodeJson([for (final l in starter.labels) l.toJson()]),
+    );
+    await writeFileAtomic(
+      p.join(folder, viewsFileName),
+      encodeJson([for (final v in starter.views) v.toJson()]),
+    );
+    for (final project in starter.projects) {
+      await writeFileAtomic(
+        p.join(folder, projectsDirName, '${project.id}.json'),
+        encodeJson(project.toJson()),
+      );
+    }
+  }
+
+  /// No marker, labels.json, views.json or project file: a folder Tasklet has never used.
+  static Future<bool> _isFresh(String folder) async {
+    for (final name in [markerFileName, labelsFileName, viewsFileName]) {
+      if (await File(p.join(folder, name)).exists()) return false;
+    }
+    final projects = Directory(p.join(folder, projectsDirName));
+    if (!await projects.exists()) return true;
+    return !await projects.list().any((e) => e.path.endsWith('.json'));
   }
 
   /// Reads the whole folder.

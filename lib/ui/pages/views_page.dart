@@ -7,7 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/colors.dart';
 import '../../core/models.dart';
 import '../../state/workspace.dart';
-import '../glyphs.dart';
+import '../icon_picker.dart';
 import '../shell/sidebar.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -27,11 +27,13 @@ class _ViewsPageState extends ConsumerState<ViewsPage> {
   bool _creating = false;
   String? _renaming;
   TaskletColor _newColor = TaskletColor.purple;
+  String? _newIcon;
 
   WorkspaceController get _controller => ref.read(workspaceProvider.notifier);
 
   void _startCreate() => setState(() {
     _creating = true;
+    _newIcon = null;
     _newColor =
         TaskletColor.rotation[Random().nextInt(TaskletColor.rotation.length)];
   });
@@ -97,17 +99,14 @@ class _ViewsPageState extends ConsumerState<ViewsPage> {
                       ListHeading('Quick Filters', views.length),
                       if (_creating)
                         ListRowShell(
-                          leading: TapMenu(
-                            menuChildren: [
-                              ColorGrid(
-                                selected: _newColor,
-                                onPick: (c) => setState(() => _newColor = c),
-                              ),
-                            ],
-                            child: LayersIcon(
-                              color: t.named(_newColor),
-                              size: 15,
-                            ),
+                          leading: IconPickerButton(
+                            icon: _newIcon,
+                            color: _newColor,
+                            kind: GlyphKind.view,
+                            onPick: (icon, color) => setState(() {
+                              _newIcon = icon;
+                              _newColor = color;
+                            }),
                           ),
                           title: InlineEditField(
                             initial: '',
@@ -117,6 +116,7 @@ class _ViewsPageState extends ConsumerState<ViewsPage> {
                               final view = await _controller.createView(
                                 name,
                                 _newColor,
+                                icon: _newIcon,
                               );
                               // An unfiltered view isn't useful yet; go set its filters (SPEC §4.6).
                               if (context.mounted) {
@@ -137,16 +137,12 @@ class _ViewsPageState extends ConsumerState<ViewsPage> {
 
   Widget _row(BuildContext context, SavedView v, Tokens t, bool editable) =>
       ListRowShell(
-        leading: TapMenu(
+        leading: IconPickerButton(
           enabled: editable,
-          menuChildren: [
-            ColorGrid(
-              selected: v.color,
-              onPick: (c) =>
-                  _controller.updateView(v.id, (x) => x.copyWith(color: c)),
-            ),
-          ],
-          child: LayersIcon(color: t.named(v.color), size: 15),
+          icon: v.icon,
+          color: v.color,
+          kind: GlyphKind.view,
+          onPick: (icon, color) => _controller.setViewIcon(v.id, icon, color),
         ),
         title: _renaming == v.id
             ? InlineEditField(
@@ -200,10 +196,13 @@ class _ViewsPageState extends ConsumerState<ViewsPage> {
                   'Rename',
                   onPressed: () => setState(() => _renaming = v.id),
                 ),
-                colorSubmenu(
-                  selected: v.color,
-                  onPick: (c) =>
-                      _controller.updateView(v.id, (x) => x.copyWith(color: c)),
+                iconMenuItem(
+                  context,
+                  icon: v.icon,
+                  color: v.color,
+                  kind: GlyphKind.view,
+                  onPick: (icon, color) =>
+                      _controller.setViewIcon(v.id, icon, color),
                 ),
                 const Divider(),
                 menuItem(

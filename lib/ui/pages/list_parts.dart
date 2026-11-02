@@ -222,32 +222,3 @@ class ProgressCell extends StatelessWidget {
     );
   }
 }
-
-/// Opens [menuChildren] from a tap on [child] (e.g. a color icon that opens the color grid).
-class TapMenu extends StatelessWidget {
-  const TapMenu({
-    super.key,
-    required this.menuChildren,
-    required this.child,
-    this.enabled = true,
-    this.tooltip = 'Change color',
-  });
-  final List<Widget> menuChildren;
-  final Widget child;
-  final bool enabled;
-  final String tooltip;
-
-  @override
-  Widget build(BuildContext context) => MenuAnchor(
-    menuChildren: menuChildren,
-    builder: (context, controller, _) => GestureDetector(
-      onTap: enabled
-          ? () => controller.isOpen ? controller.close() : controller.open()
-          : null,
-      child: MouseRegion(
-        cursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
-        child: enabled ? Tooltip(message: tooltip, child: child) : child,
-      ),
-    ),
-  );
-}

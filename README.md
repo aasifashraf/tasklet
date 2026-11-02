@@ -56,8 +56,8 @@ planned.
   rename.
 - **Tasks without a project** are allowed and get IDs like `TSK-3`.
 - **Labels** for the whole workspace or for one project.
-- **Icons and colors** for projects and labels: about 640 project-related icons (Lucide) with search, and 16
-  colors.
+- **Icons and colors** for projects, labels and quick filters: about 640 project-related icons (Lucide) with
+  search, and 16 colors.
 - **Favorites** pinned at the top of the sidebar, and an **archive** for finished projects.
 - **Quick filters**: save any combination of filters and open it in one click, optionally pinned to the sidebar. A
   quick filter's filters and display settings are stored in your data folder, so it looks the same on every computer.
@@ -118,7 +118,10 @@ The installer isn't code-signed yet, so Windows SmartScreen may show a warning t
 1. Start Tasklet. On first launch it asks where to keep your data.
 2. Choose **Create Organization…** (name it, then pick where its folder goes, for example inside your OneDrive
    folder) or **Choose Existing Folder…** to open a folder you already use with Tasklet on another computer.
-   Add more organizations later from the top of the sidebar or the **Organization** menu.
+   Add more organizations later from the top of the sidebar or the **Organization** menu. A new organization
+   starts with four labels (bug, feature, refactor, security) and everyday quick filters (Overdue, Due Soon, High
+   Priority, In Progress, No Due Date); your first one also has a sample **Tasklet** project showing Tasklet's own
+   plan. Rename or delete any of it.
 3. Create a project from the **Projects** page, then add tasks with **Ctrl+N**.
 
 ### Keyboard shortcuts

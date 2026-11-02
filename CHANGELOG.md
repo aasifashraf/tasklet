@@ -11,7 +11,11 @@
 - Move a project to another organization from its menu: it is written there before it is removed here, with the
   labels its tasks use and the same task numbers
 - Export an organization to one `.tasklet.json` file and import it as a new organization
-- Icons for projects and labels: about 640 project-related icons (Lucide) with search, recents and a color row
+- Icons for projects, labels and quick filters: about 640 project-related icons (Lucide) with search, recents and
+  a color row; quick filters show a filter icon by default
+- A new organization starts with bug, feature, refactor and security labels and five everyday quick filters
+  (Overdue, Due Soon and High Priority pinned, In Progress, No Due Date); the first one also gets a sample Tasklet
+  project showing Tasklet's plan. Folders that already have data are never changed
 - 16 colors (teal, cyan, indigo, pink, lime, amber, brown and slate added); green, orange and yellow are darker in
   the light theme so every color reads on every background
 - Boards patch only the tasks that changed after an edit (about 20 ms instead of 170 ms with 100,000 tasks), search

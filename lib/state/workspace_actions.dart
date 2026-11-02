@@ -493,18 +493,35 @@ extension WorkspaceActions on WorkspaceController {
     return _save((s) => s.writeViews(views));
   }
 
-  Future<SavedView> createView(String name, TaskletColor color) async {
+  Future<SavedView> createView(
+    String name,
+    TaskletColor color, {
+    String? icon,
+  }) async {
     final now = _now;
     final view = SavedView(
       id: newId(),
       name: name.trim(),
       color: color,
+      icon: icon,
       createdAt: now,
       updatedAt: now,
     );
     await _putViews([..._ws.views, view]);
     return view;
   }
+
+  /// The icon picker's choice for a quick filter (null icon: the funnel). An unchanged color is left alone, so a
+  /// color from a newer version survives picking only an icon.
+  Future<void> setViewIcon(String id, String? icon, TaskletColor color) =>
+      updateView(
+        id,
+        (v) => v.copyWith(
+          icon: icon,
+          clearIcon: icon == null,
+          color: color == v.color ? null : color,
+        ),
+      );
 
   /// Edits and deletes of quick filters; nothing happens when no workspace is open.
   Future<void> _changeViews(

@@ -151,7 +151,8 @@ have an icon, and there are 16 colors.
 - New colors: teal, cyan, indigo, pink, lime, amber, brown, slate. Older versions show them as neutral and keep
   them (D1). Every color must reach 3:1 against every surface as a glyph, so green, orange and yellow (and the new
   colors) use darker shades in the light theme; `test/ui/design_system_test.dart` checks this.
-- Quick filters keep their stacked-layers glyph with the 16 colors.
+- Quick filters have icons too (D16); their default glyph is a filter (funnel) instead of SPEC §8.5's stacked layers,
+  and the Quick Filters nav item uses a filter icon to match.
 
 ## D15. Organizations are data folders
 
@@ -188,4 +189,20 @@ a time and switches between them from the sidebar header, the Organization menu 
   at most, parsed off the UI thread), refuses another kind or a newer format, checks every project parses and has a
   safe id, then writes it into a new, empty folder chosen in the New Organization dialog; on any failure that folder
   is emptied again. Ids are kept: a new folder can't clash.
+
+## D16. Starter content in new organizations
+
+SPEC §10 says "No demo data, ever". An empty organization made people build the basics by hand, so a new one now
+starts with a few things that are useful in any line of work, all of which can be renamed or deleted:
+
+- Four workspace labels with icons: bug, feature, refactor, security.
+- Five quick filters built only from status, priority and due date, so they fit any field: Overdue, Due Soon and High
+  Priority (pinned to the sidebar), In Progress and No Due Date. They never reference labels or projects.
+- Only in the first organization on a computer (first launch): a sample "Tasklet" project whose tasks are Tasklet's
+  own plan, done, in progress, todo and backlog, with a welcome task explaining it. Later organizations (a client, an
+  employer) start without it.
+
+It is written only into a fresh folder: no marker, labels.json, views.json or project file yet. A folder that already
+has Tasklet data, an imported organization (D15) and the development data-folder override never get it, so existing
+data is never added to or changed. The content lives in `lib/core/starter.dart`.
 
