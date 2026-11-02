@@ -106,6 +106,14 @@ Project removeTask(Project project, String taskId, DateTime now) =>
   now: now,
 );
 
+/// Whether no task in [project] (including entries this version can't display) uses [number], ignoring the task
+/// [exceptTaskId].
+bool isNumberFree(Project project, int number, {String? exceptTaskId}) =>
+    project.tasks.every((t) => t.id == exceptTaskId || t.number != number) &&
+    !project.opaqueTasks.any(
+      (o) => o is Map && o['number'] == number && o['id'] != exceptTaskId,
+    );
+
 /// Repairs task numbers that appear twice in one project, e.g. when two computers both created WEB-13 while
 /// offline and sync merged the files. Like project keys (SPEC §2.4), the oldest task (by `createdAt`, then id) keeps
 /// a contested number and the others get fresh ones from `nextNumber`; numbers of entries this version can't
@@ -147,7 +155,9 @@ Project? resolveDuplicateNumbers(Project project) {
   required DateTime now,
 }) {
   final numberFree =
-      restoreNumber != null && to.tasks.every((t) => t.number != restoreNumber);
+      restoreNumber != null &&
+      from.id != to.id &&
+      isNumberFree(to, restoreNumber);
   final number = numberFree ? restoreNumber : to.nextNumber;
   final moved = task.copyWith(
     number: number,

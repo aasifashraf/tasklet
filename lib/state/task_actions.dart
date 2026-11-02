@@ -19,13 +19,25 @@ class TaskActions {
   ToastController get _toast => _ref.read(toastProvider.notifier);
   LocalDate get _today => _ref.read(todayProvider);
 
-  void _withUndo(String message, ProjectTask e, {bool toast = true}) {
+  /// Shows [message] with an Undo that reverts only what this action changed (via [revert], given the task as it
+  /// is then and as it was before), so edits made meanwhile, e.g. by sync, survive.
+  void _withUndo(
+    String message,
+    ProjectTask e,
+    Task Function(Task now, Task before) revert, {
+    bool toast = true,
+  }) {
     if (!toast) return;
     final before = e.task;
     _toast.show(
       message,
-      onUndo: () => _c.restoreTaskSnapshot(e.project.id, before),
+      onUndo: () => _undo(_c.revertTask(before.id, (t) => revert(t, before))),
     );
+  }
+
+  /// Runs an undo and says so when it can't apply any more (the task or its project is gone).
+  Future<void> _undo(Future<bool> undo) async {
+    if (!await undo) _toast.show("Can't undo: the task no longer exists.");
   }
 
   Future<void> setStatus(
@@ -34,7 +46,13 @@ class TaskActions {
     bool toast = true,
   }) async {
     if (e.task.status == status) return;
-    _withUndo('${e.displayId} moved to ${status.label}', e, toast: toast);
+    _withUndo(
+      '${e.displayId} moved to ${status.label}',
+      e,
+      (t, before) =>
+          t.copyWith(status: before.status, completedAt: before.completedAt),
+      toast: toast,
+    );
     await _c.updateTask(
       e.project.id,
       e.task.id,
@@ -53,6 +71,7 @@ class TaskActions {
           ? 'Removed priority from ${e.displayId}'
           : '${e.displayId} priority set to ${priority.label}',
       e,
+      (t, before) => t.copyWith(priority: before.priority),
       toast: toast,
     );
     await _c.updateTask(
@@ -74,6 +93,7 @@ class TaskActions {
           ? 'Removed due date from ${e.displayId}'
           : '${e.displayId} due ${phrase ?? relativeDate(due, _today).toLowerCase()}',
       e,
+      (t, before) => t.copyWith(dueDate: before.dueDate),
       toast: toast,
     );
     await _c.updateTask(
@@ -94,6 +114,7 @@ class TaskActions {
           ? 'Removed start date from ${e.displayId}'
           : '${e.displayId} starts ${relativeDate(start, _today).toLowerCase()}',
       e,
+      (t, before) => t.copyWith(startDate: before.startDate),
       toast: toast,
     );
     await _c.updateTask(
@@ -112,6 +133,15 @@ class TaskActions {
     _withUndo(
       has ? 'Removed label ${label.name}' : 'Added label ${label.name}',
       e,
+      // Toggle just this label back; other label changes made meanwhile stay.
+      (t, _) => t.copyWith(
+        labelIds: has
+            ? [...t.labelIds.where((id) => id != label.id), label.id]
+            : [
+                for (final id in t.labelIds)
+                  if (id != label.id) id,
+              ],
+      ),
       toast: toast,
     );
     await _c.updateTask(
@@ -135,31 +165,18 @@ class TaskActions {
   }) async {
     if (e.project.id == to.id) return;
     final before = e.task;
+    // The open detail panel follows the task by id (DetailPanelOverlay), so a move or its Undo keeps it open.
     final moved = await _c.moveTaskToProject(e.project.id, e.task.id, to.id);
-    if (moved == null) return;
-    final newRef = TaskRef(to.id, moved.id);
-    // Keep the detail panel on the task after it changes project.
-    final open = _ref.read(openTaskProvider);
-    if (open?.taskId == e.task.id) {
-      _ref.read(openTaskProvider.notifier).open(newRef);
-    }
-    if (toast) {
-      _toast.show(
-        'Moved to ${to.name} as ${to.key}-${moved.number}',
-        onUndo: () async {
-          await _c.restoreMovedTask(e.project.id, to.id, before);
-          if (_ref.read(openTaskProvider)?.taskId == e.task.id) {
-            _ref
-                .read(openTaskProvider.notifier)
-                .open(TaskRef(e.project.id, e.task.id));
-          }
-        },
-      );
-    }
+    if (moved == null || !toast) return;
+    _toast.show(
+      'Moved to ${to.name} as ${to.key}-${moved.number}',
+      onUndo: () => _undo(_c.restoreMovedTask(e.project.id, to.id, before)),
+    );
   }
 
-  Future<ProjectTask> duplicate(ProjectTask e) async {
+  Future<ProjectTask?> duplicate(ProjectTask e) async {
     final copy = await _c.duplicateTask(e.project.id, e.task.id);
+    if (copy == null) return null;
     _toast.show(
       'Duplicated as ${copy.displayId}',
       onUndo: () => _c.deleteTask(copy.project.id, copy.task.id),
@@ -181,7 +198,7 @@ class TaskActions {
     _toast.show(
       'Deleted ${e.displayId}',
       duration: const Duration(seconds: 8),
-      onUndo: () => _c.undoDelete(deleted.id),
+      onUndo: () => _undo(_c.undoDelete(deleted.id)),
     );
   }
 }

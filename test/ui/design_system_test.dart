@@ -30,11 +30,12 @@ void main() {
       final isTheme = file.path.endsWith('theme.dart');
       for (final (i, line) in file.readAsLinesSync().indexed) {
         final where = '${file.path}:${i + 1}';
-        if (line.contains('—')) {
+        if (line.contains('\u2014')) {
           problems.add('$where em dash (use a colon, comma or "to")');
         }
-        if (RegExp(r'''['"][^'"]*\.\.\.[^'"]*['"]''').hasMatch(line) &&
-            !line.contains('...[')) {
+        // Spread operators (`...list`, `...?map[k]`) aren't text; drop them before looking inside strings.
+        final code = line.replaceAll(RegExp(r'\.\.\.(?=[?\[{(A-Za-z_])'), '');
+        if (RegExp(r'''['"][^'"]*\.\.\.[^'"]*['"]''').hasMatch(code)) {
           problems.add('$where "..." in a string (use the ellipsis character)');
         }
         if (!isTheme && line.contains('Color(0x')) {

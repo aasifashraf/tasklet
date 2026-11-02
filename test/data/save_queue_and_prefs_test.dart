@@ -132,5 +132,29 @@ void main() {
       expect(events, 1);
       await watcher.dispose();
     });
+
+    test(
+      'a burst that never pauses still reports at least every maxWait',
+      () async {
+        final watcher = FolderWatcher(
+          root.path,
+          isOwnWrite: (_) => false,
+          usePolling: true,
+          pollingDelay: const Duration(milliseconds: 40),
+          debounce: const Duration(milliseconds: 300),
+          maxWait: const Duration(milliseconds: 400),
+        );
+        var events = 0;
+        watcher.changes.listen((_) => events++);
+        await watcher.start();
+        // A sync client rewriting files faster than the debounce for ~1.6 s.
+        for (var i = 0; i < 16; i++) {
+          await File(p.join(root.path, 'busy.json')).writeAsString('{"i":$i}');
+          await Future<void>.delayed(const Duration(milliseconds: 100));
+        }
+        expect(events, greaterThanOrEqualTo(2));
+        await watcher.dispose();
+      },
+    );
   });
 }

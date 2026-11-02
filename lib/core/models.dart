@@ -953,6 +953,15 @@ class Workspace {
   /// Labels a task in [project] may use: the project's own, then workspace-wide (SPEC §2.2).
   List<Label> labelsFor(Project project) => [...project.labels, ...labels];
 
+  /// The task with [taskId] wherever it lives now (it may have moved project since a reference was taken).
+  ProjectTask? findTask(String taskId) {
+    for (final p in allProjects) {
+      final t = p.taskById(taskId);
+      if (t != null) return ProjectTask(p, t);
+    }
+    return null;
+  }
+
   /// Every label (workspace first, so its id wins a clash) by id. Built once per workspace snapshot.
   late final Map<String, Label> _labelsById = {
     for (final p in projects.reversed)

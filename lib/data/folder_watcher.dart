@@ -12,19 +12,25 @@ class FolderWatcher {
     this.folder, {
     required this.isOwnWrite,
     this.debounce = const Duration(milliseconds: 300),
+    this.maxWait = const Duration(seconds: 2),
     bool usePolling = false,
     this.pollingDelay = const Duration(seconds: 2),
   }) : _polling = usePolling;
 
   final String folder;
   final Duration debounce;
+
+  /// A burst that never pauses (a sync client touching many files) still reports at least this often.
+  final Duration maxWait;
   final Duration pollingDelay;
   final bool Function(String path) isOwnWrite;
   bool _polling;
+  bool _disposed = false;
 
   final _controller = StreamController<void>.broadcast();
   StreamSubscription<WatchEvent>? _subscription;
   Timer? _timer;
+  final _sinceFirstPending = Stopwatch();
 
   Stream<void> get changes => _controller.stream;
 
@@ -35,7 +41,7 @@ class FolderWatcher {
         : DirectoryWatcher(folder);
     _subscription = watcher.events.listen(
       _onEvent,
-      onError: (Object _) => _fallBackToPolling(),
+      onError: (Object _) => unawaited(_fallBackToPolling()),
     );
     await watcher.ready;
   }
@@ -46,20 +52,35 @@ class FolderWatcher {
         isOwnWrite(event.path)) {
       return;
     }
+    if (!_sinceFirstPending.isRunning) _sinceFirstPending.start();
     _timer?.cancel();
-    _timer = Timer(debounce, () {
-      if (!_controller.isClosed) _controller.add(null);
-    });
+    _timer = Timer(
+      _sinceFirstPending.elapsed >= maxWait ? Duration.zero : debounce,
+      _emit,
+    );
+  }
+
+  void _emit() {
+    _sinceFirstPending
+      ..stop()
+      ..reset();
+    if (!_controller.isClosed) _controller.add(null);
   }
 
   Future<void> _fallBackToPolling() async {
-    if (_polling) return;
+    if (_polling || _disposed) return;
     _polling = true;
     await _subscription?.cancel();
-    await start();
+    if (_disposed) return;
+    try {
+      await start();
+    } catch (_) {
+      // Polling couldn't start either; window focus still refreshes.
+    }
   }
 
   Future<void> dispose() async {
+    _disposed = true;
     _timer?.cancel();
     await _subscription?.cancel();
     await _controller.close();

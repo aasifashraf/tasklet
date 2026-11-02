@@ -217,22 +217,26 @@ class BoardBody extends ConsumerWidget {
     ];
     final manual = isManuallyOrdered(board.display.order, target.status);
     final double sortOrder;
+    var respaced = const <ProjectTask, double>{};
     if (manual) {
-      final index = target.index.clamp(0, list.length);
-      sortOrder = sortOrderBetween(
-        index > 0 ? list[index - 1].task.sortOrder : null,
-        index < list.length ? list[index].task.sortOrder : null,
-      );
+      final place = placeInColumn([
+        for (final e in list) e.task.sortOrder,
+      ], target.index.clamp(0, list.length));
+      sortOrder = place.value;
+      respaced = {
+        for (final MapEntry(key: i, value: v) in place.respaced.entries)
+          list[i]: v,
+      };
     } else if (target.status != entry.task.status) {
       sortOrder = sortOrderAtTop([for (final e in list) e.task.sortOrder]);
     } else {
       return;
     }
     await controller.placeTask(
-      entry.project.id,
-      entry.task.id,
+      entry,
       status: target.status == entry.task.status ? null : target.status,
       sortOrder: sortOrder,
+      respaced: respaced,
     );
   }
 }

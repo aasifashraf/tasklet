@@ -36,6 +36,11 @@ Future<void> main(List<String> args) async {
 
   // The Settings window runs in its own engine (SPEC §11).
   if (isSettingsWindow(args)) {
+    try {
+      await listenAsSettingsWindow();
+    } catch (e, s) {
+      ErrorLog.record(e, s, context: 'settings window');
+    }
     runApp(ProviderScope(overrides: overrides, child: const SettingsApp()));
     return;
   }

@@ -125,7 +125,11 @@ class WorkspaceController extends Notifier<WorkspaceState> {
       );
       _watcher = watcher;
       _watchSub = watcher.changes.listen((_) => refresh());
-      await watcher.start();
+      try {
+        await watcher.start();
+      } catch (_) {
+        // The folder is open and usable; it just won't live-update (window focus still refreshes).
+      }
     } on WorkspaceFolderMissing {
       if (generation == _generation) {
         state = FailedState(
@@ -401,15 +405,16 @@ class WorkspaceController extends Notifier<WorkspaceState> {
     return ProjectTask(project, task);
   }
 
-  /// Applies [change] to a task; bumps updatedAt and maintains completedAt when the status changes.
+  /// Applies [change] to a task; bumps updatedAt and maintains completedAt when the status changes. A task or
+  /// project that is gone (deleted here or by sync while a menu was open) is left alone.
   Future<void> updateTask(
     String projectId,
     String taskId,
     Task Function(Task t) change,
   ) {
-    final project = _project(projectId);
-    final current = project.taskById(taskId);
-    if (current == null) return Future.value();
+    final project = workspace?.projectById(projectId);
+    final current = project?.taskById(taskId);
+    if (project == null || current == null) return Future.value();
     var next = change(current).copyWith(updatedAt: _now);
     // Never save a start date after the due date (data that already arrived that way from sync stays editable).
     if (!ops.datesInOrder(next.startDate, next.dueDate) &&
@@ -423,17 +428,25 @@ class WorkspaceController extends Notifier<WorkspaceState> {
     return _putProject(ops.putTask(project, next, _now));
   }
 
-  /// Restores an exact earlier snapshot of a task (Undo).
-  Future<void> restoreTaskSnapshot(String projectId, Task snapshot) {
-    final project = _ws.projectById(projectId);
-    if (project == null) return Future.value();
-    return _putProject(ops.putTask(project, snapshot, _now));
+  /// Undo of a field edit: applies [revert] to the task as it is now, wherever it lives, so fields changed since
+  /// (e.g. by sync on another computer) are kept. Returns false, changing nothing, if the task no longer exists.
+  Future<bool> revertTask(String taskId, Task Function(Task now) revert) async {
+    final entry = workspace?.findTask(taskId);
+    if (entry == null) return false;
+    await _putProject(
+      ops.putTask(
+        entry.project,
+        revert(entry.task).copyWith(updatedAt: _now),
+        _now,
+      ),
+    );
+    return true;
   }
 
   Future<Task?> deleteTask(String projectId, String taskId) async {
-    final project = _project(projectId);
-    final task = project.taskById(taskId);
-    if (task == null) return null;
+    final project = workspace?.projectById(projectId);
+    final task = project?.taskById(taskId);
+    if (project == null || task == null) return null;
     _recentlyDeleted.remove(taskId);
     _recentlyDeleted[taskId] = (projectId, task);
     if (_recentlyDeleted.length > 50) {
@@ -443,21 +456,25 @@ class WorkspaceController extends Notifier<WorkspaceState> {
     return task;
   }
 
-  /// Puts a deleted task back with its exact id, number and fields.
-  Future<void> undoDelete(String taskId) async {
+  /// Puts a deleted task back with its exact id, number and fields. Returns false if that's no longer possible
+  /// (its project was deleted, or the workspace was closed).
+  Future<bool> undoDelete(String taskId) async {
     final entry = _recentlyDeleted.remove(taskId);
-    if (entry == null) return;
+    if (entry == null) return false;
     final (projectId, task) = entry;
-    final project = _ws.projectById(projectId);
-    if (project == null) return;
+    final project = workspace?.projectById(projectId);
+    if (project == null) return false;
     await _putProject(ops.putTask(project, task, _now));
+    return true;
   }
 
-  Future<ProjectTask> duplicateTask(String projectId, String taskId) async {
-    final project = _project(projectId);
+  Future<ProjectTask?> duplicateTask(String projectId, String taskId) async {
+    final project = workspace?.projectById(projectId);
+    final source = project?.taskById(taskId);
+    if (project == null || source == null) return null;
     final (updated, copy) = ops.duplicateTask(
       project,
-      project.taskById(taskId)!,
+      source,
       newId: newId(),
       now: _now,
     );
@@ -472,14 +489,15 @@ class WorkspaceController extends Notifier<WorkspaceState> {
     String toId, {
     int? restoreNumber,
   }) async {
-    if (fromId == toId) return null;
-    final ws = _ws;
-    final from = _project(fromId);
-    final to = _project(toId);
-    final task = from.taskById(taskId);
-    if (task == null) return null;
+    final ws = workspace;
+    final from = ws?.projectById(fromId);
+    final to = ws?.projectById(toId);
+    final task = from?.taskById(taskId);
+    if (fromId == toId || ws == null || to == null || task == null) {
+      return null;
+    }
     final (newFrom, newTo, moved) = ops.moveTask(
-      from,
+      from!,
       to,
       task,
       allowedLabelIds: {for (final l in ws.labelsFor(to)) l.id},
@@ -491,17 +509,24 @@ class WorkspaceController extends Notifier<WorkspaceState> {
   }
 
   /// Undo of a project move: takes the task out of [currentId] and puts [snapshot] back into [originalId] with its
-  /// original number if that is still free there (SPEC §7.3), otherwise a fresh one.
-  Future<void> restoreMovedTask(
+  /// original number if that is still free there (SPEC §7.3), otherwise a fresh one. Returns false, changing
+  /// nothing, if either project or the moved task is gone.
+  Future<bool> restoreMovedTask(
     String originalId,
     String currentId,
     Task snapshot,
   ) async {
-    final original = _ws.projectById(originalId);
-    final current = _ws.projectById(currentId);
-    if (original == null || current == null) return;
-    final numberFree = original.tasks.every(
-      (t) => t.id == snapshot.id || t.number != snapshot.number,
+    final original = workspace?.projectById(originalId);
+    final current = workspace?.projectById(currentId);
+    if (original == null ||
+        current == null ||
+        current.taskById(snapshot.id) == null) {
+      return false;
+    }
+    final numberFree = ops.isNumberFree(
+      original,
+      snapshot.number,
+      exceptTaskId: snapshot.id,
     );
     final restored = numberFree
         ? snapshot
@@ -516,22 +541,43 @@ class WorkspaceController extends Notifier<WorkspaceState> {
           ),
       ops.removeTask(current, snapshot.id, _now),
     ], inOrder: true);
+    return true;
   }
 
-  /// Drag-and-drop: set status and/or manual position.
+  /// Drag-and-drop: sets the dropped task's status and/or manual position, plus new positions for neighbours that
+  /// had to be re-spaced to make room (see `placeInColumn`). Re-spacing isn't an edit, so those tasks keep their
+  /// `updatedAt`.
   Future<void> placeTask(
-    String projectId,
-    String taskId, {
+    ProjectTask dropped, {
     TaskStatus? status,
-    double? sortOrder,
-  }) => updateTask(
-    projectId,
-    taskId,
-    (t) => t.copyWith(
-      status: status ?? t.status,
-      sortOrder: sortOrder ?? t.sortOrder,
-    ),
-  );
+    required double sortOrder,
+    Map<ProjectTask, double> respaced = const {},
+  }) async {
+    final ws = workspace;
+    if (ws == null) return;
+    final changed = <String, Project>{};
+    Project? projectOf(String id) => changed[id] ?? ws.projectById(id);
+    for (final MapEntry(key: e, value: value) in respaced.entries) {
+      final project = projectOf(e.project.id);
+      final task = project?.taskById(e.task.id);
+      if (project == null || task == null) continue;
+      changed[project.id] = ops.putTask(
+        project,
+        task.copyWith(sortOrder: value),
+        _now,
+      );
+    }
+    final project = projectOf(dropped.project.id);
+    final current = project?.taskById(dropped.task.id);
+    if (project == null || current == null) return;
+    final moved = ops.withStatus(
+      current.copyWith(sortOrder: sortOrder, updatedAt: _now),
+      status ?? current.status,
+      _now,
+    );
+    changed[project.id] = ops.putTask(project, moved, _now);
+    await _putProjects(changed.values.toList());
+  }
 
   // ---------------------------------------------------------------- labels
 

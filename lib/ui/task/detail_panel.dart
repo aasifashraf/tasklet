@@ -21,14 +21,27 @@ class DetailPanelOverlay extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ws = ref.watch(workspaceDataProvider);
-    final project = ws?.projectById(taskRef.projectId);
-    final task = project?.taskById(taskRef.taskId);
-    if (ws == null || project == null || task == null) {
+    // Follow the task by id: a move to another project (or its Undo, or a move synced from another computer)
+    // keeps the panel open on it.
+    final expected = ws?.projectById(taskRef.projectId);
+    final expectedTask = expected?.taskById(taskRef.taskId);
+    final found = expectedTask != null
+        ? ProjectTask(expected!, expectedTask)
+        : ws?.findTask(taskRef.taskId);
+    if (ws == null || found == null) {
       // Deleted here or by sync while open → close (SPEC §7.2).
       WidgetsBinding.instance.addPostFrameCallback(
         (_) => ref.read(openTaskProvider.notifier).close(),
       );
       return const SizedBox.shrink();
+    }
+    final project = found.project, task = found.task;
+    if (project.id != taskRef.projectId) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => ref
+            .read(openTaskProvider.notifier)
+            .open(TaskRef(project.id, task.id)),
+      );
     }
     final t = Tokens.of(context);
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
@@ -145,7 +158,8 @@ class _PanelBodyState extends ConsumerState<_PanelBody> {
 
   @override
   void dispose() {
-    _flush(revertEmptyTitle: true); // save immediately on close (SPEC §7.2)
+    // Save on close (SPEC §7.2), right after this frame: changing app state while the tree unmounts isn't allowed.
+    _flush(revertEmptyTitle: true, deferred: true);
     _controller.pendingEditFlushers.remove(_flush);
     _title.dispose();
     _description.dispose();
@@ -161,26 +175,30 @@ class _PanelBodyState extends ConsumerState<_PanelBody> {
   }
 
   /// Saves title/description if changed. An empty title is never saved; it reverts when the field is left.
-  void _flush({bool revertEmptyTitle = false}) {
+  /// [deferred] saves in a microtask (used from dispose).
+  void _flush({bool revertEmptyTitle = false, bool deferred = false}) {
     _debounce?.cancel();
     _debounce = null;
     if (widget.readOnly) return;
     final title = _title.text.trim();
     final description = _description.text;
-    final current = _controller.workspace
-        ?.projectById(entry.project.id)
-        ?.taskById(entry.task.id);
+    // By id: the task may have moved to another project while the panel was open.
+    final current = _controller.workspace?.findTask(entry.task.id);
     if (current == null) return;
-    if (title.isEmpty && revertEmptyTitle && mounted) {
-      _title.text = current.title;
+    if (title.isEmpty && revertEmptyTitle && mounted && !deferred) {
+      _title.text = current.task.title;
     }
-    final newTitle = title.isEmpty ? current.title : title;
-    if (newTitle == current.title && description == current.description) return;
-    _controller.updateTask(
-      entry.project.id,
-      entry.task.id,
+    final newTitle = title.isEmpty ? current.task.title : title;
+    if (newTitle == current.task.title &&
+        description == current.task.description) {
+      return;
+    }
+    void save() => _controller.updateTask(
+      current.project.id,
+      current.task.id,
       (t) => t.copyWith(title: newTitle, description: description),
     );
+    deferred ? scheduleMicrotask(save) : save();
   }
 
   @override
