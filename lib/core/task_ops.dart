@@ -106,6 +106,35 @@ Project removeTask(Project project, String taskId, DateTime now) =>
   now: now,
 );
 
+/// Repairs task numbers that appear twice in one project, e.g. when two computers both created WEB-13 while
+/// offline and sync merged the files. Like project keys (SPEC §2.4), the oldest task (by `createdAt`, then id) keeps
+/// a contested number and the others get fresh ones from `nextNumber`; numbers of entries this version can't
+/// display are never handed out. Returns the repaired project, or null when every number is unique.
+Project? resolveDuplicateNumbers(Project project) {
+  final taken = <int>{
+    for (final o in project.opaqueTasks)
+      if (o case {'number': final int n}) n,
+  };
+  final ordered = [...project.tasks]
+    ..sort((a, b) {
+      final byCreated = a.createdAt.compareTo(b.createdAt);
+      return byCreated != 0 ? byCreated : a.id.compareTo(b.id);
+    });
+  var next = project.nextNumber;
+  final renumbered = <String, int>{};
+  for (final t in ordered) {
+    if (!taken.add(t.number)) renumbered[t.id] = next++;
+  }
+  if (renumbered.isEmpty) return null;
+  return project.copyWith(
+    tasks: [
+      for (final t in project.tasks)
+        renumbered[t.id] == null ? t : t.copyWith(number: renumbered[t.id]),
+    ],
+    nextNumber: next,
+  );
+}
+
 /// Moves [task] from [from] to [to]. The task gets [restoreNumber] if given and still free in [to], otherwise
 /// [to]'s next number. Labels not in [allowedLabelIds] (labels usable in [to]) are dropped. Lands at the top of its
 /// status group. Returns (updated from, updated to, moved task).

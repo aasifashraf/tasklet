@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import '../core/colors.dart';
 import '../core/models.dart';
 import '../core/project_keys.dart';
+import '../core/task_ops.dart' show resolveDuplicateNumbers;
 import 'atomic_file.dart';
 import 'save_queue.dart';
 
@@ -35,9 +36,17 @@ typedef MoveToTrash = Future<bool> Function(String path);
 /// Reads and writes one data folder (SPEC §2.1, §2.5). The only code that touches workspace files.
 /// Decisions behind these rules: docs/DECISIONS.md.
 class WorkspaceStore {
-  WorkspaceStore(this.folder, {SaveQueue? queue, DateTime Function()? clock})
-    : queue = queue ?? SaveQueue(clock: clock),
-      _now = clock ?? DateTime.now;
+  WorkspaceStore(
+    this.folder, {
+    SaveQueue? queue,
+    DateTime Function()? clock,
+    this.maxFileBytes = 100 * 1024 * 1024,
+  }) : queue = queue ?? SaveQueue(clock: clock),
+       _now = clock ?? DateTime.now;
+
+  /// Larger project, label or view files are treated as unreadable: never loaded (protects memory against a huge
+  /// or hostile file in a shared folder) and never overwritten.
+  final int maxFileBytes;
 
   static const markerFileName = 'tasklet-workspace.json';
   static const labelsFileName = 'labels.json';
@@ -120,7 +129,8 @@ class WorkspaceStore {
   /// - Unreadable files are skipped and remembered so they're never overwritten.
   /// - Sync conflict copies are reported and never touched; if a project's main file is missing, its newest copy
   ///   is shown instead (first save recreates the main file).
-  /// - Project keys are resolved and changed keys persisted.
+  /// - Project keys and duplicate task numbers are resolved and the repairs persisted.
+  /// - Files over [maxFileBytes] are treated as unreadable (never loaded, never overwritten).
   /// - Only files that changed since the last read are parsed again; if nothing changed, the previous [Workspace]
   ///   instance is returned. [reparse] forces a full read (explicit Refresh).
   Future<Workspace> read({bool reparse = false}) async {
@@ -211,7 +221,7 @@ class WorkspaceStore {
     ); // a project restored by sync is editable again
 
     final storedNoProject = canonical.remove(noProjectId);
-    final noProject = storedNoProject == null
+    var noProject = storedNoProject == null
         ? Project.noProject(_now())
         : storedNoProject.copyWith(
             name: 'No Project',
@@ -221,29 +231,32 @@ class WorkspaceStore {
             favorite: false,
           );
 
-    var projects = canonical.values.toList();
-    final changedKeys = resolveProjectKeys(projects);
+    // Self-heal what syncing two computers can break: duplicate project keys and duplicate task numbers.
+    final changedKeys = resolveProjectKeys(canonical.values);
+    final healed = <Project>[];
+    Project heal(Project pr) {
+      var next = changedKeys.containsKey(pr.id)
+          ? pr.copyWith(key: changedKeys[pr.id])
+          : pr;
+      next = resolveDuplicateNumbers(next) ?? next;
+      if (!identical(next, pr)) healed.add(next);
+      return next;
+    }
+
+    final projects = [for (final pr in canonical.values) heal(pr)];
+    if (storedNoProject != null) noProject = heal(noProject);
+
     final last = _last;
     if (last != null &&
-        changedKeys.isEmpty &&
+        healed.isEmpty &&
         signature.toString() == _lastSignature) {
       return last;
     }
-    if (changedKeys.isNotEmpty) {
-      projects = [
-        for (final pr in projects)
-          changedKeys.containsKey(pr.id)
-              ? pr.copyWith(key: changedKeys[pr.id])
-              : pr,
-      ];
-      if (!_readOnly) {
-        // Persist self-healed keys; a failure here is retried on the next read.
-        await Future.wait([
-          for (final pr in projects)
-            if (changedKeys.containsKey(pr.id))
-              writeProject(pr).catchError((Object _) {}),
-        ]);
-      }
+    if (healed.isNotEmpty && !_readOnly) {
+      // Persist the repairs; a failure here is retried on the next read.
+      await Future.wait([
+        for (final pr in healed) writeProject(pr).catchError((Object _) {}),
+      ]);
     }
     projects.sort((a, b) {
       final byOrder = a.sortOrder.compareTo(b.sortOrder);
@@ -272,8 +285,8 @@ class WorkspaceStore {
       readOnly: _readOnly,
       hiddenEntryCount: hidden,
     );
-    // Key self-heal writes change files, so that read is never reused.
-    _last = changedKeys.isEmpty ? workspace : null;
+    // Self-heal writes change files, so that read is never reused.
+    _last = healed.isEmpty ? workspace : null;
     _lastSignature = signature.toString();
     return workspace;
   }
@@ -284,12 +297,22 @@ class WorkspaceStore {
     var staleBytes = 0;
     for (final (file, stat) in files) {
       final cached = _parsed[file.path];
-      if (cached == null ||
-          cached.modified != stat.modified ||
-          cached.size != stat.size) {
-        stale.add(file.path);
-        staleBytes += stat.size;
+      if (cached != null &&
+          cached.modified == stat.modified &&
+          cached.size == stat.size) {
+        continue;
       }
+      if (stat.size > maxFileBytes) {
+        // A huge file in a shared folder (damaged, or not ours) must not exhaust memory: unreadable, untouched.
+        _parsed[file.path] = (
+          modified: stat.modified,
+          size: stat.size,
+          project: null,
+        );
+        continue;
+      }
+      stale.add(file.path);
+      staleBytes += stat.size;
     }
     final current = {for (final (file, _) in files) file.path};
     _parsed.removeWhere((path, _) => !current.contains(path));
@@ -449,8 +472,11 @@ class WorkspaceStore {
       if (!await marker.exists()) return false;
       final json = jsonDecode(await marker.readAsString());
       if (json is! Map<String, Object?>) return true;
-      final version = json['formatVersion'];
-      return version is! int || version > formatVersion;
+      // No version (hand-made or legacy marker) means format 1; `1.0` from another JSON writer is 1. Anything
+      // else that isn't a whole number can't be judged, so it stays read-only.
+      final version = json['formatVersion'] ?? 1;
+      if (version is! num || version != version.truncate()) return true;
+      return version > formatVersion;
     } on FormatException {
       return true;
     } on FileSystemException {
@@ -510,6 +536,7 @@ class WorkspaceStore {
     final file = File(path);
     try {
       if (!await file.exists()) return (empty, true);
+      if (await file.length() > maxFileBytes) return (empty, false);
       return (
         LenientList.parse(jsonDecode(await file.readAsString()), parse, idOf),
         true,

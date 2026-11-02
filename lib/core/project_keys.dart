@@ -5,6 +5,10 @@ import 'models.dart';
 final _letter = RegExp('[A-Za-z]');
 final _trailingDigits = RegExp(r'\d+$');
 
+/// What a stored key may look like: a letter, then letters/digits (base + numeric suffix), at most 10 characters.
+/// Anything else (e.g. "W-B" or "A B" from a hand edit) would make ambiguous task IDs and is regenerated.
+final _validKey = RegExp(r'^[A-Z][A-Z0-9]{0,9}$');
+
 /// First 3 letters of [name] (everything else stripped), uppercased; `PRJ` when there are none.
 String baseKeyFor(String name) {
   final letters = _letter
@@ -35,7 +39,7 @@ String keyForNewProject(String name, Iterable<Project> projects) =>
 ///
 /// Keys are sticky: a project keeps its stored key unless another project created earlier claims the same one
 /// (or it collides with the reserved `TSK`), in which case it gets the next free suffix of its base. Projects with
-/// no stored key (legacy files) get one from their name. Processing in `createdAt` order makes the oldest project
+/// no stored key (legacy files), or one that isn't a valid key, get one from their name. Processing in `createdAt` order makes the oldest project
 /// win every contest, so offline-created duplicates self-heal once synced.
 ///
 /// Returns only the projects whose key changed (id → new key); callers persist those.
@@ -48,7 +52,8 @@ Map<String, String> resolveProjectKeys(Iterable<Project> projects) {
   final taken = <String>{};
   final changed = <String, String>{};
   for (final project in ordered) {
-    final stored = project.key.trim().toUpperCase();
+    var stored = project.key.trim().toUpperCase();
+    if (!_validKey.hasMatch(stored)) stored = '';
     final String key;
     if (stored.isNotEmpty &&
         stored != noProjectKey &&

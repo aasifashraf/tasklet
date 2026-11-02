@@ -104,13 +104,16 @@ List<Project> reportProjects(Workspace ws, ReportFilters f) {
 
 LocalDate _day(DateTime t) => LocalDate.fromDateTime(t);
 
+/// The day a done task was completed. A done task without `completedAt` (written by another tool) counts as
+/// completed when it was last updated, rather than as open forever.
+LocalDate? _completedDay(Task t) =>
+    t.isDone ? _day(t.completedAt ?? t.updatedAt) : null;
+
 /// A task qualifies if it overlaps the period in ANY way (SPEC §4.9): open at some point during it, completed in
 /// it, or its start or due date falls in it.
 bool inRange(Task t, ReportPeriod period) {
   final created = _day(t.createdAt);
-  final completed = t.completedAt == null || !t.isDone
-      ? null
-      : _day(t.completedAt!);
+  final completed = _completedDay(t);
   final openDuring =
       !created.isAfter(period.to) &&
       (completed == null || !completed.isBefore(period.from));
@@ -147,7 +150,7 @@ Map<String, Object?> buildReportJson({
 
   // "All Time" is reported as the actual earliest-task-to-today span.
   var span = period;
-  if (period.from == allTimeFrom) {
+  if (period.from == allTimeFrom && period.to == allTimeTo) {
     final earliest = tasks.isEmpty
         ? today
         : tasks
@@ -276,9 +279,7 @@ Map<String, Object?> _taskJson(
   List<_Stats> stats,
 ) {
   final created = _day(t.createdAt);
-  final completed = t.isDone && t.completedAt != null
-      ? _day(t.completedAt!)
-      : null;
+  final completed = _completedDay(t);
   final atEnd = created.isAfter(span.to)
       ? 'not created yet'
       : (completed != null && !completed.isAfter(span.to) ? 'done' : 'open');
@@ -288,9 +289,10 @@ Map<String, Object?> _taskJson(
     if (t.dueDate != null && span.contains(t.dueDate!)) 'due',
     if (completed != null && span.contains(completed)) 'completed',
   ];
+  // Clock differences between computers can put completion before creation; never report negative days.
   final daysToComplete = completed == null
       ? null
-      : created.daysUntil(completed);
+      : created.daysUntil(completed).clamp(0, 1 << 31);
   final overdueBy = !t.isDone && t.dueDate != null && t.dueDate!.isBefore(today)
       ? t.dueDate!.daysUntil(today)
       : 0;
@@ -336,38 +338,50 @@ final _monthLabel = DateFormat('MMM y');
 final _weekLabel = DateFormat('MMM d');
 
 /// Month buckets when the span covers more than ~45 days; week buckets when it is ~10–130 days. Each bucket is
-/// clipped to the report span.
-Map<String, Object?> _timeline(List<Task> tasks, ReportPeriod span) {
+/// clipped to the report span. A range longer than two years is first narrowed to the days its tasks actually
+/// touch, so a very wide custom range can't produce thousands of empty buckets.
+Map<String, Object?> _timeline(List<Task> tasks, ReportPeriod period) {
+  LocalDate maxOf(LocalDate a, LocalDate b) => a.isAfter(b) ? a : b;
+  LocalDate minOf(LocalDate a, LocalDate b) => a.isBefore(b) ? a : b;
+
+  var span = period;
+  if (period.days > 731) {
+    final touched = [
+      for (final t in tasks) ...[
+        _day(t.createdAt),
+        ?_completedDay(t),
+        ?t.startDate,
+        ?t.dueDate,
+      ],
+    ];
+    if (touched.isEmpty) return {'months': const [], 'weeks': const []};
+    span = ReportPeriod(
+      maxOf(period.from, touched.reduce(minOf)),
+      minOf(period.to, touched.reduce(maxOf)),
+      period.name,
+    );
+  }
+
   final days = span.days;
   List<Map<String, Object?>> buckets(List<ReportPeriod> ranges) => [
     for (final r in ranges)
       {
         'label': r.name,
         'created': tasks.where((t) => r.contains(_day(t.createdAt))).length,
-        'completed': tasks
-            .where(
-              (t) =>
-                  t.isDone &&
-                  t.completedAt != null &&
-                  r.contains(_day(t.completedAt!)),
-            )
-            .length,
+        'completed': tasks.where((t) {
+          final completed = _completedDay(t);
+          return completed != null && r.contains(completed);
+        }).length,
         'due': tasks
             .where((t) => t.dueDate != null && r.contains(t.dueDate!))
             .length,
         'openAtEnd': tasks.where((t) {
-          final created = _day(t.createdAt);
-          final completed = t.isDone && t.completedAt != null
-              ? _day(t.completedAt!)
-              : null;
-          return !created.isAfter(r.to) &&
+          final completed = _completedDay(t);
+          return !_day(t.createdAt).isAfter(r.to) &&
               (completed == null || completed.isAfter(r.to));
         }).length,
       },
   ];
-
-  LocalDate maxOf(LocalDate a, LocalDate b) => a.isAfter(b) ? a : b;
-  LocalDate minOf(LocalDate a, LocalDate b) => a.isBefore(b) ? a : b;
 
   final months = <ReportPeriod>[];
   if (days > 45) {

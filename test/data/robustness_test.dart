@@ -103,6 +103,73 @@ void main() {
       expect(p1.tasks.single.sortOrder, 0);
       await store.writeProject(p1);
     });
+
+    test(
+      'duplicate task numbers from two computers are repaired and saved',
+      () async {
+        final store = WorkspaceStore(folder, clock: () => t0);
+        await store.writeProject(
+          project(
+            'p1',
+            key: 'WEB',
+            tasks: [
+              task('mine', number: 13, created: at(1)),
+              task('theirs', number: 13, created: at(2)),
+            ],
+          ),
+        );
+        final ws = await WorkspaceStore(folder, clock: () => t0).read();
+        final numbers = {
+          for (final t in ws.projectById('p1')!.tasks) t.id: t.number,
+        };
+        expect(numbers, {'mine': 13, 'theirs': 14});
+        final onDisk = jsonDecode(
+          await File(p.join(folder, 'projects', 'p1.json')).readAsString(),
+        ) as Map<String, Object?>;
+        expect(
+          [
+            for (final t in onDisk['tasks']! as List<Object?>)
+              (t! as Map<String, Object?>)['number'],
+          ],
+          [13, 14],
+        );
+      },
+    );
+
+    test('a marker without a version, or 1.0, is writable; an unknown one is read-only', () async {
+      final marker = File(p.join(folder, 'tasklet-workspace.json'));
+      for (final (contents, readOnly) in [
+        ('{"app":"tasklet"}', false),
+        ('{"app":"tasklet","formatVersion":1.0}', false),
+        ('{"app":"tasklet","formatVersion":"2"}', true),
+        ('{"app":"tasklet","formatVersion":2}', true),
+      ]) {
+        await marker.writeAsString(contents);
+        final ws = await WorkspaceStore(folder, clock: () => t0).read();
+        expect(ws.readOnly, readOnly, reason: contents);
+      }
+    });
+
+    test(
+      'a file over the size cap is never loaded and never overwritten',
+      () async {
+        final path = p.join(folder, 'projects', 'p1.json');
+        final big = encodeJson(project('p1', key: 'BIG').toJson());
+        await File(path).writeAsString(big);
+        final store = WorkspaceStore(
+          folder,
+          clock: () => t0,
+          maxFileBytes: big.length - 1,
+        );
+        final ws = await store.read();
+        expect(ws.projectById('p1'), isNull);
+        await expectLater(
+          store.writeProject(project('p1', key: 'BIG')),
+          throwsA(isA<UnsafeWriteException>()),
+        );
+        expect(await File(path).readAsString(), big);
+      },
+    );
   });
 
   group('atomic writes', () {

@@ -553,42 +553,61 @@ class BoardFilters {
     Set<String> labels = const {},
     Set<DueFilter> due = const {},
     Map<String, Object?> extra = const {},
+    Map<String, List<Object?>> unknownValues = const {},
   }) : status = Set.unmodifiable(status),
        priorities = Set.unmodifiable(priorities),
        projects = Set.unmodifiable(projects),
        labels = Set.unmodifiable(labels),
        due = Set.unmodifiable(due),
-       extra = Map.unmodifiable(extra);
+       extra = Map.unmodifiable(extra),
+       unknownValues = Map.unmodifiable(unknownValues);
 
   static final empty = BoardFilters();
   static const _known = {'status', 'priorities', 'projects', 'labels', 'due'};
 
-  /// Lenient: unknown values (e.g. from a newer version) are dropped rather than failing the whole file.
+  /// Lenient: values this version doesn't know (e.g. a status added by a newer version) don't filter here but are
+  /// kept in [unknownValues] and written back, so a newer version still sees its filter.
   factory BoardFilters.fromJson(Object? value) {
     if (value is! Map<String, Object?>) return empty;
     final json = value;
+    final unknown = <String, List<Object?>>{};
+    Set<T> parse<T>(String key, T? Function(Object?) known) {
+      final result = <T>{};
+      if (json[key] case final List<Object?> list) {
+        for (final raw in list) {
+          final v = known(raw);
+          if (v != null) {
+            result.add(v);
+          } else {
+            (unknown[key] ??= []).add(raw);
+          }
+        }
+      }
+      return result;
+    }
+
     return BoardFilters(
-      status: {
-        for (final s in _strings(json['status']))
-          for (final st in TaskStatus.values)
-            if (st.json == s) st,
-      },
-      priorities: {
-        if (json['priorities'] case final List<Object?> list)
-          for (final p in list)
-            for (final pr in Priority.values)
-              if (pr.value == p) pr,
-      },
+      status: parse(
+        'status',
+        (s) => TaskStatus.values.where((st) => st.json == s).firstOrNull,
+      ),
+      priorities: parse(
+        'priorities',
+        (p) => Priority.values.where((pr) => pr.value == p).firstOrNull,
+      ),
       projects: _strings(json['projects']).toSet(),
       labels: _strings(json['labels']).toSet(),
-      due: {
-        for (final d in _strings(json['due']))
-          for (final df in DueFilter.values)
-            if (df.json == d) df,
-      },
+      due: parse(
+        'due',
+        (d) => DueFilter.values.where((df) => df.json == d).firstOrNull,
+      ),
       extra: _extra(json, _known),
+      unknownValues: unknown,
     );
   }
+
+  /// Filter values from a newer version, by category key; preserved until the filters are cleared.
+  final Map<String, List<Object?>> unknownValues;
 
   final Set<TaskStatus> status;
   final Set<Priority> priorities;
@@ -621,17 +640,21 @@ class BoardFilters {
     labels: labels ?? this.labels,
     due: due ?? this.due,
     extra: extra,
+    unknownValues: unknownValues,
   );
 
   BoardFilters cleared() => BoardFilters(extra: extra);
 
   Map<String, Object?> toJson() => {
     ...extra,
-    'status': [for (final s in status) s.json],
-    'priorities': [for (final p in priorities) p.value],
+    'status': [for (final s in status) s.json, ...?unknownValues['status']],
+    'priorities': [
+      for (final p in priorities) p.value,
+      ...?unknownValues['priorities'],
+    ],
     'projects': projects.toList(),
     'labels': labels.toList(),
-    'due': [for (final d in due) d.json],
+    'due': [for (final d in due) d.json, ...?unknownValues['due']],
   };
 }
 
