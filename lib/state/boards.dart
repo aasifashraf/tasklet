@@ -172,7 +172,27 @@ List<(Label, Project?)> boardLabels(Workspace ws, BoardKind kind) {
   ];
 }
 
-final boardProvider = Provider.family<BoardData?, BoardKind>((ref, kind) {
+/// Sidebar badges (SPEC §3.3): open tasks matching the Today rules, and all open tasks. Recounted only when the
+/// workspace, the day or the rules change, not on every sidebar rebuild (navigation, hover, prefs).
+final navCountsProvider = Provider<({int today, int allOpen})>((ref) {
+  final ws = ref.watch(workspaceDataProvider);
+  if (ws == null) return (today: 0, allOpen: 0);
+  final today = ref.watch(todayProvider);
+  final rules = ref.watch(prefsProvider.select((p) => p.todayRules));
+  var allOpen = 0, todayCount = 0;
+  for (final e in ws.activeTasks) {
+    if (e.task.isDone) continue;
+    allOpen++;
+    if (matchesToday(e.task, rules, today)) todayCount++;
+  }
+  return (today: todayCount, allOpen: allOpen);
+});
+
+/// Auto-disposed: a board nobody shows doesn't keep its sorted copy of the tasks in memory.
+final boardProvider = Provider.autoDispose.family<BoardData?, BoardKind>((
+  ref,
+  kind,
+) {
   final ws = ref.watch(workspaceDataProvider);
   if (ws == null) return null;
   final today = ref.watch(todayProvider);

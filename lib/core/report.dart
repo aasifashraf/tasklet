@@ -107,18 +107,30 @@ LocalDate _day(DateTime t) => LocalDate.fromDateTime(t);
 /// The day a done task was completed. A done task without `completedAt` (written by another tool) counts as
 /// completed when it was last updated, rather than as open forever.
 LocalDate? _completedDay(Task t) =>
-    t.isDone ? _day(t.completedAt ?? t.updatedAt) : null;
+    t.isDone ? (t.completedDay ?? _day(t.updatedAt)) : null;
+
+/// A period's bounds as instants (local midnight at its start, and after its last day), so tasks can be compared
+/// by timestamp without a timezone conversion each (docs/SYSTEM_DESIGN.md, P1).
+typedef _Bounds = ({DateTime from, DateTime until});
+
+_Bounds _boundsOf(ReportPeriod p) =>
+    (from: p.from.toLocalDateTime(), until: p.to.addDays(1).toLocalDateTime());
 
 /// A task qualifies if it overlaps the period in ANY way (SPEC §4.9): open at some point during it, completed in
 /// it, or its start or due date falls in it.
-bool inRange(Task t, ReportPeriod period) {
-  final created = _day(t.createdAt);
-  final completed = _completedDay(t);
+bool inRange(Task t, ReportPeriod period) =>
+    _inRange(t, period, _boundsOf(period));
+
+bool _inRange(Task t, ReportPeriod period, _Bounds b) {
+  // Same rule as comparing local days: created on or before the last day, completed on or after the first.
+  final completed = t.isDone ? (t.completedAt ?? t.updatedAt) : null;
   final openDuring =
-      !created.isAfter(period.to) &&
-      (completed == null || !completed.isBefore(period.from));
+      t.createdAt.isBefore(b.until) &&
+      (completed == null || !completed.isBefore(b.from));
   return openDuring ||
-      (completed != null && period.contains(completed)) ||
+      (completed != null &&
+          !completed.isBefore(b.from) &&
+          completed.isBefore(b.until)) ||
       (t.startDate != null && period.contains(t.startDate!)) ||
       (t.dueDate != null && period.contains(t.dueDate!));
 }
@@ -128,15 +140,18 @@ List<ProjectTask> reportTasks(
   Workspace ws,
   ReportFilters f,
   ReportPeriod period,
-) => [
-  for (final p in reportProjects(ws, f))
-    for (final t in p.tasks)
-      if (inRange(t, period) &&
-          (f.statuses.isEmpty || f.statuses.contains(t.status)) &&
-          (f.priorities.isEmpty || f.priorities.contains(t.priority)) &&
-          (f.labelIds.isEmpty || t.labelIds.any(f.labelIds.contains)))
-        ProjectTask(p, t),
-];
+) {
+  final bounds = _boundsOf(period);
+  return [
+    for (final p in reportProjects(ws, f))
+      for (final t in p.tasks)
+        if (_inRange(t, period, bounds) &&
+            (f.statuses.isEmpty || f.statuses.contains(t.status)) &&
+            (f.priorities.isEmpty || f.priorities.contains(t.priority)) &&
+            (f.labelIds.isEmpty || t.labelIds.any(f.labelIds.contains)))
+          ProjectTask(p, t),
+  ];
+}
 
 /// Builds the simplified JSON (SPEC §4.9): no UUIDs, names instead of ids, YYYY-MM-DD dates, and every
 /// empty/zero/not-applicable field omitted. Totals are pre-computed.
@@ -154,7 +169,7 @@ Map<String, Object?> buildReportJson({
     final earliest = tasks.isEmpty
         ? today
         : tasks
-              .map((e) => _day(e.task.createdAt))
+              .map((e) => e.task.createdDay)
               .reduce((a, b) => a.isBefore(b) ? a : b);
     span = ReportPeriod(
       earliest.isAfter(today) ? today : earliest,
@@ -278,7 +293,7 @@ Map<String, Object?> _taskJson(
   Map<String, String> labelNames,
   List<_Stats> stats,
 ) {
-  final created = _day(t.createdAt);
+  final created = t.createdDay;
   final completed = _completedDay(t);
   final atEnd = created.isAfter(span.to)
       ? 'not created yet'
@@ -348,7 +363,7 @@ Map<String, Object?> _timeline(List<Task> tasks, ReportPeriod period) {
   if (period.days > 731) {
     final touched = [
       for (final t in tasks) ...[
-        _day(t.createdAt),
+        t.createdDay,
         ?_completedDay(t),
         ?t.startDate,
         ?t.dueDate,
@@ -367,7 +382,7 @@ Map<String, Object?> _timeline(List<Task> tasks, ReportPeriod period) {
     for (final r in ranges)
       {
         'label': r.name,
-        'created': tasks.where((t) => r.contains(_day(t.createdAt))).length,
+        'created': tasks.where((t) => r.contains(t.createdDay)).length,
         'completed': tasks.where((t) {
           final completed = _completedDay(t);
           return completed != null && r.contains(completed);
@@ -377,7 +392,7 @@ Map<String, Object?> _timeline(List<Task> tasks, ReportPeriod period) {
             .length,
         'openAtEnd': tasks.where((t) {
           final completed = _completedDay(t);
-          return !_day(t.createdAt).isAfter(r.to) &&
+          return !t.createdDay.isAfter(r.to) &&
               (completed == null || completed.isAfter(r.to));
         }).length,
       },

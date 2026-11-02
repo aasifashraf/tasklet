@@ -84,6 +84,20 @@ List<Label> labelsOf(Workspace ws, Task task) => [
   for (final id in task.labelIds) ?ws.labelById(id),
 ];
 
+/// What a card or row needs from the workspace, compared by value so a tile rebuilds only when its own labels
+/// change (renamed, recolored, deleted) or the folder turns read-only, not on every edit elsewhere.
+typedef _TileWorkspace = ({bool readOnly, String labels});
+
+_TileWorkspace? _tileWorkspace(Workspace? ws, Task task) => ws == null
+    ? null
+    : (
+        readOnly: ws.readOnly,
+        labels: [
+          for (final l in labelsOf(ws, task))
+            '${l.id}/${l.name}/${l.color.name}',
+        ].join('|'),
+      );
+
 /// Kanban card content (SPEC §8.6). Interaction (drag/click) is added by the board.
 class TaskCard extends ConsumerWidget {
   const TaskCard({
@@ -102,11 +116,15 @@ class TaskCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Tokens.of(context);
     final today = ref.watch(todayProvider);
-    final ws = ref.watch(workspaceDataProvider);
-    final open = ref.watch(openTaskProvider);
+    ref.watch(
+      workspaceDataProvider.select((ws) => _tileWorkspace(ws, entry.task)),
+    );
+    final ws = ref.read(workspaceDataProvider);
+    final isOpen = ref.watch(
+      openTaskProvider.select((open) => open?.taskId == entry.task.id),
+    );
     final actions = ref.read(taskActionsProvider);
     final task = entry.task;
-    final isOpen = open?.taskId == task.id;
     final readOnly = ws?.readOnly ?? true;
     final labels = ws == null ? <Label>[] : labelsOf(ws, task);
 
@@ -239,11 +257,15 @@ class TaskRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Tokens.of(context);
     final today = ref.watch(todayProvider);
-    final ws = ref.watch(workspaceDataProvider);
-    final open = ref.watch(openTaskProvider);
+    ref.watch(
+      workspaceDataProvider.select((ws) => _tileWorkspace(ws, entry.task)),
+    );
+    final ws = ref.read(workspaceDataProvider);
+    final isOpen = ref.watch(
+      openTaskProvider.select((open) => open?.taskId == entry.task.id),
+    );
     final actions = ref.read(taskActionsProvider);
     final task = entry.task;
-    final isOpen = open?.taskId == task.id;
     final readOnly = ws?.readOnly ?? true;
     final labels = ws == null ? <Label>[] : labelsOf(ws, task);
     final taskRef = TaskRef(entry.project.id, task.id);

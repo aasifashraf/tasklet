@@ -268,6 +268,13 @@ class Task {
   final DateTime? completedAt;
   final Map<String, Object?> extra;
 
+  /// Local calendar days of [createdAt] and [completedAt], converted once per task instance: a timezone conversion
+  /// per use was a measurable cost across 100k tasks (docs/SYSTEM_DESIGN.md, P1).
+  late final LocalDate createdDay = LocalDate.fromDateTime(createdAt);
+  late final LocalDate? completedDay = completedAt == null
+      ? null
+      : LocalDate.fromDateTime(completedAt!);
+
   bool get isDone => status == TaskStatus.done;
 
   Task copyWith({

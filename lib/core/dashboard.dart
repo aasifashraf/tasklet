@@ -16,21 +16,34 @@ class Glance {
   final int doneThisWeek;
 }
 
-bool _completedWithinLastWeek(Task t, DateTime now) {
-  final completed = t.completedAt;
-  if (!t.isDone || completed == null) return false;
-  final completedDay = LocalDate.fromDateTime(completed);
+/// "Completed in the last 7 days" as an instant range: from local midnight 6 days before [now]'s day up to (not
+/// including) local midnight after it. Comparing instants avoids a timezone conversion per task, which dominated
+/// the Dashboard at 100k tasks (docs/SYSTEM_DESIGN.md, P1).
+typedef _Window = ({DateTime from, DateTime until});
+
+_Window _lastWeek(DateTime now) {
   final today = LocalDate.fromDateTime(now);
-  final days = completedDay.daysUntil(today);
-  return days >= 0 && days < 7;
+  return (
+    from: today.addDays(-6).toLocalDateTime(),
+    until: today.addDays(1).toLocalDateTime(),
+  );
+}
+
+bool _completedIn(Task t, _Window w) {
+  final completed = t.completedAt;
+  return t.isDone &&
+      completed != null &&
+      !completed.isBefore(w.from) &&
+      completed.isBefore(w.until);
 }
 
 Glance glanceFor(Iterable<ProjectTask> tasks, LocalDate today, DateTime now) {
   var overdue = 0, dueToday = 0, dueWeek = 0, done = 0;
   final weekEnd = today.addDays(6);
+  final window = _lastWeek(now);
   for (final e in tasks) {
     final t = e.task;
-    if (_completedWithinLastWeek(t, now)) done++;
+    if (_completedIn(t, window)) done++;
     if (t.isDone || t.dueDate == null) continue;
     final due = t.dueDate!;
     if (due.isBefore(today)) overdue++;
@@ -67,10 +80,11 @@ List<ProjectTask> upNext(Iterable<ProjectTask> tasks, LocalDate today) {
 
 /// Up to 5 tasks completed in the last 7 days, most recent first.
 List<ProjectTask> recentlyCompleted(Iterable<ProjectTask> tasks, DateTime now) {
+  final window = _lastWeek(now);
   final list =
       [
         for (final e in tasks)
-          if (_completedWithinLastWeek(e.task, now)) e,
+          if (_completedIn(e.task, window)) e,
       ]..sort((a, b) {
         final byTime = b.task.completedAt!.compareTo(a.task.completedAt!);
         return byTime != 0 ? byTime : a.task.id.compareTo(b.task.id);

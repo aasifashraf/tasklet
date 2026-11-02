@@ -4,9 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/models.dart';
-import '../../core/today_rules.dart';
 import '../../platform/whats_new_notes.dart';
-import '../../state/clock.dart';
+import '../../state/boards.dart';
 import '../../state/prefs.dart';
 import '../../state/ui_state.dart';
 import '../../state/workspace.dart';
@@ -178,14 +177,10 @@ class _SidebarState extends ConsumerState<Sidebar> {
     Workspace ws,
     String path,
   ) {
-    final today = ref.watch(todayProvider);
-    final rules = prefs.todayRules;
-    final open = ws.activeTasks.where((e) => !e.task.isDone).toList();
+    final navCounts = ref.watch(navCountsProvider);
     final counts = {
-      NavItem.today: open
-          .where((e) => matchesToday(e.task, rules, today))
-          .length,
-      NavItem.allTasks: open.length,
+      NavItem.today: navCounts.today,
+      NavItem.allTasks: navCounts.allOpen,
     };
     final movable = prefs.visibleNav.skip(1).toList();
 

@@ -5,9 +5,9 @@ import '../../core/dashboard.dart';
 import '../../core/date_format.dart';
 import '../../core/models.dart';
 import '../../state/clock.dart';
+import '../../state/dashboard.dart';
 import '../../state/prefs.dart';
 import '../../state/ui_state.dart';
-import '../../state/workspace.dart';
 import '../board/task_tiles.dart';
 import '../glyphs.dart';
 import '../task/task_menu.dart';
@@ -22,30 +22,17 @@ class DashboardPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final ws = ref.watch(workspaceDataProvider);
-    if (ws == null) return const SizedBox.shrink();
+    final data = ref.watch(dashboardProvider);
+    if (data == null) return const SizedBox.shrink();
     final t = Tokens.of(context);
-    final now = ref.watch(nowProvider);
     final today = ref.watch(todayProvider);
-    final name = ref.watch(prefsProvider.select((p) => p.userName));
-    final storedFilter = ref.watch(
-      prefsProvider.select((p) => p.dashboardProject),
-    );
-    final activeProjects = ws.projects.where((p) => !p.archived).toList()
-      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-    final project = activeProjects
-        .where((p) => p.id == storedFilter)
-        .firstOrNull;
-    final tasks = project == null
-        ? ws.activeTasks.toList()
-        : [for (final task in project.tasks) ProjectTask(project, task)];
+    final activeProjects = data.activeProjects;
+    final project = data.project;
+    final next = data.upNext;
+    final recent = data.recent;
 
     void setFilter(String? id) =>
         ref.read(prefsProvider.notifier).set(PrefKeys.dashboardProject, id);
-
-    final glance = glanceFor(tasks, today, now);
-    final next = upNext(tasks, today);
-    final recent = recentlyCompleted(tasks, now);
 
     return PageScaffold(
       title: 'Dashboard',
@@ -81,12 +68,18 @@ class DashboardPage extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    greeting(now, name),
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                      color: t.primary,
+                  // Only the greeting follows the clock's 30-second tick.
+                  Consumer(
+                    builder: (context, ref, _) => Text(
+                      greeting(
+                        ref.watch(nowProvider),
+                        ref.watch(prefsProvider.select((p) => p.userName)),
+                      ),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        color: t.primary,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -96,7 +89,7 @@ class DashboardPage extends ConsumerWidget {
                         .copyWith(fontSize: 13),
                   ),
                   const SizedBox(height: 28),
-                  if (tasks.isEmpty)
+                  if (data.isEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 60),
                       child: EmptyState(
@@ -108,7 +101,7 @@ class DashboardPage extends ConsumerWidget {
                       ),
                     )
                   else ...[
-                    _GlanceStrip(glance: glance),
+                    _GlanceStrip(glance: data.glance),
                     if (next.isNotEmpty) ...[
                       _SectionTitle('Up Next'),
                       _TaskRows(
@@ -118,7 +111,7 @@ class DashboardPage extends ConsumerWidget {
                       ),
                     ],
                     _SectionTitle('Overview'),
-                    _StatusCard(counts: statusCounts(tasks)),
+                    _StatusCard(counts: data.statusCounts),
                     if (recent.isNotEmpty) ...[
                       _SectionTitle('Recently Completed'),
                       _TaskRows(
