@@ -29,9 +29,16 @@ A > 2x regression on any row blocks a release.
 | Sidebar counts | 7-9 / 16-19 ms on every sidebar rebuild | same cost, only when data, day or rules change | |
 | Label usage map | 30-39 / 49-61 ms | unchanged | |
 | Edit one task (in memory) | 3-4 / 14-20 ms | unchanged | |
-| Save largest project (20k tasks) | 442-571 / 543-728 ms, stall 116-145 ms | unchanged (phase 5/7) | stall < 16 ms |
+| **Save largest project (20k tasks)** | **442-571 / 543-728 ms, stall 116-145 ms** | **377-413 / 484-499 ms, stall 42-63 ms (sliced encode, Nov 3)** | stall < 16 ms |
 | Save typical project | 14 ms | unchanged | |
 | Peak memory | 437-457 MB | unchanged | < 600 MB |
+
+Saving a big project (Nov 3, 2026): the encode isolate had to receive a copy of the whole 20k-task project (40-80 ms
+on the UI isolate) and the 44 MB result was UTF-8 encoded and written in one go (~80 ms). Now the project is encoded
+250 tasks at a time on the UI isolate with a pause between slices (byte-identical output,
+`test/data/sliced_encode_test.dart`), kept as parts and written 1 MB at a time. What is left of the stall is garbage
+collection on the ~380 MB heap, not encoding work; note that the 1 ms stall meter can't resolve below the ~15.6 ms
+Windows timer tick.
 
 Phase 3 also stopped every visible card from rebuilding when a task panel opens or anything else in the workspace
 changes (cards watch only their own labels and open state), and boards nobody shows are released from memory.

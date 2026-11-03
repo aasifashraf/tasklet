@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
+import 'dart:typed_data';
 
 import 'package:path/path.dart' as p;
 
@@ -117,8 +118,8 @@ class WorkspaceStore {
   /// freezes the UI. Smaller reads stay on the async file API (no isolate start-up cost).
   static const _isolateParseBytes = 256 * 1024;
 
-  /// Projects with more tasks than this are encoded on a background isolate when saved.
-  static const _isolateEncodeTasks = 2000;
+  /// Projects with more tasks than this are encoded a slice at a time when saved (see [_encodeProject]).
+  static const _sliceEncodeTasks = 2000;
 
   String get _projectsDir => p.join(folder, projectsDirName);
   String projectPath(String projectId) =>
@@ -437,10 +438,17 @@ class WorkspaceStore {
     return isSafeProjectId(project.id) ? project : null;
   }
 
-  static Future<String> _encodeProject(Project project) =>
-      project.tasks.length > _isolateEncodeTasks
-      ? Isolate.run(() => encodeJson(project.toJson()))
-      : Future.value(encodeJson(project.toJson()));
+  /// A project file's bytes. Big projects are encoded a slice of tasks at a time on this isolate: sending a
+  /// 20,000-task project to a background isolate copied the whole object graph and blocked the UI for 40-80 ms.
+  static Future<List<Uint8List>> _encodeProject(Project project) =>
+      project.tasks.length > _sliceEncodeTasks
+      ? encodeJsonInSlices(
+          project.copyWith(tasks: const []).toJson(),
+          'tasks',
+          [...project.tasks, ...project.opaqueTasks],
+          (Object? t) => t is Task ? t.toJson() : t,
+        )
+      : Future.value([utf8.encode(encodeJson(project.toJson()))]);
 
   /// Saves one project file atomically. The No-Project file is only created once it has a task (SPEC §2.3).
   /// The version being replaced goes to [backups] first ([backupFirst]: even if a recent backup exists).
@@ -476,7 +484,7 @@ class WorkspaceStore {
       final merged = await _mergeIfChangedOnDisk(path, project);
       final toWrite = merged ?? project;
       await _backUp(path, force: backupFirst || merged != null);
-      await writeFileAtomic(path, await _encodeProject(toWrite));
+      await writeBytesAtomic(path, await _encodeProject(toWrite));
       _remember(path, toWrite);
     });
   }
