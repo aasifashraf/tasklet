@@ -277,6 +277,12 @@ class WorkspaceStore {
       canonical.keys,
     ); // a project restored by sync is editable again
 
+    // Nothing on disk changed since a read that needed no repairs: the repairs below would find nothing again
+    // (they depend only on the files), so skip them. They walk every task, about 200 ms at 100,000 tasks, and
+    // this runs on every window focus.
+    final last = _last;
+    if (last != null && signature.toString() == _lastSignature) return last;
+
     final storedNoProject = canonical.remove(noProjectId);
     var noProject = storedNoProject == null
         ? Project.noProject(_now())
@@ -332,12 +338,6 @@ class WorkspaceStore {
             ...renumberNotes,
           ];
 
-    final last = _last;
-    if (last != null &&
-        healed.isEmpty &&
-        signature.toString() == _lastSignature) {
-      return last;
-    }
     if (healed.isNotEmpty && !_readOnly) {
       // Persist the repairs; a failure here is retried on the next read.
       await Future.wait([

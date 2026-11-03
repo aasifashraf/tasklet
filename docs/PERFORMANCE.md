@@ -19,7 +19,7 @@ A > 2x regression on any row blocks a release.
 | Operation | Before v1.1 (Nov 2, 2026) | Now | Target |
 |---|---|---|---|
 | Open (first read) | 2.2-5.2 s, stall 173-208 ms | unchanged | < 3 s |
-| Refresh, nothing changed | 190-216 ms, stall 173-196 ms | unchanged (phase 2 profiling) | < 50 ms |
+| **Refresh, nothing changed** | **190-216 ms, stall 173-196 ms** | **58-62 ms, stall at the meter's floor (Nov 3)** | < 50 ms |
 | All Tasks board: filter + group + sort | 117-150 / 135-173 ms | 171 / 213 ms, now only when filters, search, sort or day change | p95 < 50 ms |
 | **All Tasks board after an edit** | **same full recompute** | **20 / 54 ms including the edit itself (patched)** | p95 < 50 ms |
 | Largest project board (20k tasks) | 7-11 / 15-23 ms | unchanged | p95 < 50 ms |
