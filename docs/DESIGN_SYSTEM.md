@@ -79,8 +79,13 @@ not wrapped, so it isn't announced as a button.
 
 ## Writing
 
-- Title Case for buttons, menu items and page titles ("New Quick Filter", "Copy to Clipboard"); sentence case for
-  descriptions, hints and messages.
+- **Title Case** for things you act on or navigate to: buttons, menu items, tabs, page, dialog and section titles,
+  setting names, and value names ("New Quick Filter", "Copy to Clipboard", "Date Range", "No Project", "No
+  Priority"). Small words stay lowercase inside ("Pick a Date…", "Move to Workspace").
+- **Sentence case** for everything that describes: inline toggles and captions beside content ("Create more",
+  "Include archived", "Recent first"), descriptions, hints, placeholders ("Due date"), tooltips ("Change icon and
+  color"), toasts, banners and messages, and any label that is a full sentence or question ("Discard this task?").
+  A tooltip that names a command uses the command's name ("Restore Previous Version…").
 - An item that opens a dialog ends with the ellipsis character ("Delete Project…"), never three dots.
 - No em dashes anywhere in the app or docs; use a colon, comma or "to".
 - Say what happened and what to do: "Couldn't save your change: the folder is offline."

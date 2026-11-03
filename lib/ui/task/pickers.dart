@@ -133,7 +133,7 @@ List<Widget> priorityMenuItems(
   ValueChanged<Priority> onPick,
 ) => [
   checkItem(
-    'No priority',
+    'No Priority',
     checked: current == Priority.none,
     leading: const PriorityIcon(Priority.none),
     onPressed: () => onPick(Priority.none),

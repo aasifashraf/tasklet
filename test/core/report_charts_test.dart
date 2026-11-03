@@ -15,7 +15,7 @@ void main() {
     'totals': {
       'tasks': 6,
       'byStatusNow': {'Todo': 2, 'In Progress': 1, 'Done': 3},
-      'byPriority': {'High': 2, 'No priority': 4},
+      'byPriority': {'High': 2, 'No Priority': 4},
     },
     'timeline': {
       'weeks': [

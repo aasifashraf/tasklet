@@ -442,7 +442,7 @@ class _NotificationsTabState extends ConsumerState<_NotificationsTab> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Notifications Are Off. Tasklet can\'t show reminders until you allow notifications.',
+                  'Notifications are off. Tasklet can\'t show reminders until you allow notifications.',
                   style: TextStyles.body(context),
                 ),
               ),

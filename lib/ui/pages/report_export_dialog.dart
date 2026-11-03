@@ -143,14 +143,14 @@ class _ExportDialogState extends ConsumerState<_ExportDialog> {
                 Row(
                   children: [
                     Text(
-                      'Chart preview',
+                      'Chart Preview',
                       style: TextStyles.sectionLabel(context),
                     ),
                     const Spacer(),
                     TextButton(
                       onPressed: () => setState(() => _showCode = !_showCode),
                       child: Text(
-                        _showCode ? 'Show charts' : 'Show Mermaid code',
+                        _showCode ? 'Show Charts' : 'Show Mermaid Code',
                       ),
                     ),
                   ],

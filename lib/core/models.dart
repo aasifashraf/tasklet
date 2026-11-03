@@ -41,7 +41,7 @@ enum TaskStatus {
 }
 
 enum Priority {
-  none(0, 'No priority'),
+  none(0, 'No Priority'),
   urgent(1, 'Urgent'),
   high(2, 'High'),
   medium(3, 'Medium'),

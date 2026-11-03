@@ -101,7 +101,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                     padding: const EdgeInsets.symmetric(vertical: 6),
                     child: Column(
                       children: [
-                        _row(context, 'Date range', [
+                        _row(context, 'Date Range', [
                           PillMenuButton(
                             label: _preset.label,
                             menuChildren: [
