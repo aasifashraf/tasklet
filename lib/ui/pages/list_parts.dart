@@ -23,7 +23,7 @@ class PillToggle<T> extends StatelessWidget {
       padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         border: Border.all(color: t.border),
-        borderRadius: BorderRadius.circular(13),
+        borderRadius: BorderRadius.circular(Radii.pill),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -32,7 +32,7 @@ class PillToggle<T> extends StatelessWidget {
             Pressable(
               onTap: () => onChanged(key),
               selected: key == selected,
-              borderRadius: 11,
+              borderRadius: Radii.pill,
               builder: (context, hovered) => Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10),
                 alignment: Alignment.center,
@@ -40,7 +40,7 @@ class PillToggle<T> extends StatelessWidget {
                   color: key == selected
                       ? t.selected
                       : (hovered ? t.hover : Colors.transparent),
-                  borderRadius: BorderRadius.circular(11),
+                  borderRadius: BorderRadius.circular(Radii.pill),
                 ),
                 child: Text(
                   value,
@@ -115,7 +115,7 @@ class ListRowShell extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
         color: hovered ? t.hover : Colors.transparent,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(Radii.small),
       ),
       child: Opacity(
         opacity: dimmed ? 0.5 : 1,
@@ -195,7 +195,7 @@ class ProgressCell extends StatelessWidget {
           height: 4,
           decoration: BoxDecoration(
             color: t.selected,
-            borderRadius: BorderRadius.circular(2),
+            borderRadius: BorderRadius.circular(Radii.mark),
           ),
           alignment: Alignment.centerLeft,
           child: FractionallySizedBox(
@@ -203,7 +203,7 @@ class ProgressCell extends StatelessWidget {
             child: Container(
               decoration: BoxDecoration(
                 color: fill,
-                borderRadius: BorderRadius.circular(2),
+                borderRadius: BorderRadius.circular(Radii.mark),
               ),
             ),
           ),

@@ -39,7 +39,7 @@ class Pressable extends StatefulWidget {
     super.key,
     required this.onTap,
     required this.builder,
-    this.borderRadius = 6,
+    this.borderRadius = Radii.small,
     this.onDoubleTap,
     this.selected,
     this.semanticLabel,
@@ -151,7 +151,7 @@ class PropChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: hovered ? t.hover : Colors.transparent,
         border: Border.all(color: t.border),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(Radii.large),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -178,7 +178,7 @@ class PropChip extends StatelessWidget {
     }
     return Pressable(
       onTap: onTap,
-      borderRadius: 12,
+      borderRadius: Radii.large,
       tooltip: tooltip,
       builder: (context, hovered) => shell(hovered),
     );
@@ -219,7 +219,7 @@ class IconBtn extends StatelessWidget {
         height: size,
         decoration: BoxDecoration(
           color: active ? t.selected : (hovered ? t.hover : Colors.transparent),
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(Radii.small),
         ),
         child: Icon(
           icon,
@@ -573,7 +573,7 @@ class NoticeBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: t.surface,
         border: Border.all(color: t.border),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(Radii.medium),
       ),
       child: Row(
         children: [
@@ -613,7 +613,7 @@ class DisclosureTriangle extends StatelessWidget {
     turns: collapsed ? -0.25 : 0,
     duration: MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
-        : const Duration(milliseconds: 120),
+        : Motion.fast,
     child: CustomPaint(
       size: Size.square(size),
       painter: _TrianglePainter(color ?? Tokens.of(context).tertiary),

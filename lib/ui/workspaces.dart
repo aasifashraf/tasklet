@@ -254,7 +254,7 @@ class WorkspaceSwitcher extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
           decoration: BoxDecoration(
             color: hovered || controller.isOpen ? t.hover : null,
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(Radii.small),
           ),
           child: Row(
             children: [

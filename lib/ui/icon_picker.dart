@@ -116,7 +116,7 @@ class IconPickerButton extends StatelessWidget {
         onPick: onPick,
       ),
       tooltip: 'Change icon and color',
-      borderRadius: 4,
+      borderRadius: Radii.small,
       builder: (context, _) => glyph,
     );
   }
@@ -249,7 +249,7 @@ class _IconPickerState extends ConsumerState<IconPicker> {
       elevation: 8,
       shadowColor: Colors.black26,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(Radii.medium),
         side: BorderSide(color: t.border),
       ),
       clipBehavior: Clip.antiAlias,
@@ -363,7 +363,7 @@ class _Cell extends StatelessWidget {
           color: selected
               ? t.selected
               : (hovered ? t.hover : Colors.transparent),
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(Radii.small),
         ),
         child: child,
       ),

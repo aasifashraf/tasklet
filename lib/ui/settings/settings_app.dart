@@ -69,7 +69,7 @@ class _SettingsPageState extends State<_SettingsPage> {
                   Pressable(
                     onTap: () => setState(() => _tab = tab),
                     selected: tab == _tab,
-                    borderRadius: 8,
+                    borderRadius: Radii.medium,
                     builder: (context, hovered) => Container(
                       width: 92,
                       margin: const EdgeInsets.symmetric(
@@ -80,7 +80,7 @@ class _SettingsPageState extends State<_SettingsPage> {
                         color: tab == _tab
                             ? t.selected
                             : (hovered ? t.hover : Colors.transparent),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(Radii.medium),
                       ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -275,7 +275,7 @@ class _SidebarTab extends ConsumerWidget {
           decoration: BoxDecoration(
             color: t.surface,
             border: Border.all(color: t.border),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(Radii.medium),
           ),
           child: Row(
             children: [
@@ -405,7 +405,7 @@ class _NotificationsTabState extends ConsumerState<_NotificationsTab> {
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             border: Border.all(color: t.warning.withValues(alpha: 0.6)),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(Radii.medium),
           ),
           child: Row(
             children: [
@@ -596,7 +596,7 @@ class _WorkspaceRow extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
       decoration: BoxDecoration(
         border: Border.all(color: t.border),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(Radii.medium),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

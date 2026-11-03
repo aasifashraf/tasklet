@@ -17,6 +17,11 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'task_tiles.dart';
 
+// Drag choreography timings (SPEC §5.1).
+const _liftTime = Duration(milliseconds: 150);
+const _settleTime = Duration(milliseconds: 240);
+const _dropLineGlide = Duration(milliseconds: 90);
+
 /// Where a drop lands: a status column and an index in that column's list (excluding the dragged card).
 typedef DropTarget = ({TaskStatus status, int index});
 
@@ -58,7 +63,7 @@ class BoardDragController extends ChangeNotifier {
   Timer? _autoScroll;
   late final AnimationController _lift = AnimationController(
     vsync: vsync,
-    duration: const Duration(milliseconds: 150),
+    duration: _liftTime,
   );
   AnimationController? _settle;
   Offset _settleFrom = Offset.zero;
@@ -292,10 +297,7 @@ class BoardDragController extends ChangeNotifier {
     }
     _settleFrom = from;
     _settleTo = dest;
-    final settle = AnimationController(
-      vsync: vsync,
-      duration: const Duration(milliseconds: 240),
-    );
+    final settle = AnimationController(vsync: vsync, duration: _settleTime);
     _settle = settle;
     settle.addListener(_markGhost);
     _lift.reverse();
@@ -537,7 +539,7 @@ class _Column extends StatelessWidget {
                   key: drag.columnKeys[status],
                   decoration: BoxDecoration(
                     color: over && dragging ? t.hover : t.surface,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(Radii.large),
                     border: Border.all(
                       color: over && dragging
                           ? t.accent.withValues(alpha: 0.5)
@@ -551,7 +553,7 @@ class _Column extends StatelessWidget {
                         AnimatedPositioned(
                           duration: drag.reduceMotion
                               ? Duration.zero
-                              : const Duration(milliseconds: 90),
+                              : _dropLineGlide,
                           curve: Curves.easeOut,
                           left: 8,
                           right: 8,
@@ -560,7 +562,7 @@ class _Column extends StatelessWidget {
                             height: 2,
                             decoration: BoxDecoration(
                               color: t.accent,
-                              borderRadius: BorderRadius.circular(1),
+                              borderRadius: BorderRadius.circular(Radii.mark),
                             ),
                           ),
                         ),
@@ -572,7 +574,9 @@ class _Column extends StatelessWidget {
                                 color: t.background.withValues(
                                   alpha: over ? 0.55 : 0.35,
                                 ),
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(
+                                  Radii.large,
+                                ),
                               ),
                               alignment: Alignment.center,
                               child: Text(
@@ -651,7 +655,7 @@ class _DraggableCardState extends ConsumerState<_DraggableCard>
   int? _pointer;
   late final AnimationController _flip = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 200),
+    duration: Motion.medium,
   );
   double _flipFrom = 0;
 
@@ -795,7 +799,7 @@ class _DraggableCardState extends ConsumerState<_DraggableCard>
                 key: _key,
                 decoration: focused
                     ? BoxDecoration(
-                        borderRadius: BorderRadius.circular(9),
+                        borderRadius: BorderRadius.circular(Radii.medium),
                         border: Border.all(
                           color: Tokens.of(context).accent
                               .withValues(alpha: 0.6),
@@ -832,7 +836,10 @@ class _DashedRRect extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final path = Path()
       ..addRRect(
-        RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(8)),
+        RRect.fromRectAndRadius(
+          Offset.zero & size,
+          const Radius.circular(Radii.medium),
+        ),
       );
     final paint = Paint()
       ..color = color

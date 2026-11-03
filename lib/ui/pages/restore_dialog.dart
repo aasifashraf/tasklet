@@ -162,14 +162,14 @@ class _RestoreDialogState extends ConsumerState<_RestoreDialog> {
                         final b = backups[i];
                         final selected = identical(b, _selected);
                         return InkWell(
-                          borderRadius: BorderRadius.circular(6),
+                          borderRadius: BorderRadius.circular(Radii.small),
                           onTap: () => setState(() => _selected = b),
                           child: Container(
                             height: 34,
                             padding: const EdgeInsets.symmetric(horizontal: 8),
                             decoration: BoxDecoration(
                               color: selected ? t.selected : null,
-                              borderRadius: BorderRadius.circular(6),
+                              borderRadius: BorderRadius.circular(Radii.small),
                             ),
                             child: Row(
                               children: [

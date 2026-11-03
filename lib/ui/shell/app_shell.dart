@@ -207,14 +207,14 @@ class ToastHost extends ConsumerWidget {
       bottom: 20,
       child: Center(
         child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 160),
+          duration: Motion.fast,
           child: toast == null
               ? const SizedBox.shrink()
               : Material(
                   key: ValueKey(toast.id),
                   color: t.primary,
                   elevation: 6,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(Radii.medium),
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
                     child: Row(

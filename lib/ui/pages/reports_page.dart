@@ -96,7 +96,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                     decoration: BoxDecoration(
                       color: t.surface,
                       border: Border.all(color: t.border),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(Radii.large),
                     ),
                     padding: const EdgeInsets.symmetric(vertical: 6),
                     child: Column(

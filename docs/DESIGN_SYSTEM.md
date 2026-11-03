@@ -26,21 +26,28 @@ secondary ≥ 4.5:1, tertiary ≥ 3:1. Use tertiary only for text that is not ne
 
 ## Type
 
-`TextStyles` only; no raw `fontSize`. 12 px body is the default everywhere.
+`TextStyles` only: a raw `fontSize` outside theme.dart fails the design-system test. 12 px body is the default
+everywhere; change color or weight with `copyWith`, never the size.
 
 | Style | Size / weight | Use |
 |---|---|---|
-| `meta` | 11 / regular, tertiary | counts, dates, IDs, hints |
-| `body`, `bodySecondary` | 12 / regular | almost everything |
+| `meta` | 11 / regular, tertiary | counts, dates, IDs, hints, Settings tab labels, badges |
+| `body`, `bodySecondary` | 12 / regular | almost everything; menu items get 12 from the menu theme |
+| `chip` | 12 / regular, secondary | text in the 24 px chip shell, toggles, date pills |
 | `sectionLabel` | 12 / 500, secondary | sidebar and list section headers |
+| `bodyLarge` | 13 / regular | task titles on cards and rows, sidebar rows, descriptions |
 | `section` | 13 / 600 | column headers, dialog section titles |
 | `pageTitle` | 14 / 600 | page and dialog titles |
+| `title` | 18 / 600 | a task title where it is edited (panel, New Task) |
+| `display` | 20 / 600 | the one large line of a page (greeting, Welcome, What's New) |
+| `stat` | 26 / 600 | Dashboard numbers |
+| `code` | 12 / mono | Mermaid source |
 
 ## Shape and size
 
-These are the values in use; new code picks from them (a token group is planned, see TODO).
-
-- **Radius:** 6 for buttons and controls, 8 for cards, rows and panels, 12 for the chip/pill shell.
+- **Radius:** `Radii` in theme.dart, the only place a radius is written (tested): `mark` 2 (bars, drop lines),
+  `small` 6 (buttons, rows, inputs, icon buttons), `medium` 8 (menus, cards, toasts, banners), `large` 12 (columns,
+  dashboard cards, dialogs, panels, the chip shell), `pill` (segmented toggles).
 - **Heights:** chip 24, compact control 26, sidebar row 30, button 30, list row 38.
 - **Icons:** 12 (inline meta), 14 (default), 16 (emphasis), painted glyphs in `glyphs.dart` for status/priority.
   Projects, labels, quick filters and workspaces show a user-picked Lucide icon (catalog in `lib/ui/icons/`,
@@ -48,8 +55,9 @@ These are the values in use; new code picks from them (a token group is planned,
   `ProjectGlyph`, `LabelGlyph`, `ViewGlyph` or `WorkspaceGlyph`, never a raw icon.
 - **Spacing:** multiples of 4 (4, 8, 12, 16, 24); 6 is allowed for tight icon-to-label gaps.
 - **Borders:** always 1px `border`; no shadows on resting elements in dark mode.
-- **Motion:** 120 ms for hover/fades, 200 ms for panels and drops, `Curves.easeOutCubic`. Respect
-  `MediaQuery.disableAnimations`.
+- **Motion:** `Motion.fast` 120 ms (hover, fades, toasts), `Motion.medium` 200 ms (panels, slides, reordering),
+  `Motion.slow` 350 ms (long scrolls), `Curves.easeOutCubic`. Drag has its own SPEC §5.1 timings in kanban.dart.
+  Respect `MediaQuery.disableAnimations`.
 
 ## Components
 

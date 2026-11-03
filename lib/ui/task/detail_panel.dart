@@ -66,7 +66,7 @@ class DetailPanelOverlay extends ConsumerWidget {
               width: 580,
               child: TweenAnimationBuilder<double>(
                 tween: Tween(begin: reduceMotion ? 0 : 1, end: 0),
-                duration: const Duration(milliseconds: 200),
+                duration: Motion.medium,
                 curve: Curves.easeOutCubic,
                 builder: (context, v, child) => Transform.translate(
                   offset: Offset(v * 600, 0),
@@ -77,7 +77,7 @@ class DetailPanelOverlay extends ConsumerWidget {
                   elevation: 12,
                   shadowColor: Colors.black54,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(Radii.large),
                     side: BorderSide(color: t.border),
                   ),
                   clipBehavior: Clip.antiAlias,

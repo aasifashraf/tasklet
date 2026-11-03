@@ -162,7 +162,7 @@ class _LoadingViewState extends State<LoadingView> {
     return Scaffold(
       body: AnimatedOpacity(
         opacity: _visible ? 1 : 0,
-        duration: const Duration(milliseconds: 150),
+        duration: Motion.fast,
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,

@@ -66,6 +66,11 @@ void main() {
         if (!isTheme && line.contains('Color(0x')) {
           problems.add('$where raw color (add a token in theme.dart)');
         }
+        if (!isTheme &&
+            !file.path.endsWith('glyphs.dart') &&
+            RegExp(r'Radius\.circular\(\d').hasMatch(line)) {
+          problems.add('$where raw radius (use Radii)');
+        }
         if (!isTheme && line.contains('fontSize:')) {
           problems.add('$where raw font size (use a TextStyles style)');
         }

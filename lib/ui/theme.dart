@@ -142,6 +142,36 @@ class Tokens extends ThemeExtension<Tokens> {
       t < 0.5 || other == null ? this : other;
 }
 
+/// Corner radii (docs/DESIGN_SYSTEM.md). Written only here (test/ui/design_system_test.dart).
+abstract final class Radii {
+  /// Thin bars and lines: progress bars, drop lines, chart bars.
+  static const double mark = 2;
+
+  /// Buttons, rows, inputs, icon buttons, picker cells.
+  static const double small = 6;
+
+  /// Menus, popovers, cards, toasts, banners, Settings tabs.
+  static const double medium = 8;
+
+  /// Board columns, dashboard and report cards, dialogs, panels, the 24 px chip shell.
+  static const double large = 12;
+
+  /// Fully rounded ends at any height (segmented toggles).
+  static const double pill = 999;
+}
+
+/// Animation lengths (docs/DESIGN_SYSTEM.md, Motion); drag choreography has its own SPEC values in kanban.dart.
+abstract final class Motion {
+  /// Hover, fades, small rotations, toasts.
+  static const fast = Duration(milliseconds: 120);
+
+  /// Panels, slides, reordering.
+  static const medium = Duration(milliseconds: 200);
+
+  /// Long scrolls (What's New "More").
+  static const slow = Duration(milliseconds: 350);
+}
+
 /// Type scale (SPEC §8.1): 11 meta, 12 body and chips, 13 titles of rows and cards and long text, 13 semibold
 /// sections, 14 page titles, 18 task titles, 20 greetings, 26 numbers. The only place a font size is written
 /// (test/ui/design_system_test.dart); vary color or weight with copyWith, never the size.
@@ -255,7 +285,7 @@ ThemeData buildTheme(Brightness brightness) {
         ),
         shape: WidgetStatePropertyAll(
           RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(Radii.medium),
             side: BorderSide(color: t.border),
           ),
         ),
@@ -283,7 +313,7 @@ ThemeData buildTheme(Brightness brightness) {
       backgroundColor: t.raised,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(Radii.large),
         side: BorderSide(color: t.border),
       ),
     ),
@@ -292,15 +322,15 @@ ThemeData buildTheme(Brightness brightness) {
       hintStyle: TextStyle(color: t.tertiary, fontSize: 12),
       border: OutlineInputBorder(
         borderSide: BorderSide(color: t.border),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(Radii.small),
       ),
       enabledBorder: OutlineInputBorder(
         borderSide: BorderSide(color: t.border),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(Radii.small),
       ),
       focusedBorder: OutlineInputBorder(
         borderSide: BorderSide(color: t.accent),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(Radii.small),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
     ),
@@ -311,7 +341,9 @@ ThemeData buildTheme(Brightness brightness) {
         textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
         minimumSize: const Size(0, 30),
         padding: const EdgeInsets.symmetric(horizontal: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Radii.small),
+        ),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
@@ -321,7 +353,9 @@ ThemeData buildTheme(Brightness brightness) {
         textStyle: const TextStyle(fontSize: 12),
         minimumSize: const Size(0, 30),
         padding: const EdgeInsets.symmetric(horizontal: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Radii.small),
+        ),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
@@ -330,7 +364,9 @@ ThemeData buildTheme(Brightness brightness) {
         textStyle: const TextStyle(fontSize: 12),
         minimumSize: const Size(0, 28),
         padding: const EdgeInsets.symmetric(horizontal: 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Radii.small),
+        ),
       ),
     ),
     switchTheme: SwitchThemeData(

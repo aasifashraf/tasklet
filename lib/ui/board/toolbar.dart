@@ -165,7 +165,7 @@ class _ToolbarButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: hovered ? t.hover : Colors.transparent,
           border: Border.all(color: t.border),
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(Radii.small),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -179,7 +179,7 @@ class _ToolbarButton extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                 decoration: BoxDecoration(
                   color: t.accent,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(Radii.medium),
                 ),
                 child: Text(
                   '$badge',

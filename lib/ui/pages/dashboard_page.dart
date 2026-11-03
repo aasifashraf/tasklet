@@ -152,7 +152,7 @@ class _Card extends StatelessWidget {
       decoration: BoxDecoration(
         color: t.surface,
         border: Border.all(color: t.border),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(Radii.large),
       ),
       child: child,
     );
@@ -247,7 +247,7 @@ class _TaskRows extends ConsumerWidget {
                         color: open?.taskId == e.task.id
                             ? t.openHighlight
                             : (hovered ? t.hover : Colors.transparent),
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(Radii.small),
                       ),
                       child: Row(
                         children: [
@@ -317,7 +317,7 @@ class _StatusCard extends StatelessWidget {
           Text('Status', style: TextStyles.sectionLabel(context)),
           const SizedBox(height: 12),
           ClipRRect(
-            borderRadius: BorderRadius.circular(3),
+            borderRadius: BorderRadius.circular(Radii.mark),
             child: SizedBox(
               height: 6,
               child: Row(

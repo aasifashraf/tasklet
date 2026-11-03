@@ -60,7 +60,7 @@ Widget? datePill(
     padding: const EdgeInsets.symmetric(horizontal: 8),
     decoration: BoxDecoration(
       border: Border.all(color: t.border),
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(Radii.large),
     ),
     child: Row(
       mainAxisSize: MainAxisSize.min,
@@ -160,7 +160,7 @@ class TaskCard extends ConsumerWidget {
       decoration: BoxDecoration(
         color: isOpen ? Color.alphaBlend(t.openHighlight, t.raised) : t.raised,
         border: Border.all(color: t.border),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(Radii.medium),
         boxShadow: lifted
             ? [
                 BoxShadow(
@@ -285,7 +285,7 @@ class TaskRow extends ConsumerWidget {
                 border: focused
                     ? Border.all(color: t.accent.withValues(alpha: 0.6))
                     : null,
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(Radii.small),
               ),
               child: Row(
                 children: [

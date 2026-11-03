@@ -70,7 +70,7 @@ class _WhatsNewDialogState extends State<_WhatsNewDialog> {
         .clamp(0.0, _scroll.position.maxScrollExtent);
     _scroll.animateTo(
       target,
-      duration: const Duration(milliseconds: 350),
+      duration: Motion.slow,
       curve: Curves.easeOutCubic,
     );
   }

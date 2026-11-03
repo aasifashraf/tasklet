@@ -525,7 +525,7 @@ class _Row extends StatelessWidget {
           color: selected
               ? t.selected
               : (hovered ? t.hover : Colors.transparent),
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(Radii.small),
         ),
         child: Row(
           children: [
@@ -584,7 +584,7 @@ class _RenameRow extends StatelessWidget {
     decoration: BoxDecoration(
       color: Tokens.of(context).raised,
       border: Border.all(color: Tokens.of(context).accent),
-      borderRadius: BorderRadius.circular(6),
+      borderRadius: BorderRadius.circular(Radii.small),
     ),
     child: Row(
       children: [
@@ -626,7 +626,7 @@ class _Reorderable<T> extends StatelessWidget {
     proxyDecorator: (child, index, animation) => Material(
       color: Tokens.of(context).raised,
       elevation: 4,
-      borderRadius: BorderRadius.circular(6),
+      borderRadius: BorderRadius.circular(Radii.small),
       child: child,
     ),
     onReorderItem: (oldIndex, newIndex) {

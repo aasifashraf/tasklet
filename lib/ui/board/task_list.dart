@@ -101,7 +101,7 @@ class _SectionHeader extends StatelessWidget {
         builder: (context, hovered) => Container(
           decoration: BoxDecoration(
             color: t.surface,
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(Radii.small),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Row(

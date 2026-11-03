@@ -161,7 +161,7 @@ class _ExportDialogState extends ConsumerState<_ExportDialog> {
                     decoration: BoxDecoration(
                       color: t.surface,
                       border: Border.all(color: t.border),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(Radii.medium),
                     ),
                     child: SingleChildScrollView(
                       padding: const EdgeInsets.all(14),
@@ -271,7 +271,7 @@ class _ChartPreview extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: _color(t, p.label),
                           borderRadius: const BorderRadius.horizontal(
-                            right: Radius.circular(4),
+                            right: Radius.circular(Radii.mark),
                           ),
                         ),
                       ),
