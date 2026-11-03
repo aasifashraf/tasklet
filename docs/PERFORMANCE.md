@@ -54,3 +54,9 @@ description cap and no ranking, so a search finds the same tasks as before. Sear
 200 ms debounce, so there are no stale results to drop; an isolate is only worth it if a query stays over 50 ms.
 
 Earlier measurements at 10k and 500k tasks: [SYSTEM_DESIGN.md](SYSTEM_DESIGN.md) section 3.
+
+At 500k tasks (Nov 3, 2026, after the changes above): refresh with nothing changed 59-63 ms with no UI stall (it
+was about 1 s; the cause was the sync repair pass running on every read, not garbage collection), first open 14.6 s
+with a 1.1 s stall (the repair pass has to run once), saving the 100k-task project 2.2 s with a 213 ms stall
+(garbage collection on a 920 MB heap), peak memory 920 MB. Those last three are past the v2 triggers (SQLite read
+index, chunked project files); nothing more is planned for them in v1.
