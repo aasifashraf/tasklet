@@ -22,6 +22,13 @@ const _liftTime = Duration(milliseconds: 150);
 const _settleTime = Duration(milliseconds: 240);
 const _dropLineGlide = Duration(milliseconds: 90);
 
+/// A column during a drag: the board's list, that list without the dragged card, and each task's index in it.
+typedef _DragColumn = ({
+  List<ProjectTask> source,
+  List<ProjectTask> list,
+  Map<String, int> index,
+});
+
 /// Where a drop lands: a status column and an index in that column's list (excluding the dragged card).
 typedef DropTarget = ({TaskStatus status, int index});
 
@@ -71,6 +78,9 @@ class BoardDragController extends ChangeNotifier {
 
   bool get isDragging => dragging != null;
 
+  // The board can go away while a drop is saving (navigating away mid-drop); the awaits below check this.
+  bool _disposed = false;
+
   // ------------------------------------------------------------------ geometry
 
   Rect? _rectOf(GlobalKey key) {
@@ -84,10 +94,26 @@ class BoardDragController extends ChangeNotifier {
   Rect? cardRect(String id) =>
       cardKeys[id] == null ? null : _rectOf(cardKeys[id]!);
 
-  List<ProjectTask> _listWithoutDragged(TaskStatus s) => [
-    for (final e in columnLists[s] ?? const <ProjectTask>[])
-      if (e.task.id != dragging?.task.id) e,
-  ];
+  // Per drag: each column's tasks without the dragged card, and where each task sits in that list. Built once,
+  // not on every pointer move; rebuilt only when the board hands the column a new list (a sync landed mid-drag).
+  final _columns = <TaskStatus, _DragColumn>{};
+
+  _DragColumn _column(TaskStatus s) {
+    final source = columnLists[s] ?? const <ProjectTask>[];
+    final cached = _columns[s];
+    if (cached != null && identical(cached.source, source)) return cached;
+    final list = [
+      for (final e in source)
+        if (e.task.id != dragging?.task.id) e,
+    ];
+    final column = (
+      source: source,
+      list: list,
+      index: {for (final (i, e) in list.indexed) e.task.id: i},
+    );
+    _columns[s] = column;
+    return column;
+  }
 
   DropTarget? _computeTarget() {
     TaskStatus? status;
@@ -98,19 +124,20 @@ class BoardDragController extends ChangeNotifier {
       }
     }
     if (status == null) return null;
-    final list = _listWithoutDragged(status);
-    int? lastVisible;
-    for (final (i, e) in list.indexed) {
-      final r = cardRect(e.task.id);
-      if (r == null) continue;
+    final column = _column(status);
+    // Only built cards have a position, and a column can hold thousands of tasks: look at the built cards of this
+    // column (cardKeys holds just those), in list order.
+    final visible = [
+      for (final MapEntry(key: id, value: key) in cardKeys.entries)
+        if (column.index[id] case final i?)
+          if (_rectOf(key) case final r?) (i, r),
+    ]..sort((a, b) => a.$1.compareTo(b.$1));
+    for (final (i, r) in visible) {
       if (_pointer.dy < r.center.dy) return (status: status, index: i);
-      lastVisible = i;
     }
     return (
       status: status,
-      index: lastVisible == null
-          ? (list.isEmpty ? 0 : list.length)
-          : lastVisible + 1,
+      index: visible.isEmpty ? column.list.length : visible.last.$1 + 1,
     );
   }
 
@@ -120,7 +147,7 @@ class BoardDragController extends ChangeNotifier {
     if (t == null || t.status != s) return null;
     final col = columnRect(s);
     if (col == null) return null;
-    final list = _listWithoutDragged(s);
+    final list = _column(s).list;
     if (list.isEmpty) return 4;
     if (t.index < list.length) {
       final r = cardRect(list[t.index].task.id);
@@ -144,6 +171,7 @@ class BoardDragController extends ChangeNotifier {
   ) {
     if (isDragging) return;
     dragging = entry;
+    _columns.clear();
     origin = entry.task.status;
     _pointerId = event.pointer;
     _pointer = event.position;
@@ -272,6 +300,7 @@ class BoardDragController extends ChangeNotifier {
     }
     settlingId = entry.task.id;
     await onDrop(entry, dropTarget);
+    if (_disposed) return;
     dragging = null;
     target = null;
     notifyListeners();
@@ -290,6 +319,7 @@ class BoardDragController extends ChangeNotifier {
     target = null;
     notifyListeners();
     await WidgetsBinding.instance.endOfFrame;
+    if (_disposed) return;
     final dest = to();
     if (reduceMotion || dest == null) {
       _end();
@@ -348,6 +378,7 @@ class BoardDragController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     _detachInput();
     _ghost?.remove();
     _lift.dispose();
@@ -728,14 +759,16 @@ class _DraggableCardState extends ConsumerState<_DraggableCard>
         final dy = _flip.isAnimating
             ? _flipFrom * (1 - Curves.easeOutCubic.transform(_flip.value))
             : 0.0;
-        Widget content = child!;
-        if (isOrigin) {
-          content = _Placeholder(child: Opacity(opacity: 0, child: content));
-        }
-        if (settling && !isOrigin) {
-          content = Opacity(opacity: 0, child: content);
-        }
-        return Transform.translate(offset: Offset(0, dy), child: content);
+        // The same widgets in every state, changing only their values: wrapping the card differently while it is
+        // dragged would rebuild the menu region around it and move the card (it has a GlobalKey) under the new one,
+        // leaving its menus registered with the old one.
+        return Transform.translate(
+          offset: Offset(0, dy),
+          child: _Placeholder(
+            visible: isOrigin,
+            child: Opacity(opacity: isOrigin || settling ? 0 : 1, child: child),
+          ),
+        );
       },
       child: ContextMenuRegion(
         menuChildren: () => taskMenuChildren(context, ref, widget.entry),
@@ -817,13 +850,17 @@ class _DraggableCardState extends ConsumerState<_DraggableCard>
 }
 
 /// Dashed outline left where a dragged card came from (SPEC §8.6).
+/// The dashed outline left where the dragged card came from; paints nothing when not [visible].
 class _Placeholder extends StatelessWidget {
-  const _Placeholder({required this.child});
+  const _Placeholder({required this.visible, required this.child});
+  final bool visible;
   final Widget child;
 
   @override
   Widget build(BuildContext context) => CustomPaint(
-    foregroundPainter: _DashedRRect(Tokens.of(context).tertiary),
+    foregroundPainter: visible
+        ? _DashedRRect(Tokens.of(context).tertiary)
+        : null,
     child: child,
   );
 }
