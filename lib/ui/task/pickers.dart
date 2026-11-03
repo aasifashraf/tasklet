@@ -33,8 +33,9 @@ class NoDragZone extends StatelessWidget {
   );
 }
 
-/// A chip that opens a menu (the picker shell).
-class _MenuChip extends StatelessWidget {
+/// A chip that opens a menu (the picker shell). The items are built only while the menu is open: every card has
+/// pickers and most never open.
+class _MenuChip extends StatefulWidget {
   const _MenuChip({
     required this.chip,
     required this.menuChildren,
@@ -45,14 +46,35 @@ class _MenuChip extends StatelessWidget {
   final bool enabled;
 
   @override
+  State<_MenuChip> createState() => _MenuChipState();
+}
+
+class _MenuChipState extends State<_MenuChip> {
+  final _controller = MenuController();
+  bool _building = false;
+
+  void _toggle() {
+    if (_controller.isOpen) {
+      _controller.close();
+      return;
+    }
+    // Build the items for this opening, then open on the next frame (as ContextMenuRegion does).
+    setState(() => _building = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _controller.open();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) => NoDragZone(
     child: MenuAnchor(
-      menuChildren: menuChildren(),
-      builder: (context, controller, _) => chip(
-        enabled
-            ? () => controller.isOpen ? controller.close() : controller.open()
-            : null,
-      ),
+      controller: _controller,
+      onClose: () {
+        if (mounted && _building) setState(() => _building = false);
+      },
+      menuChildren: _building ? widget.menuChildren() : const [],
+      builder: (context, controller, _) =>
+          widget.chip(widget.enabled ? _toggle : null),
     ),
   );
 }
@@ -374,6 +396,9 @@ class LabelsPicker extends StatelessWidget {
   }
 }
 
+/// Above this many items a label or project menu gets a search field and builds only the rows in view.
+const searchableMenuThreshold = 12;
+
 /// Checkable label items (project labels first, then workspace; SPEC §6). Stays open while toggling.
 List<Widget> labelMenuItems(
   List<(Label, Project?)> available,
@@ -384,11 +409,25 @@ List<Widget> labelMenuItems(
   final projectLabels = available.where((e) => e.$2 != null).toList();
   final workspaceLabels = available.where((e) => e.$2 == null).toList();
   Widget item(Label l) => _ToggleItem(
+    key: ValueKey(l.id),
     label: l.name,
     leading: LabelGlyph(l),
     initiallyChecked: selected.contains(l.id),
     onToggle: () => onToggle(l),
   );
+  if (available.length > searchableMenuThreshold) {
+    final ordered = [
+      for (final (l, _) in [...projectLabels, ...workspaceLabels]) l,
+    ];
+    return [
+      _SearchableMenuList(
+        hint: 'Search labels',
+        names: [for (final l in ordered) l.name],
+        rowBuilder: (i) => item(ordered[i]),
+        onSubmit: (i, _) => onToggle(ordered[i]),
+      ),
+    ];
+  }
   return [
     for (final (l, _) in projectLabels) item(l),
     if (projectLabels.isNotEmpty && workspaceLabels.isNotEmpty) const Divider(),
@@ -399,6 +438,7 @@ List<Widget> labelMenuItems(
 /// A menu row that toggles a check mark without closing the menu.
 class _ToggleItem extends StatefulWidget {
   const _ToggleItem({
+    super.key,
     required this.label,
     required this.leading,
     required this.initiallyChecked,
@@ -415,6 +455,15 @@ class _ToggleItem extends StatefulWidget {
 
 class _ToggleItemState extends State<_ToggleItem> {
   late bool _checked = widget.initiallyChecked;
+
+  @override
+  void didUpdateWidget(_ToggleItem old) {
+    super.didUpdateWidget(old);
+    // Toggled from elsewhere (Enter in the search field) while the menu stays open.
+    if (widget.initiallyChecked != old.initiallyChecked) {
+      _checked = widget.initiallyChecked;
+    }
+  }
 
   @override
   Widget build(BuildContext context) => MenuItemButton(
@@ -472,21 +521,128 @@ List<Widget> projectMenuItems(
   String currentId,
   ValueChanged<Project> onPick,
   Tokens t,
-) => [
-  for (final (i, p) in options.indexed) ...[
-    checkItem(
-      p.name,
-      checked: p.id == currentId,
-      leading: ProjectGlyph(
-        p,
-        size: 12,
-        color: p.isNoProject ? t.tertiary : null,
-      ),
-      onPressed: () => onPick(p),
+) {
+  Widget item(Project p) => checkItem(
+    p.name,
+    checked: p.id == currentId,
+    leading: ProjectGlyph(
+      p,
+      size: 12,
+      color: p.isNoProject ? t.tertiary : null,
     ),
-    if (i == 0 && p.isNoProject && options.length > 1) const Divider(),
-  ],
-];
+    onPressed: () => onPick(p),
+  );
+  if (options.length > searchableMenuThreshold) {
+    return [
+      _SearchableMenuList(
+        hint: 'Search projects',
+        names: [for (final p in options) p.name],
+        rowBuilder: (i) => item(options[i]),
+        onSubmit: (i, close) {
+          onPick(options[i]);
+          close();
+        },
+      ),
+    ];
+  }
+  return [
+    for (final (i, p) in options.indexed) ...[
+      item(p),
+      if (i == 0 && p.isNoProject && options.length > 1) const Divider(),
+    ],
+  ];
+}
+
+/// A long picker menu: a search field over a list that builds only the rows in view. Every typed word must appear
+/// in a row's name; Enter picks the first match.
+class _SearchableMenuList extends StatefulWidget {
+  const _SearchableMenuList({
+    required this.hint,
+    required this.names,
+    required this.rowBuilder,
+    required this.onSubmit,
+  });
+  final String hint;
+  final List<String> names;
+  final Widget Function(int index) rowBuilder;
+
+  /// Called for the first match on Enter, with a function that closes the menu.
+  final void Function(int index, VoidCallback close) onSubmit;
+
+  @override
+  State<_SearchableMenuList> createState() => _SearchableMenuListState();
+}
+
+class _SearchableMenuListState extends State<_SearchableMenuList> {
+  static const _rowHeight = 30.0;
+  static const _visibleRows = 10;
+  static const _width = 240.0;
+  String _query = '';
+
+  List<int> get _matches {
+    final words = _query.toLowerCase().split(' ').where((w) => w.isNotEmpty);
+    return [
+      for (final (i, name) in widget.names.indexed)
+        if (words.every(name.toLowerCase().contains)) i,
+    ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Tokens.of(context);
+    final matches = _matches;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 2, 8, 4),
+          child: SizedBox(
+            width: _width - 16,
+            child: TextField(
+              autofocus: true,
+              style: TextStyles.body(context),
+              onChanged: (q) => setState(() => _query = q),
+              onSubmitted: (_) {
+                if (matches.isEmpty) return;
+                widget.onSubmit(
+                  matches.first,
+                  () => MenuController.maybeOf(context)?.close(),
+                );
+              },
+              decoration: InputDecoration(
+                hintText: widget.hint,
+                isDense: true,
+                prefixIcon: Icon(Icons.search, size: 14, color: t.tertiary),
+                prefixIconConstraints: const BoxConstraints(minWidth: 28),
+                contentPadding: const EdgeInsets.symmetric(vertical: 6),
+              ),
+            ),
+          ),
+        ),
+        if (matches.isEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
+            child: SizedBox(
+              width: _width - 24,
+              child: Text('No matches', style: TextStyles.meta(context)),
+            ),
+          )
+        else
+          SizedBox(
+            width: _width,
+            height: _rowHeight * matches.length.clamp(1, _visibleRows),
+            child: ListView.builder(
+              // The menu panel has its own scroll view; this list must not claim the primary controller.
+              primary: false,
+              itemCount: matches.length,
+              itemExtent: _rowHeight,
+              itemBuilder: (context, k) => widget.rowBuilder(matches[k]),
+            ),
+          ),
+      ],
+    );
+  }
+}
 
 /// Projects a task can be filed into: "No Project" first, then active projects, plus [alsoInclude] (an archived
 /// project the task already belongs to or whose board opened the dialog; SPEC §7.1, §7.3).
