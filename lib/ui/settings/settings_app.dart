@@ -57,51 +57,67 @@ class _SettingsPageState extends State<_SettingsPage> {
     return Scaffold(
       body: Column(
         children: [
+          // Grows with large OS text (the page below scrolls); tabs widen to fit their label, and the row only
+          // shrinks when it would be wider than the fixed window.
           Container(
-            height: 64,
+            constraints: const BoxConstraints(minHeight: 64),
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            alignment: Alignment.center,
             decoration: BoxDecoration(
               border: Border(bottom: BorderSide(color: t.border)),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                for (final tab in _Tab.values)
-                  Pressable(
-                    onTap: () => setState(() => _tab = tab),
-                    selected: tab == _tab,
-                    borderRadius: Radii.medium,
-                    builder: (context, hovered) => Container(
-                      width: 92,
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: 2,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: tab == _tab
-                            ? t.selected
-                            : (hovered ? t.hover : Colors.transparent),
-                        borderRadius: BorderRadius.circular(Radii.medium),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            tab.icon,
-                            size: 18,
-                            color: tab == _tab ? t.accent : t.secondary,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (final tab in _Tab.values)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      child: Pressable(
+                        onTap: () => setState(() => _tab = tab),
+                        selected: tab == _tab,
+                        borderRadius: Radii.medium,
+                        builder: (context, hovered) => Container(
+                          constraints: const BoxConstraints(
+                            minWidth: 92,
+                            minHeight: 48,
                           ),
-                          const SizedBox(height: 3),
-                          Text(
-                            tab.label,
-                            style: TextStyles.meta(context).copyWith(
-                              color: tab == _tab ? t.primary : t.secondary,
-                            ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
                           ),
-                        ],
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: tab == _tab
+                                ? t.selected
+                                : (hovered ? t.hover : Colors.transparent),
+                            borderRadius: BorderRadius.circular(Radii.medium),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                tab.icon,
+                                size: 18,
+                                color: tab == _tab ? t.accent : t.secondary,
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                tab.label,
+                                maxLines: 1,
+                                softWrap: false,
+                                style: TextStyles.meta(context).copyWith(
+                                  color: tab == _tab ? t.primary : t.secondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
           // Each tab scrolls on its own so nothing overflows past the fixed window (SPEC §11).
@@ -126,36 +142,45 @@ class _Row extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 8),
-    child: Row(
+  Widget build(BuildContext context) {
+    final heading = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(
-          width: 150,
-          child: Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: Column(
+        Text(
+          label,
+          style: TextStyles.body(context).copyWith(fontWeight: FontWeight.w500),
+        ),
+        if (description != null) ...[
+          const SizedBox(height: 2),
+          Text(description!, style: TextStyles.meta(context)),
+        ],
+      ],
+    );
+    // Large OS text doesn't fit a 150 px label column in the fixed 520 px window: put the label above instead.
+    final stacked = MediaQuery.textScalerOf(context).scale(12) > 18;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: stacked
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [heading, const SizedBox(height: 6), child],
+            )
+          : Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  label,
-                  style: TextStyles.body(context)
-                      .copyWith(fontWeight: FontWeight.w500),
+                SizedBox(
+                  width: 150,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: heading,
+                  ),
                 ),
-                if (description != null) ...[
-                  const SizedBox(height: 2),
-                  Text(description!, style: TextStyles.meta(context)),
-                ],
+                const SizedBox(width: 16),
+                Expanded(child: child),
               ],
             ),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(child: child),
-      ],
-    ),
-  );
+    );
+  }
 }
 
 ListView _tabBody(List<Widget> children) => ListView(
