@@ -135,12 +135,16 @@ class PropChip extends StatelessWidget {
     this.onTap,
     this.tooltip,
     this.maxLabelWidth = 140,
+    this.labelColor,
   });
   final Widget? icon;
   final String? label;
   final VoidCallback? onTap;
   final String? tooltip;
   final double maxLabelWidth;
+
+  /// Overrides the secondary label color (overdue red, due-today orange).
+  final Color? labelColor;
 
   @override
   Widget build(BuildContext context) {
@@ -165,7 +169,7 @@ class PropChip extends StatelessWidget {
                 label!,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyles.chip(context),
+                style: TextStyles.chip(context).copyWith(color: labelColor),
               ),
             ),
         ],

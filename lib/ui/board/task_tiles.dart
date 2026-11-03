@@ -55,28 +55,14 @@ Widget? datePill(
   if (label == null) return null;
   final t = Tokens.of(context);
   final color = due ? dueColor(task, today, t) : null;
-  return Container(
-    height: 24,
-    padding: const EdgeInsets.symmetric(horizontal: 8),
-    decoration: BoxDecoration(
-      border: Border.all(color: t.border),
-      borderRadius: BorderRadius.circular(Radii.large),
+  return PropChip(
+    icon: Icon(
+      Icons.calendar_today_outlined,
+      size: 12,
+      color: color ?? t.secondary,
     ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          Icons.calendar_today_outlined,
-          size: 11,
-          color: color ?? t.secondary,
-        ),
-        const SizedBox(width: 5),
-        Text(
-          label,
-          style: TextStyles.chip(context).copyWith(color: color ?? t.secondary),
-        ),
-      ],
-    ),
+    label: label,
+    labelColor: color,
   );
 }
 

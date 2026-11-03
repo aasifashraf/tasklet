@@ -48,7 +48,8 @@ everywhere; change color or weight with `copyWith`, never the size.
 - **Radius:** `Radii` in theme.dart, the only place a radius is written (tested): `mark` 2 (bars, drop lines),
   `small` 6 (buttons, rows, inputs, icon buttons), `medium` 8 (menus, cards, toasts, banners), `large` 12 (columns,
   dashboard cards, dialogs, panels, the chip shell), `pill` (segmented toggles).
-- **Heights:** chip 24, compact control 26, sidebar row 30, button 30, list row 38.
+- **Heights:** chip 24 (properties: `PropChip`), compact control 26 (toolbar buttons and icon buttons, radius 6),
+  sidebar row 30, button 30, list row 38.
 - **Icons:** 12 (inline meta), 14 (default), 16 (emphasis), painted glyphs in `glyphs.dart` for status/priority.
   Projects, labels, quick filters and workspaces show a user-picked Lucide icon (catalog in `lib/ui/icons/`,
   generated from `tool/icons/catalog.txt`) or their default glyph (cube, dot, funnel). Always draw them with
