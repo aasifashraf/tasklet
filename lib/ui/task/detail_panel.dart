@@ -75,7 +75,7 @@ class DetailPanelOverlay extends ConsumerWidget {
                 child: Material(
                   color: t.raised,
                   elevation: 12,
-                  shadowColor: Colors.black54,
+                  shadowColor: t.shadow,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(Radii.large),
                     side: BorderSide(color: t.border),

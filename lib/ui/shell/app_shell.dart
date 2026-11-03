@@ -214,6 +214,7 @@ class ToastHost extends ConsumerWidget {
                   key: ValueKey(toast.id),
                   color: t.primary,
                   elevation: 6,
+                  shadowColor: t.shadow,
                   borderRadius: BorderRadius.circular(Radii.medium),
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),

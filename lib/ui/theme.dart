@@ -24,6 +24,7 @@ class Tokens extends ThemeExtension<Tokens> {
     required this.warning,
     required this.success,
     required this.backdrop,
+    required this.shadow,
   });
 
   final Color background;
@@ -45,6 +46,10 @@ class Tokens extends ThemeExtension<Tokens> {
   final Color warning;
   final Color success;
   final Color backdrop;
+
+  /// Shadow color for floating layers (menus, popovers, the task panel, toasts, dragged rows). Stronger in
+  /// the dark theme, where a light shadow on a dark page is invisible.
+  final Color shadow;
 
   // Deep enough for white 12 px text at 4.5:1 (WCAG AA), checked by test/ui/design_system_test.dart.
   static const _accent = Color(0xFF3570EA);
@@ -68,6 +73,7 @@ class Tokens extends ThemeExtension<Tokens> {
     warning: Color(0xFFF2780C),
     success: Color(0xFF2EA44F),
     backdrop: Color(0x33000000),
+    shadow: Color(0x8A000000),
   );
 
   static const dark = Tokens(
@@ -88,6 +94,7 @@ class Tokens extends ThemeExtension<Tokens> {
     warning: Color(0xFFFF8B3E),
     success: Color(0xFF3FB950),
     backdrop: Color(0x66000000),
+    shadow: Color(0xFF000000),
   );
 
   static Tokens of(BuildContext context) =>
@@ -126,6 +133,29 @@ class Tokens extends ThemeExtension<Tokens> {
         dark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
       TaskletColor.neutral => secondary,
     };
+  }
+
+  /// A card's shadow: a hint of depth at rest (none in the dark theme, where borders carry it), a clear lift
+  /// while dragged.
+  List<BoxShadow> cardShadow({required bool lifted}) {
+    final dark = identical(this, Tokens.dark);
+    if (lifted) {
+      return [
+        BoxShadow(
+          color: shadow.withValues(alpha: dark ? 0.5 : 0.18),
+          blurRadius: 16,
+          offset: const Offset(0, 6),
+        ),
+      ];
+    }
+    if (dark) return const [];
+    return [
+      BoxShadow(
+        color: shadow.withValues(alpha: 0.03),
+        blurRadius: 2,
+        offset: const Offset(0, 1),
+      ),
+    ];
   }
 
   Color status(TaskStatus status) => switch (status) {
@@ -280,6 +310,7 @@ ThemeData buildTheme(Brightness brightness) {
         backgroundColor: WidgetStatePropertyAll(t.raised),
         surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
         elevation: const WidgetStatePropertyAll(6),
+        shadowColor: WidgetStatePropertyAll(t.shadow),
         padding: const WidgetStatePropertyAll(
           EdgeInsets.symmetric(vertical: 4),
         ),

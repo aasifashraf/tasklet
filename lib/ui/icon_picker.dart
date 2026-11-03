@@ -247,7 +247,7 @@ class _IconPickerState extends ConsumerState<IconPicker> {
     return Material(
       color: t.raised,
       elevation: 8,
-      shadowColor: Colors.black26,
+      shadowColor: t.shadow,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(Radii.medium),
         side: BorderSide(color: t.border),

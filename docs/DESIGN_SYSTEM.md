@@ -54,7 +54,9 @@ everywhere; change color or weight with `copyWith`, never the size.
   generated from `tool/icons/catalog.txt`) or their default glyph (cube, dot, funnel). Always draw them with
   `ProjectGlyph`, `LabelGlyph`, `ViewGlyph` or `WorkspaceGlyph`, never a raw icon.
 - **Spacing:** multiples of 4 (4, 8, 12, 16, 24); 6 is allowed for tight icon-to-label gaps.
-- **Borders:** always 1px `border`; no shadows on resting elements in dark mode.
+- **Borders and shadows:** always 1px `border`. Floating layers use `Tokens.shadow` as their shadow color (stronger
+  in dark); cards use `Tokens.cardShadow(lifted:)`, which has no resting shadow in dark mode. No `Colors.black`
+  outside theme.dart (tested).
 - **Motion:** `Motion.fast` 120 ms (hover, fades, toasts), `Motion.medium` 200 ms (panels, slides, reordering),
   `Motion.slow` 350 ms (long scrolls), `Curves.easeOutCubic`. Drag has its own SPEC §5.1 timings in kanban.dart.
   Respect `MediaQuery.disableAnimations`.

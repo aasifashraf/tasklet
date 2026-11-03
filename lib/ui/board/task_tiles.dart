@@ -161,21 +161,7 @@ class TaskCard extends ConsumerWidget {
         color: isOpen ? Color.alphaBlend(t.openHighlight, t.raised) : t.raised,
         border: Border.all(color: t.border),
         borderRadius: BorderRadius.circular(Radii.medium),
-        boxShadow: lifted
-            ? [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.18),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
-                ),
-              ]
-            : [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 2,
-                  offset: const Offset(0, 1),
-                ),
-              ],
+        boxShadow: t.cardShadow(lifted: lifted),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

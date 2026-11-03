@@ -626,6 +626,7 @@ class _Reorderable<T> extends StatelessWidget {
     proxyDecorator: (child, index, animation) => Material(
       color: Tokens.of(context).raised,
       elevation: 4,
+      shadowColor: Tokens.of(context).shadow,
       borderRadius: BorderRadius.circular(Radii.small),
       child: child,
     ),

@@ -71,6 +71,9 @@ void main() {
             RegExp(r'Radius\.circular\(\d').hasMatch(line)) {
           problems.add('$where raw radius (use Radii)');
         }
+        if (!isTheme && line.contains('Colors.black')) {
+          problems.add('$where black shadow or fill (use Tokens.shadow)');
+        }
         if (!isTheme && line.contains('fontSize:')) {
           problems.add('$where raw font size (use a TextStyles style)');
         }
