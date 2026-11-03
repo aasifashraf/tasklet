@@ -251,35 +251,32 @@ class WorkspaceSwitcher extends ConsumerWidget {
         ),
         menuItem('Manage Workspaces…', onPressed: openSettingsWindow),
       ],
-      builder: (context, controller, _) => Hoverable(
-        cursor: SystemMouseCursors.click,
-        builder: (context, hovered) => GestureDetector(
-          onTap: () =>
-              controller.isOpen ? controller.close() : controller.open(),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-            decoration: BoxDecoration(
-              color: hovered || controller.isOpen ? t.hover : null,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Row(
-              children: [
-                if (info != null) ...[
-                  WorkspaceGlyph(info, size: 15),
-                  const SizedBox(width: 8),
-                ],
-                Flexible(
-                  child: Text(
-                    info?.name ?? 'Tasklet',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyles.section(context),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Icon(Icons.expand_more, size: 15, color: t.tertiary),
+      builder: (context, controller, _) => Pressable(
+        onTap: () => controller.isOpen ? controller.close() : controller.open(),
+        semanticLabel: 'Workspace: ${info?.name ?? 'Tasklet'}',
+        builder: (context, hovered) => Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+          decoration: BoxDecoration(
+            color: hovered || controller.isOpen ? t.hover : null,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Row(
+            children: [
+              if (info != null) ...[
+                WorkspaceGlyph(info, size: 15),
+                const SizedBox(width: 8),
               ],
-            ),
+              Flexible(
+                child: Text(
+                  info?.name ?? 'Tasklet',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyles.section(context),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Icon(Icons.expand_more, size: 15, color: t.tertiary),
+            ],
           ),
         ),
       ),

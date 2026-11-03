@@ -29,23 +29,24 @@ class PillToggle<T> extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           for (final MapEntry(:key, :value) in options.entries)
-            GestureDetector(
+            Pressable(
               onTap: () => onChanged(key),
-              child: MouseRegion(
-                cursor: SystemMouseCursors.click,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: key == selected ? t.selected : Colors.transparent,
-                    borderRadius: BorderRadius.circular(11),
-                  ),
-                  child: Text(
-                    value,
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      color: key == selected ? t.primary : t.secondary,
-                    ),
+              selected: key == selected,
+              borderRadius: 11,
+              builder: (context, hovered) => Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: key == selected
+                      ? t.selected
+                      : (hovered ? t.hover : Colors.transparent),
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: key == selected ? t.primary : t.secondary,
                   ),
                 ),
               ),
@@ -110,46 +111,46 @@ class ListRowShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Tokens.of(context);
-    Widget row = Hoverable(
-      cursor: onTap == null ? MouseCursor.defer : SystemMouseCursors.click,
-      builder: (context, hovered) => GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        onDoubleTap: onDoubleTap,
-        child: Container(
-          height: 40,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: hovered && onTap != null ? t.hover : Colors.transparent,
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Opacity(
-            opacity: dimmed ? 0.5 : 1,
-            child: Row(
-              children: [
-                SizedBox(width: 22, child: Center(child: leading)),
-                const SizedBox(width: 8),
-                Expanded(child: title),
-                for (final w in trailing) ...[const SizedBox(width: 12), w],
-                if (menuChildren != null) ...[
-                  const SizedBox(width: 8),
-                  MenuAnchor(
-                    menuChildren: menuChildren!(),
-                    builder: (context, controller, _) => IconBtn(
-                      icon: Icons.more_horiz,
-                      tooltip: 'More',
-                      onPressed: () => controller.isOpen
-                          ? controller.close()
-                          : controller.open(),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
+    Widget shell(bool hovered) => Container(
+      height: 40,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: hovered ? t.hover : Colors.transparent,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Opacity(
+        opacity: dimmed ? 0.5 : 1,
+        child: Row(
+          children: [
+            SizedBox(width: 22, child: Center(child: leading)),
+            const SizedBox(width: 8),
+            Expanded(child: title),
+            for (final w in trailing) ...[const SizedBox(width: 12), w],
+            if (menuChildren != null) ...[
+              const SizedBox(width: 8),
+              MenuAnchor(
+                menuChildren: menuChildren!(),
+                builder: (context, controller, _) => IconBtn(
+                  icon: Icons.more_horiz,
+                  tooltip: 'More',
+                  onPressed: () => controller.isOpen
+                      ? controller.close()
+                      : controller.open(),
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );
+    // Without onTap (label rows, a row being renamed) the row isn't a button.
+    Widget row = onTap == null
+        ? shell(false)
+        : Pressable(
+            onTap: onTap,
+            onDoubleTap: onDoubleTap,
+            builder: (context, hovered) => shell(hovered),
+          );
     if (menuChildren != null) {
       row = ContextMenuRegion(menuChildren: menuChildren!, child: row);
     }

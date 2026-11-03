@@ -59,7 +59,12 @@ color), `ListRowShell`, `PageScaffold`, `EmptyState`, `NoticeBanner`, `confirmDe
 any of these is a bug.
 
 States every interactive element needs: hover, selected (if applicable), disabled (tertiary text, no hover),
-**keyboard focus** (accent ring; not yet consistent, see TODO), and a tooltip or label for screen readers.
+**keyboard focus**, and a tooltip or label for screen readers. `Pressable` (widgets.dart) gives all of them at once:
+Tab focus with a 2 px accent ring (keyboard only, following the shape's radius), Enter/Space, the click cursor, button
+semantics with enabled/selected, and a `hovered` flag that is also true while keyboard focus is on or inside it, so
+hover-only affordances (a row's ⋯) appear for keyboard users. Build every clickable shell on it; `Hoverable` is only
+for hover effects on things that aren't buttons. A shell with no action (a read-only chip, a row being renamed) is
+not wrapped, so it isn't announced as a button.
 
 ## Writing
 

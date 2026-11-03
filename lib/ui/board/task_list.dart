@@ -92,47 +92,44 @@ class _SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Tokens.of(context);
-    return Hoverable(
-      builder: (context, hovered) => GestureDetector(
-        behavior: HitTestBehavior.opaque,
+    return Container(
+      height: 38,
+      color: t.background,
+      padding: const EdgeInsets.fromLTRB(16, 3, 16, 3),
+      child: Pressable(
         onTap: onToggle,
-        child: Container(
-          height: 38,
-          color: t.background,
-          padding: const EdgeInsets.fromLTRB(16, 3, 16, 3),
-          child: Container(
-            decoration: BoxDecoration(
-              color: t.surface,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Row(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: DisclosureTriangle(
-                    collapsed: collapsed,
-                    color: t.secondary,
-                  ),
+        builder: (context, hovered) => Container(
+          decoration: BoxDecoration(
+            color: t.surface,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Row(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: DisclosureTriangle(
+                  collapsed: collapsed,
+                  color: t.secondary,
                 ),
-                const SizedBox(width: 2),
-                StatusIcon(status),
-                const SizedBox(width: 8),
-                Text(
-                  status.label,
-                  style: TextStyles.section(context).copyWith(fontSize: 12.5),
+              ),
+              const SizedBox(width: 2),
+              StatusIcon(status),
+              const SizedBox(width: 8),
+              Text(
+                status.label,
+                style: TextStyles.section(context).copyWith(fontSize: 12.5),
+              ),
+              const SizedBox(width: 6),
+              CountText(count),
+              const Spacer(),
+              if (onAdd != null && (count == 0 || hovered))
+                IconBtn(
+                  icon: Icons.add,
+                  tooltip: 'New ${status.label} task',
+                  onPressed: onAdd,
                 ),
-                const SizedBox(width: 6),
-                CountText(count),
-                const Spacer(),
-                if (onAdd != null && (count == 0 || hovered))
-                  IconBtn(
-                    icon: Icons.add,
-                    tooltip: 'New ${status.label} task',
-                    onPressed: onAdd,
-                  ),
-              ],
-            ),
+            ],
           ),
         ),
       ),

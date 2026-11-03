@@ -157,43 +157,37 @@ class _ToolbarButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Tokens.of(context);
-    return Hoverable(
-      cursor: SystemMouseCursors.click,
-      builder: (context, hovered) => GestureDetector(
-        onTap: onTap,
-        child: Container(
-          height: 26,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          decoration: BoxDecoration(
-            color: hovered ? t.hover : Colors.transparent,
-            border: Border.all(color: t.border),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 14, color: t.secondary),
+    return Pressable(
+      onTap: onTap,
+      builder: (context, hovered) => Container(
+        height: 26,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: hovered ? t.hover : Colors.transparent,
+          border: Border.all(color: t.border),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: t.secondary),
+            const SizedBox(width: 6),
+            Text(label, style: TextStyle(fontSize: 12, color: t.secondary)),
+            if (badge != null && badge! > 0) ...[
               const SizedBox(width: 6),
-              Text(label, style: TextStyle(fontSize: 12, color: t.secondary)),
-              if (badge != null && badge! > 0) ...[
-                const SizedBox(width: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 5,
-                    vertical: 1,
-                  ),
-                  decoration: BoxDecoration(
-                    color: t.accent,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '$badge',
-                    style: const TextStyle(fontSize: 10, color: Colors.white),
-                  ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                decoration: BoxDecoration(
+                  color: t.accent,
+                  borderRadius: BorderRadius.circular(8),
                 ),
-              ],
+                child: Text(
+                  '$badge',
+                  style: const TextStyle(fontSize: 10, color: Colors.white),
+                ),
+              ),
             ],
-          ),
+          ],
         ),
       ),
     );

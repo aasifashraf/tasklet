@@ -66,40 +66,39 @@ class _SettingsPageState extends State<_SettingsPage> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 for (final tab in _Tab.values)
-                  Hoverable(
-                    cursor: SystemMouseCursors.click,
-                    builder: (context, hovered) => GestureDetector(
-                      onTap: () => setState(() => _tab = tab),
-                      child: Container(
-                        width: 92,
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 2,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: tab == _tab
-                              ? t.selected
-                              : (hovered ? t.hover : Colors.transparent),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              tab.icon,
-                              size: 18,
-                              color: tab == _tab ? t.accent : t.secondary,
+                  Pressable(
+                    onTap: () => setState(() => _tab = tab),
+                    selected: tab == _tab,
+                    borderRadius: 8,
+                    builder: (context, hovered) => Container(
+                      width: 92,
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: 2,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: tab == _tab
+                            ? t.selected
+                            : (hovered ? t.hover : Colors.transparent),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            tab.icon,
+                            size: 18,
+                            color: tab == _tab ? t.accent : t.secondary,
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            tab.label,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: tab == _tab ? t.primary : t.secondary,
                             ),
-                            const SizedBox(height: 3),
-                            Text(
-                              tab.label,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: tab == _tab ? t.primary : t.secondary,
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   ),

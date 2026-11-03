@@ -456,31 +456,27 @@ class _Section extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Hoverable(
-            cursor: SystemMouseCursors.click,
-            builder: (context, hovered) => GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => ref.read(prefsProvider.notifier).set(
-                PrefKeys.collapsedSidebarSections,
-                {...prefs.collapsedSidebarSections, id: !collapsed},
-              ),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(8, 2, 8, 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
-                      label,
-                      style: TextStyles.sectionLabel(context)
-                          .copyWith(height: 1),
-                    ),
-                    const SizedBox(width: 5),
-                    DisclosureTriangle(
-                      collapsed: collapsed,
-                      color: hovered ? t.secondary : t.tertiary,
-                    ),
-                  ],
-                ),
+          Pressable(
+            onTap: () => ref.read(prefsProvider.notifier).set(
+              PrefKeys.collapsedSidebarSections,
+              {...prefs.collapsedSidebarSections, id: !collapsed},
+            ),
+            semanticLabel: collapsed ? 'Expand $label' : 'Collapse $label',
+            builder: (context, hovered) => Padding(
+              padding: const EdgeInsets.fromLTRB(8, 2, 8, 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyles.sectionLabel(context).copyWith(height: 1),
+                  ),
+                  const SizedBox(width: 5),
+                  DisclosureTriangle(
+                    collapsed: collapsed,
+                    color: hovered ? t.secondary : t.tertiary,
+                  ),
+                ],
               ),
             ),
           ),
@@ -513,55 +509,53 @@ class _Row extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Tokens.of(context);
-    return Hoverable(
-      cursor: SystemMouseCursors.click,
-      builder: (context, hovered) => GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: Container(
-          height: 30,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          decoration: BoxDecoration(
-            color: selected
-                ? t.selected
-                : (hovered ? t.hover : Colors.transparent),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Row(
-            children: [
-              SizedBox(width: 16, child: Center(child: icon)),
-              const SizedBox(width: 9),
-              Expanded(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    color: selected ? t.primary : t.secondary,
-                    fontWeight: selected ? FontWeight.w500 : FontWeight.normal,
+    return Pressable(
+      onTap: onTap,
+      selected: selected,
+      builder: (context, hovered) => Container(
+        height: 30,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: selected
+              ? t.selected
+              : (hovered ? t.hover : Colors.transparent),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          children: [
+            SizedBox(width: 16, child: Center(child: icon)),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: selected ? t.primary : t.secondary,
+                  fontWeight: selected ? FontWeight.w500 : FontWeight.normal,
+                ),
+              ),
+            ),
+            ?trailing,
+            if (menuChildren != null)
+              MenuAnchor(
+                menuChildren: menuChildren!(),
+                // hovered is also true while the row or this button has keyboard focus (Pressable).
+                builder: (context, controller, _) => Opacity(
+                  opacity: hovered || controller.isOpen ? 1 : 0,
+                  child: IconBtn(
+                    icon: Icons.more_horiz,
+                    size: 22,
+                    iconSize: 14,
+                    tooltip: 'More options',
+                    onPressed: () => controller.isOpen
+                        ? controller.close()
+                        : controller.open(),
                   ),
                 ),
               ),
-              ?trailing,
-              if (menuChildren != null)
-                MenuAnchor(
-                  menuChildren: menuChildren!(),
-                  builder: (context, controller, _) => Opacity(
-                    opacity: hovered || controller.isOpen ? 1 : 0,
-                    child: IconBtn(
-                      icon: Icons.more_horiz,
-                      size: 22,
-                      iconSize: 14,
-                      tooltip: 'More options',
-                      onPressed: () => controller.isOpen
-                          ? controller.close()
-                          : controller.open(),
-                    ),
-                  ),
-                ),
-            ],
-          ),
+          ],
         ),
       ),
     );

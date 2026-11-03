@@ -107,7 +107,7 @@ class IconPickerButton extends StatelessWidget {
       },
     );
     if (!enabled) return glyph;
-    return GestureDetector(
+    return Pressable(
       onTap: () => showIconPicker(
         context,
         icon: icon,
@@ -115,10 +115,9 @@ class IconPickerButton extends StatelessWidget {
         kind: kind,
         onPick: onPick,
       ),
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: Tooltip(message: 'Change icon and color', child: glyph),
-      ),
+      tooltip: 'Change icon and color',
+      borderRadius: 4,
+      builder: (context, _) => glyph,
     );
   }
 }
@@ -352,23 +351,21 @@ class _Cell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Tokens.of(context);
-    return Tooltip(
-      message: tooltip,
-      waitDuration: const Duration(milliseconds: 400),
-      child: Material(
-        color: selected ? t.selected : Colors.transparent,
-        borderRadius: BorderRadius.circular(6),
-        child: InkWell(
-          onTap: onTap,
+    return Pressable(
+      onTap: onTap,
+      selected: selected,
+      tooltip: tooltip,
+      builder: (context, hovered) => Container(
+        width: size,
+        height: size,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected
+              ? t.selected
+              : (hovered ? t.hover : Colors.transparent),
           borderRadius: BorderRadius.circular(6),
-          hoverColor: t.hover,
-          focusColor: t.selected,
-          splashFactory: NoSplash.splashFactory,
-          child: SizedBox.square(
-            dimension: size,
-            child: Center(child: child),
-          ),
         ),
+        child: child,
       ),
     );
   }

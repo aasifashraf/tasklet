@@ -29,6 +29,103 @@ class _HoverableState extends State<Hoverable> {
   );
 }
 
+/// The one clickable shell: hover, keyboard focus (accent ring, shown only when focus came from the keyboard),
+/// Enter/Space activation, click cursor, disabled state and button semantics. [builder] paints the hover and
+/// selected backgrounds; its `hovered` is also true while keyboard focus is on it or inside it, so hover-only
+/// affordances (a row's ⋯) appear for keyboard users too. [borderRadius] matches its shape so the ring follows it.
+/// A null [onTap] is a disabled button: no hover, no focus, tertiary styling is up to [builder].
+class Pressable extends StatefulWidget {
+  const Pressable({
+    super.key,
+    required this.onTap,
+    required this.builder,
+    this.borderRadius = 6,
+    this.onDoubleTap,
+    this.selected,
+    this.semanticLabel,
+    this.tooltip,
+  });
+  final VoidCallback? onTap;
+  final VoidCallback? onDoubleTap;
+  final Widget Function(BuildContext context, bool hovered) builder;
+  final double borderRadius;
+  final bool? selected;
+  final String? semanticLabel;
+  final String? tooltip;
+
+  @override
+  State<Pressable> createState() => _PressableState();
+}
+
+class _PressableState extends State<Pressable> {
+  // Repaints when focus moves between this widget and something inside it (hasFocus stays true, the ring moves).
+  late final _node = FocusNode()
+    ..addListener(() {
+      if (mounted) setState(() {});
+    });
+  bool _hovered = false;
+
+  /// Keyboard focus is on this widget or inside it (FocusableActionDetector reports focus within).
+  bool _focusWithin = false;
+
+  @override
+  void dispose() {
+    _node.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final onTap = widget.onTap;
+    final enabled = onTap != null;
+    final radius = BorderRadius.circular(widget.borderRadius);
+    final ring = enabled && _focusWithin && _node.hasPrimaryFocus;
+    Widget child = FocusableActionDetector(
+      focusNode: _node,
+      enabled: enabled,
+      mouseCursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
+      onShowHoverHighlight: (v) => setState(() => _hovered = v),
+      onShowFocusHighlight: (v) => setState(() => _focusWithin = v),
+      actions: {
+        if (enabled)
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (_) => onTap(),
+          ),
+      },
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        onDoubleTap: enabled ? widget.onDoubleTap : null,
+        child: DecoratedBox(
+          position: DecorationPosition.foreground,
+          decoration: ring
+              ? BoxDecoration(
+                  border: Border.all(
+                    color: Tokens.of(context).accent,
+                    width: 2,
+                  ),
+                  borderRadius: radius,
+                )
+              : const BoxDecoration(),
+          child: widget.builder(context, enabled && (_hovered || _focusWithin)),
+        ),
+      ),
+    );
+    if (widget.tooltip != null) {
+      child = Tooltip(message: widget.tooltip!, child: child);
+    }
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      selected: widget.selected,
+      label: widget.semanticLabel ?? widget.tooltip,
+      // An explicit label replaces what the children would read ("Expand Projects", not "Projects").
+      excludeSemantics: widget.semanticLabel != null,
+      child: child,
+    );
+  }
+}
+
 /// The one property-pill shell used everywhere (SPEC §8.5): 24px tall, hairline border, small icon + text.
 class PropChip extends StatelessWidget {
   const PropChip({
@@ -48,44 +145,43 @@ class PropChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Tokens.of(context);
-    Widget chip = Hoverable(
-      cursor: onTap == null ? MouseCursor.defer : SystemMouseCursors.click,
-      builder: (context, hovered) => Container(
-        height: 24,
-        padding: EdgeInsets.symmetric(horizontal: label == null ? 5 : 8),
-        decoration: BoxDecoration(
-          color: hovered && onTap != null ? t.hover : Colors.transparent,
-          border: Border.all(color: t.border),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ?icon,
-            if (icon != null && label != null) const SizedBox(width: 5),
-            if (label != null)
-              ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: maxLabelWidth),
-                child: Text(
-                  label!,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 11.5, color: t.secondary),
-                ),
+    Widget shell(bool hovered) => Container(
+      height: 24,
+      padding: EdgeInsets.symmetric(horizontal: label == null ? 5 : 8),
+      decoration: BoxDecoration(
+        color: hovered ? t.hover : Colors.transparent,
+        border: Border.all(color: t.border),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ?icon,
+          if (icon != null && label != null) const SizedBox(width: 5),
+          if (label != null)
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxLabelWidth),
+              child: Text(
+                label!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 11.5, color: t.secondary),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
-    if (onTap != null) {
-      chip = GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: chip,
-      );
+    // A chip without onTap only shows a value (card chips in read-only mode), so it isn't a button.
+    if (onTap == null) {
+      final chip = shell(false);
+      return tooltip == null ? chip : Tooltip(message: tooltip!, child: chip);
     }
-    if (tooltip != null) chip = Tooltip(message: tooltip!, child: chip);
-    return chip;
+    return Pressable(
+      onTap: onTap,
+      borderRadius: 12,
+      tooltip: tooltip,
+      builder: (context, hovered) => shell(hovered),
+    );
   }
 }
 
@@ -95,7 +191,7 @@ class IconBtn extends StatelessWidget {
     super.key,
     required this.icon,
     required this.onPressed,
-    this.tooltip,
+    required this.tooltip,
     this.size = 26,
     this.iconSize = 15,
     this.color,
@@ -103,7 +199,9 @@ class IconBtn extends StatelessWidget {
   });
   final IconData icon;
   final VoidCallback? onPressed;
-  final String? tooltip;
+
+  /// Icon-only, so the tooltip is also its screen-reader label.
+  final String tooltip;
   final double size;
   final double iconSize;
   final Color? color;
@@ -112,32 +210,26 @@ class IconBtn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Tokens.of(context);
-    Widget button = Hoverable(
-      cursor: onPressed == null ? MouseCursor.defer : SystemMouseCursors.click,
-      builder: (context, hovered) => GestureDetector(
-        onTap: onPressed,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            color: active
-                ? t.selected
-                : (hovered && onPressed != null ? t.hover : Colors.transparent),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Icon(
-            icon,
-            size: iconSize,
-            color: onPressed == null
-                ? t.tertiary
-                : (color ?? (active ? t.primary : t.secondary)),
-          ),
+    return Pressable(
+      onTap: onPressed,
+      tooltip: tooltip,
+      selected: active ? true : null,
+      builder: (context, hovered) => Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: active ? t.selected : (hovered ? t.hover : Colors.transparent),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Icon(
+          icon,
+          size: iconSize,
+          color: onPressed == null
+              ? t.tertiary
+              : (color ?? (active ? t.primary : t.secondary)),
         ),
       ),
     );
-    if (tooltip != null) button = Tooltip(message: tooltip!, child: button);
-    return Semantics(button: true, label: tooltip, child: button);
   }
 }
 
