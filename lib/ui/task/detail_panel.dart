@@ -314,12 +314,7 @@ class _PanelBodyState extends ConsumerState<_PanelBody> {
                       focusNode: _titleFocus,
                       enabled: enabled,
                       maxLines: null,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: t.primary,
-                        height: 1.35,
-                      ),
+                      style: TextStyles.title(context).copyWith(height: 1.35),
                       decoration: fieldDecoration.copyWith(
                         hintText: 'Task title',
                       ),
@@ -333,11 +328,7 @@ class _PanelBodyState extends ConsumerState<_PanelBody> {
                     maxLines: null,
                     minLines: 4,
                     keyboardType: TextInputType.multiline,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: t.primary,
-                      height: 1.5,
-                    ),
+                    style: TextStyles.bodyLarge(context).copyWith(height: 1.5),
                     decoration: fieldDecoration.copyWith(
                       hintText: 'Add a description…',
                     ),

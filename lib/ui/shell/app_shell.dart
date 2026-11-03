@@ -224,7 +224,8 @@ class ToastHost extends ConsumerWidget {
                           constraints: const BoxConstraints(maxWidth: 420),
                           child: Text(
                             toast.message,
-                            style: TextStyle(fontSize: 12, color: t.background),
+                            style: TextStyles.body(context)
+                                .copyWith(color: t.background),
                           ),
                         ),
                         const SizedBox(width: 8),

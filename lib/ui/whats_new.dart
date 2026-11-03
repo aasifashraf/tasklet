@@ -115,18 +115,15 @@ class _WhatsNewDialogState extends State<_WhatsNewDialog> {
                       Text(
                         "What's New in Tasklet",
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700,
-                          color: t.primary,
-                        ),
+                        style: TextStyles.display(context)
+                            .copyWith(fontWeight: FontWeight.w700),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         currentRelease.subtitle,
                         textAlign: TextAlign.center,
-                        style: TextStyles.bodySecondary(context)
-                            .copyWith(fontSize: 13),
+                        style: TextStyles.bodyLarge(context)
+                            .copyWith(color: t.secondary),
                       ),
                       const SizedBox(height: 26),
                       _ReleaseBody(currentRelease),
@@ -199,14 +196,7 @@ class _ReleaseBody extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        f.title,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: t.primary,
-                        ),
-                      ),
+                      Text(f.title, style: TextStyles.section(context)),
                       const SizedBox(height: 2),
                       Text(
                         f.description,

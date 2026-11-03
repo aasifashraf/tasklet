@@ -187,7 +187,7 @@ List<Widget> quickDateItems(
             weekdayHint(date),
             style: TextStyles.meta(context),
           ),
-          child: Text(label, style: const TextStyle(fontSize: 12)),
+          child: Text(label),
         ),
       ),
   ];
@@ -430,7 +430,7 @@ class _ToggleItemState extends State<_ToggleItem> {
           ? Icon(Icons.check, size: 14, color: Tokens.of(context).primary)
           : null,
     ),
-    child: Text(widget.label, style: const TextStyle(fontSize: 12)),
+    child: Text(widget.label),
   );
 }
 

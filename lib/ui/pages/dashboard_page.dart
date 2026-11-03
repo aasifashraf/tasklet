@@ -73,18 +73,14 @@ class DashboardPage extends ConsumerWidget {
                         ref.watch(nowProvider),
                         ref.watch(prefsProvider.select((p) => p.userName)),
                       ),
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                        color: t.primary,
-                      ),
+                      style: TextStyles.display(context),
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     fullDate(today),
-                    style: TextStyles.bodySecondary(context)
-                        .copyWith(fontSize: 13),
+                    style: TextStyles.bodyLarge(context)
+                        .copyWith(color: t.secondary),
                   ),
                   const SizedBox(height: 28),
                   if (data.isEmpty)
@@ -177,11 +173,9 @@ class _GlanceStrip extends StatelessWidget {
           children: [
             Text(
               '$value',
-              style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.w600,
-                color: value > 0 && color != null ? color : t.primary,
-              ),
+              style: TextStyles.stat(
+                context,
+              ).copyWith(color: value > 0 && color != null ? color : t.primary),
             ),
             const SizedBox(height: 2),
             Text(label, style: TextStyles.bodySecondary(context)),

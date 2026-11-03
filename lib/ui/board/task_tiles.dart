@@ -73,7 +73,7 @@ Widget? datePill(
         const SizedBox(width: 5),
         Text(
           label,
-          style: TextStyle(fontSize: 11.5, color: color ?? t.secondary),
+          style: TextStyles.chip(context).copyWith(color: color ?? t.secondary),
         ),
       ],
     ),
@@ -208,11 +208,7 @@ class TaskCard extends ConsumerWidget {
                     task.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      color: t.primary,
-                      height: 1.35,
-                    ),
+                    style: TextStyles.bodyLarge(context).copyWith(height: 1.35),
                   ),
                 ),
               ),
@@ -327,7 +323,7 @@ class TaskRow extends ConsumerWidget {
                       task.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 12.5, color: t.primary),
+                      style: TextStyles.bodyLarge(context),
                     ),
                   ),
                   ?datePill(

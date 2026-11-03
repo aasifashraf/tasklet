@@ -116,10 +116,7 @@ class _SectionHeader extends StatelessWidget {
               const SizedBox(width: 2),
               StatusIcon(status),
               const SizedBox(width: 8),
-              Text(
-                status.label,
-                style: TextStyles.section(context).copyWith(fontSize: 12.5),
-              ),
+              Text(status.label, style: TextStyles.section(context)),
               const SizedBox(width: 6),
               CountText(count),
               const Spacer(),

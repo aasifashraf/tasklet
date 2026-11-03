@@ -536,8 +536,7 @@ class _Row extends StatelessWidget {
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 12.5,
+                style: TextStyles.bodyLarge(context).copyWith(
                   color: selected ? t.primary : t.secondary,
                   fontWeight: selected ? FontWeight.w500 : FontWeight.normal,
                 ),

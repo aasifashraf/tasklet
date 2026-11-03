@@ -165,7 +165,7 @@ class PropChip extends StatelessWidget {
                 label!,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 11.5, color: t.secondary),
+                style: TextStyles.chip(context),
               ),
             ),
         ],
@@ -354,7 +354,6 @@ Widget menuItem(
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 12,
             color: danger
                 ? (onPressed == null
                       ? t.danger.withValues(alpha: 0.4)
@@ -380,7 +379,6 @@ Widget submenuItem(
     child: Text(
       label,
       style: TextStyle(
-        fontSize: 12,
         color: menuChildren.isEmpty ? Tokens.of(context).tertiary : null,
       ),
     ),
@@ -404,7 +402,7 @@ Widget checkItem(
         width: 16,
         child: checked ? Icon(Icons.check, size: 14, color: t.primary) : null,
       ),
-      child: Text(label, style: const TextStyle(fontSize: 12)),
+      child: Text(label),
     );
   },
 );

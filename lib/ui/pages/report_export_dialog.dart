@@ -94,10 +94,7 @@ class _ExportDialogState extends ConsumerState<_ExportDialog> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                'Export Report',
-                style: TextStyles.section(context).copyWith(fontSize: 15),
-              ),
+              Text('Export Report', style: TextStyles.pageTitle(context)),
               const SizedBox(height: 4),
               Text('Covers $_tasks.', style: TextStyles.bodySecondary(context)),
               const SizedBox(height: 16),
@@ -173,12 +170,7 @@ class _ExportDialogState extends ConsumerState<_ExportDialog> {
                               _charts
                                   .map((c) => '```mermaid\n${c.mermaid}\n```')
                                   .join('\n\n'),
-                              style: TextStyle(
-                                fontFamily: 'Consolas',
-                                fontSize: 11.5,
-                                color: t.primary,
-                                height: 1.4,
-                              ),
+                              style: TextStyles.code(context),
                             )
                           : Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -76,8 +77,13 @@ void main() {
 
     // Sidebar shows the project; All Tasks shows the board with both tasks.
     expect(find.text('Website'), findsWidgets);
-    appRouter.go('/my-tasks');
+    // Clicking the sidebar row navigates (a mouse click, as on desktop).
+    await tester.tap(
+      find.text('All Tasks').first,
+      kind: PointerDeviceKind.mouse,
+    );
     await settle(tester, rounds: 5);
+    expect(appRouter.routerDelegate.currentConfiguration.uri.path, '/my-tasks');
     expect(find.text('Write the homepage copy'), findsOneWidget);
     expect(find.text('Recent first'), findsOneWidget);
 

@@ -172,7 +172,7 @@ class _ToolbarButton extends StatelessWidget {
           children: [
             Icon(icon, size: 14, color: t.secondary),
             const SizedBox(width: 6),
-            Text(label, style: TextStyle(fontSize: 12, color: t.secondary)),
+            Text(label, style: TextStyles.bodySecondary(context)),
             if (badge != null && badge! > 0) ...[
               const SizedBox(width: 6),
               Container(
@@ -183,7 +183,7 @@ class _ToolbarButton extends StatelessWidget {
                 ),
                 child: Text(
                   '$badge',
-                  style: TextStyle(fontSize: 10, color: t.onAccent),
+                  style: TextStyles.meta(context).copyWith(color: t.onAccent),
                 ),
               ),
             ],
@@ -222,7 +222,7 @@ class _LiveCheck extends ConsumerWidget {
             ? Icon(Icons.check, size: 14, color: Tokens.of(context).primary)
             : null,
       ),
-      child: Text(label, style: const TextStyle(fontSize: 12)),
+      child: Text(label),
     );
   }
 }

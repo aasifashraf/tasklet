@@ -142,14 +142,33 @@ class Tokens extends ThemeExtension<Tokens> {
       t < 0.5 || other == null ? this : other;
 }
 
-/// Type scale (SPEC §8.1): 12px body, 13px section titles, 14px page titles, 11px meta.
+/// Type scale (SPEC §8.1): 11 meta, 12 body and chips, 13 titles of rows and cards and long text, 13 semibold
+/// sections, 14 page titles, 18 task titles, 20 greetings, 26 numbers. The only place a font size is written
+/// (test/ui/design_system_test.dart); vary color or weight with copyWith, never the size.
 class TextStyles {
   static TextStyle body(BuildContext c) =>
       TextStyle(fontSize: 12, color: Tokens.of(c).primary, height: 1.35);
   static TextStyle bodySecondary(BuildContext c) =>
       body(c).copyWith(color: Tokens.of(c).secondary);
+
+  /// Task titles on cards and rows, sidebar rows, descriptions and other long text.
+  static TextStyle bodyLarge(BuildContext c) =>
+      TextStyle(fontSize: 13, color: Tokens.of(c).primary, height: 1.4);
   static TextStyle meta(BuildContext c) =>
       TextStyle(fontSize: 11, color: Tokens.of(c).tertiary, height: 1.3);
+
+  /// Text inside the 24 px chip shell (PropChip, toggles, date pills).
+  static TextStyle chip(BuildContext c) =>
+      TextStyle(fontSize: 12, color: Tokens.of(c).secondary, height: 1.2);
+
+  /// Monospaced text (Mermaid source).
+  static TextStyle code(BuildContext c) => TextStyle(
+    fontFamily: 'Consolas',
+    fontFamilyFallback: const ['Menlo', 'monospace'],
+    fontSize: 12,
+    color: Tokens.of(c).primary,
+    height: 1.4,
+  );
   static TextStyle section(BuildContext c) => TextStyle(
     fontSize: 13,
     fontWeight: FontWeight.w600,
@@ -162,6 +181,27 @@ class TextStyles {
   );
   static TextStyle pageTitle(BuildContext c) => TextStyle(
     fontSize: 14,
+    fontWeight: FontWeight.w600,
+    color: Tokens.of(c).primary,
+  );
+
+  /// A task's title where it is edited (detail panel, New Task).
+  static TextStyle title(BuildContext c) => TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.w600,
+    color: Tokens.of(c).primary,
+  );
+
+  /// The one large line of a page (Dashboard greeting, Welcome, What's New).
+  static TextStyle display(BuildContext c) => TextStyle(
+    fontSize: 20,
+    fontWeight: FontWeight.w600,
+    color: Tokens.of(c).primary,
+  );
+
+  /// Big numbers (Dashboard glance).
+  static TextStyle stat(BuildContext c) => TextStyle(
+    fontSize: 26,
     fontWeight: FontWeight.w600,
     color: Tokens.of(c).primary,
   );

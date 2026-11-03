@@ -493,8 +493,7 @@ class _Column extends StatelessWidget {
                           maxLines: 1,
                           softWrap: false,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyles.section(context)
-                              .copyWith(fontSize: 12.5),
+                          style: TextStyles.section(context),
                         ),
                       ),
                       const SizedBox(width: 6),

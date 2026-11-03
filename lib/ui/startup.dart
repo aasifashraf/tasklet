@@ -65,14 +65,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                 height: 64,
               ),
               const SizedBox(height: 20),
-              Text(
-                'Welcome to Tasklet',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  color: t.primary,
-                ),
-              ),
+              Text('Welcome to Tasklet', style: TextStyles.display(context)),
               const SizedBox(height: 10),
               Text(
                 'Tasklet keeps your tasks as plain files in a folder you choose. No account, no server. '
@@ -80,7 +73,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                 'across your computers. Each folder is a workspace; add more later (work, freelance, '
                 'open source) and switch between them at the top of the sidebar.',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: t.secondary, height: 1.5),
+                style: TextStyles.bodyLarge(context)
+                    .copyWith(color: t.secondary, height: 1.5),
               ),
               const SizedBox(height: 28),
               SizedBox(

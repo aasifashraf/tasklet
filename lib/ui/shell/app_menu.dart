@@ -304,7 +304,7 @@ class AppMenu extends ConsumerWidget {
                             EdgeInsets.symmetric(horizontal: 10),
                           ),
                           textStyle: WidgetStatePropertyAll(
-                            TextStyle(fontSize: 12, color: t.secondary),
+                            TextStyles.bodySecondary(context),
                           ),
                         ),
                         menuChildren: [
@@ -322,15 +322,12 @@ class AppMenu extends ConsumerWidget {
                                         color: t.primary,
                                       )
                                     : null,
-                                child: Text(
-                                  c.label,
-                                  style: const TextStyle(fontSize: 12),
-                                ),
+                                child: Text(c.label),
                               ),
                         ],
                         child: Text(
                           g.label,
-                          style: TextStyle(fontSize: 12, color: t.secondary),
+                          style: TextStyles.bodySecondary(context),
                         ),
                       ),
                   ],

@@ -93,8 +93,7 @@ class _SettingsPageState extends State<_SettingsPage> {
                           const SizedBox(height: 3),
                           Text(
                             tab.label,
-                            style: TextStyle(
-                              fontSize: 11,
+                            style: TextStyles.meta(context).copyWith(
                               color: tab == _tab ? t.primary : t.secondary,
                             ),
                           ),
@@ -709,7 +708,6 @@ class _TimeSelect extends StatelessWidget {
             child: Text(
               label,
               style: TextStyle(
-                fontSize: 12,
                 fontWeight: label == value ? FontWeight.w600 : null,
               ),
             ),

@@ -217,11 +217,7 @@ class WorkspaceSwitcher extends ConsumerWidget {
             onPressed: () => switchToWorkspace(context, ref, o.folder),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 220),
-              child: Text(
-                o.info.name,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12),
-              ),
+              child: Text(o.info.name, overflow: TextOverflow.ellipsis),
             ),
           ),
         const Divider(),

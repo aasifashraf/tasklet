@@ -66,6 +66,9 @@ void main() {
         if (!isTheme && line.contains('Color(0x')) {
           problems.add('$where raw color (add a token in theme.dart)');
         }
+        if (!isTheme && line.contains('fontSize:')) {
+          problems.add('$where raw font size (use a TextStyles style)');
+        }
         if (!ownsSubmenus && line.contains('SubmenuButton(')) {
           problems.add(
             '$where raw SubmenuButton (use submenuItem so it lines up)',

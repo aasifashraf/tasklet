@@ -318,11 +318,7 @@ class _NewTaskDialogState extends ConsumerState<_NewTaskDialog> {
                     controller: _title,
                     focusNode: _titleFocus,
                     autofocus: true,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: t.primary,
-                    ),
+                    style: TextStyles.title(context),
                     decoration: const InputDecoration(
                       hintText: 'Task title',
                       border: InputBorder.none,
@@ -341,11 +337,7 @@ class _NewTaskDialogState extends ConsumerState<_NewTaskDialog> {
                       controller: _description,
                       maxLines: null,
                       keyboardType: TextInputType.multiline,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: t.primary,
-                        height: 1.45,
-                      ),
+                      style: TextStyles.bodyLarge(context),
                       decoration: const InputDecoration(
                         hintText: 'Add a description…',
                         border: InputBorder.none,

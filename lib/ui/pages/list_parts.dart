@@ -44,10 +44,9 @@ class PillToggle<T> extends StatelessWidget {
                 ),
                 child: Text(
                   value,
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    color: key == selected ? t.primary : t.secondary,
-                  ),
+                  style: TextStyles.chip(
+                    context,
+                  ).copyWith(color: key == selected ? t.primary : t.secondary),
                 ),
               ),
             ),
