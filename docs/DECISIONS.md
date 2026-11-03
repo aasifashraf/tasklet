@@ -140,7 +140,9 @@ typical saves take 6-15 ms, so per-file tracking would add complexity without a 
 SPEC §8.2 and §8.5 give projects a tinted cube and labels a dot in one of 8 colors. Projects and labels can now also
 have an icon, and there are 16 colors.
 
-- Icons come from Lucide (MIT/ISC, `lucide_icons_flutter`, pinned). The picker offers a curated set of about 640
+- Icons come from Lucide 1.58.0 (ISC, with MIT for its Feather-derived icons): `assets/fonts/lucide/lucide.ttf`
+  and its LICENSE are vendored (until 1.1.1 the `lucide_icons_flutter` package shipped it along with six unused
+  weight variants, about 3 MB). The picker offers a curated set of about 640
   project-related icons in 14 categories, with search by name, Lucide's tags and category. The list is
   `tool/icons/catalog.txt`; `tool/icons/gen_catalog.py` turns it into const `IconData` (so release builds keep only
   these glyphs) and refuses names the font lacks or draws empty (Lucide dropped its brand icons).

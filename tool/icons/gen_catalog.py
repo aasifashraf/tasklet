@@ -2,38 +2,23 @@
 
     python -I tool/icons/gen_catalog.py
 
-Codepoints come from the lucide_icons_flutter package in the pub cache (the font the app ships), search keywords
-from Lucide's tags.json for the same Lucide version (downloaded once into .dart_tool/). Fails on any name the font
-doesn't have.
+Codepoints come from tool/icons/lucide-codepoints.json and glyphs from assets/fonts/lucide/lucide.ttf (the font
+the app ships, Lucide LUCIDE_VERSION), search keywords from Lucide's tags.json for the same version (downloaded once
+into .dart_tool/). Fails on any name the font doesn't have. To update Lucide: replace lucide.ttf and its LICENSE from
+lucide-static@<version>, regenerate the codepoints, set LUCIDE_VERSION, run this.
 """
 
 import json
 import pathlib
-import re
 import sys
-import urllib.parse
 import urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 CATALOG = ROOT / "tool" / "icons" / "catalog.txt"
 OUT = ROOT / "lib" / "ui" / "icons" / "project_icons.g.dart"
-PACKAGE = "lucide_icons_flutter"
-
-
-def package_root() -> pathlib.Path:
-    config = json.loads((ROOT / ".dart_tool" / "package_config.json").read_text(encoding="utf-8"))
-    for p in config["packages"]:
-        if p["name"] == PACKAGE:
-            uri = urllib.parse.unquote(p["rootUri"])
-            return pathlib.Path(re.sub(r"^file:///", "", uri))
-    sys.exit(f"{PACKAGE} not found: run flutter pub get")
-
-
-def lucide_version(pkg: pathlib.Path) -> str:
-    match = re.search(r"Lucide version: ([0-9.]+)", (pkg / "README.md").read_text(encoding="utf-8"))
-    if not match:
-        sys.exit("Lucide version not found in the package README")
-    return match.group(1)
+FONT = ROOT / "assets" / "fonts" / "lucide" / "lucide.ttf"
+CODEPOINTS = ROOT / "tool" / "icons" / "lucide-codepoints.json"
+LUCIDE_VERSION = "1.58.0"
 
 
 def tags(version: str) -> dict:
@@ -116,14 +101,13 @@ def dart_string(s: str) -> str:
 
 
 def main() -> None:
-    pkg = package_root()
-    codepoints = json.loads((pkg / "assets" / "codepoints.json").read_text(encoding="utf-8"))
-    keywords = tags(lucide_version(pkg))
+    codepoints = json.loads(CODEPOINTS.read_text(encoding="utf-8"))
+    keywords = tags(LUCIDE_VERSION)
     categories = catalog()
     missing = sorted({n for _, names in categories for n in names if n not in codepoints})
     if missing:
         sys.exit("Not in the Lucide font: " + " ".join(missing))
-    drawn = drawn_codepoints((pkg / "assets" / "lucide.ttf").read_bytes())
+    drawn = drawn_codepoints(FONT.read_bytes())
     blank = sorted({n for _, names in categories for n in names if codepoints[n] not in drawn})
     if blank:
         sys.exit("Empty glyph in the Lucide font (removed icon): " + " ".join(blank))
@@ -134,7 +118,6 @@ def main() -> None:
         "part of 'project_icons.dart';",
         "",
         "const _font = 'Lucide';",
-        f"const _package = '{PACKAGE}';",
         "",
         "const iconCategories = <IconCategory>[",
     ]
@@ -145,8 +128,7 @@ def main() -> None:
             words = [name.replace("-", " "), *keywords.get(name, []), category.lower()]
             text = " ".join(dict.fromkeys(w.lower() for w in words))
             out.append(
-                f"    ProjectIcon({dart_string(name)}, IconData(0x{codepoints[name]:x}, fontFamily: _font, "
-                f"fontPackage: _package), {dart_string(text)}),"
+                f"    ProjectIcon({dart_string(name)}, IconData(0x{codepoints[name]:x}, fontFamily: _font), {dart_string(text)}),"
             )
             seen.add(name)
         out.append("  ]),")
