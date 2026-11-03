@@ -17,7 +17,7 @@ Read with `Tokens.of(context)`. Never write `Color(0x…)` outside `theme.dart` 
 | `primary` | titles and body text |
 | `secondary` | supporting text, sidebar labels, chip text |
 | `tertiary` | meta text, placeholders, idle icons, disabled items |
-| `accent` | the one action color: primary buttons, focus, Done |
+| `accent`, `onAccent` | the one action color (#3570EA): primary buttons, focus, Done; `onAccent` is the text on it (white, 4.5:1) |
 | `danger`, `warning`, `success` | destructive actions, warnings, confirmations |
 | `named(TaskletColor)` | the 16 user colors for projects, labels, quick filters and workspaces: glyphs, dots and fills, never body text; each reaches 3:1 on every surface (darker shades in the light theme where needed) |
 

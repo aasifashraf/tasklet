@@ -23,6 +23,14 @@ void main() {
       }
     });
 
+    test('$name accent: button text reads on it, and it reads as a focus ring '
+        'and icon on every surface', () {
+      expect(contrast(t.onAccent, t.accent), greaterThanOrEqualTo(4.5));
+      for (final bg in [t.background, t.sidebar, t.surface, t.raised]) {
+        expect(contrast(t.accent, bg), greaterThanOrEqualTo(3));
+      }
+    });
+
     test('$name project and label colors read as glyphs on every surface', () {
       for (final c in TaskletColor.values) {
         for (final bg in [t.background, t.sidebar, t.surface, t.raised]) {

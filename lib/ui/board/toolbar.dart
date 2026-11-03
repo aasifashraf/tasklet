@@ -183,7 +183,7 @@ class _ToolbarButton extends StatelessWidget {
                 ),
                 child: Text(
                   '$badge',
-                  style: const TextStyle(fontSize: 10, color: Colors.white),
+                  style: TextStyle(fontSize: 10, color: t.onAccent),
                 ),
               ),
             ],

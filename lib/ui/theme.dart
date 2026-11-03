@@ -19,6 +19,7 @@ class Tokens extends ThemeExtension<Tokens> {
     required this.secondary,
     required this.tertiary,
     required this.accent,
+    required this.onAccent,
     required this.danger,
     required this.warning,
     required this.success,
@@ -37,12 +38,16 @@ class Tokens extends ThemeExtension<Tokens> {
   final Color secondary;
   final Color tertiary;
   final Color accent;
+
+  /// Text and icons on an accent fill (primary buttons, badges): at least 4.5:1 on [accent].
+  final Color onAccent;
   final Color danger;
   final Color warning;
   final Color success;
   final Color backdrop;
 
-  static const _accent = Color(0xFF3E7BFA);
+  // Deep enough for white 12 px text at 4.5:1 (WCAG AA), checked by test/ui/design_system_test.dart.
+  static const _accent = Color(0xFF3570EA);
 
   static const light = Tokens(
     background: Color(0xFFFFFFFF),
@@ -52,12 +57,13 @@ class Tokens extends ThemeExtension<Tokens> {
     border: Color(0xFFE4E4E7),
     hover: Color(0x0A000000),
     selected: Color(0x12000000),
-    openHighlight: Color(0x143E7BFA),
+    openHighlight: Color(0x143570EA),
     primary: Color(0xFF1C1C1E),
     // Contrast floors (test/ui/design_system_test.dart): secondary ≥ 4.5:1, tertiary ≥ 3:1 on every surface.
     secondary: Color(0xA61C1C1E),
     tertiary: Color(0x8C1C1C1E),
     accent: _accent,
+    onAccent: Color(0xFFFFFFFF),
     danger: Color(0xFFE5484D),
     warning: Color(0xFFF2780C),
     success: Color(0xFF2EA44F),
@@ -72,11 +78,12 @@ class Tokens extends ThemeExtension<Tokens> {
     border: Color(0xFF2E2E33),
     hover: Color(0x0FFFFFFF),
     selected: Color(0x1AFFFFFF),
-    openHighlight: Color(0x263E7BFA),
+    openHighlight: Color(0x263570EA),
     primary: Color(0xFFEDEDEF),
     secondary: Color(0x99EDEDEF),
     tertiary: Color(0x80EDEDEF),
     accent: _accent,
+    onAccent: Color(0xFFFFFFFF),
     danger: Color(0xFFFF6369),
     warning: Color(0xFFFF8B3E),
     success: Color(0xFF3FB950),
@@ -260,7 +267,7 @@ ThemeData buildTheme(Brightness brightness) {
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         backgroundColor: t.accent,
-        foregroundColor: Colors.white,
+        foregroundColor: t.onAccent,
         textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
         minimumSize: const Size(0, 30),
         padding: const EdgeInsets.symmetric(horizontal: 12),
