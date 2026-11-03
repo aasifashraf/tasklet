@@ -41,3 +41,10 @@ milestone's behavior working. Section numbers refer to [SPEC.md](SPEC.md).
 Reuse `lib/core/` and `lib/state/` unchanged. Adaptive shell (drawer sidebar, full-screen detail, Settings as a page,
 long-press menus). Storage: iOS iCloud container / Files picker with security-scoped bookmarks; Android Storage Access
 Framework, only `lib/data/` changes.
+
+## Phase 3, Shared workspaces for small teams
+
+Personal by default; a workspace on a shared folder can also serve a team of about 2 to 10 people. Assign a task to
+yourself or someone else (one assignee per task), see who is doing what, and filter boards, lists and quick filters by
+person, including Me and Unassigned. No roles or permissions (a shared folder can't enforce them), no server. Design:
+[SHARED_WORKSPACES.md](SHARED_WORKSPACES.md).
