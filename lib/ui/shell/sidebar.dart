@@ -87,7 +87,8 @@ class _SidebarState extends ConsumerState<Sidebar> {
                         before: before?.id,
                         after: after?.id,
                       ),
-                      itemBuilder: (v) => _viewRow(context, v, pinned, path),
+                      itemBuilder: (v, i) =>
+                          _viewRow(context, v, pinned, i, path),
                     ),
                   ),
                 if (favorites.isNotEmpty)
@@ -103,10 +104,11 @@ class _SidebarState extends ConsumerState<Sidebar> {
                         after: after?.id,
                         favorites: true,
                       ),
-                      itemBuilder: (p) => _projectRow(
+                      itemBuilder: (p, i) => _projectRow(
                         context,
                         p,
                         favorites,
+                        i,
                         path,
                         favoritesList: true,
                       ),
@@ -125,10 +127,11 @@ class _SidebarState extends ConsumerState<Sidebar> {
                         after: after?.id,
                         favorites: false,
                       ),
-                      itemBuilder: (p) => _projectRow(
+                      itemBuilder: (p, i) => _projectRow(
                         context,
                         p,
                         plain,
+                        i,
                         path,
                         favoritesList: false,
                       ),
@@ -140,11 +143,12 @@ class _SidebarState extends ConsumerState<Sidebar> {
                     label: 'Archived',
                     child: Column(
                       children: [
-                        for (final p in archived)
+                        for (final (i, p) in archived.indexed)
                           _projectRow(
                             context,
                             p,
                             archived,
+                            i,
                             path,
                             favoritesList: false,
                           ),
@@ -224,7 +228,7 @@ class _SidebarState extends ConsumerState<Sidebar> {
               for (final n in order) n.name,
             ]);
           },
-          itemBuilder: row,
+          itemBuilder: (item, _) => row(item),
         ),
       ],
     );
@@ -234,12 +238,12 @@ class _SidebarState extends ConsumerState<Sidebar> {
     BuildContext context,
     Project p,
     List<Project> section,
+    int index,
     String path, {
     required bool favoritesList,
   }) {
     final key = 'project:${p.id}';
     final selected = path == '/projects/${p.id}';
-    final index = section.indexOf(p);
     List<Widget> menu() => [
       menuItem(
         p.favorite ? 'Unpin from Favorites' : 'Pin to Favorites',
@@ -330,10 +334,10 @@ class _SidebarState extends ConsumerState<Sidebar> {
     BuildContext context,
     SavedView v,
     List<SavedView> section,
+    int index,
     String path,
   ) {
     final key = 'view:${v.id}';
-    final index = section.indexOf(v);
     List<Widget> menu() => [
       menuItem('Rename', onPressed: () => setState(() => _renaming = key)),
       iconMenuItem(
@@ -615,7 +619,7 @@ class _Reorderable<T> extends StatelessWidget {
 
   /// Called with the moved item and its new neighbors (null at the ends).
   final void Function(T item, T? before, T? after) onMove;
-  final Widget Function(T item) itemBuilder;
+  final Widget Function(T item, int index) itemBuilder;
 
   @override
   Widget build(BuildContext context) => ReorderableListView.builder(
@@ -644,7 +648,7 @@ class _Reorderable<T> extends StatelessWidget {
     itemBuilder: (context, index) => _VerticalDragStart(
       key: ValueKey(keyOf(items[index])),
       index: index,
-      child: itemBuilder(items[index]),
+      child: itemBuilder(items[index], index),
     ),
   );
 }
