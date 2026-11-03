@@ -245,12 +245,6 @@ class _FilterButton extends ConsumerWidget {
     Set<T> toggle<T>(Set<T> s, T v) =>
         s.contains(v) ? ({...s}..remove(v)) : {...s, v};
 
-    Widget submenu(String label, List<Widget> children) => SubmenuButton(
-      menuChildren: children,
-      leadingIcon: const SizedBox(width: 16),
-      child: Text(label, style: const TextStyle(fontSize: 12)),
-    );
-
     final projects = ws.projects.where((p) => !p.archived).toList()
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     final projectLabels = board.availableLabels
@@ -262,121 +256,137 @@ class _FilterButton extends ConsumerWidget {
 
     return MenuAnchor(
       menuChildren: [
-        submenu('Status', [
-          for (final s in TaskStatus.values)
-            _LiveCheck(
-              label: s.label,
-              leading: StatusIcon(s),
-              isChecked: (r) => watched(r).status.contains(s),
-              onToggle: (r) => update(
-                r,
-                current(r).copyWith(status: toggle(current(r).status, s)),
-              ),
-            ),
-        ]),
-        submenu('Priority', [
-          for (final p in [
-            Priority.none,
-            Priority.urgent,
-            Priority.high,
-            Priority.medium,
-            Priority.low,
-          ]) ...[
-            _LiveCheck(
-              label: p.label,
-              leading: PriorityIcon(p),
-              isChecked: (r) => watched(r).priorities.contains(p),
-              onToggle: (r) => update(
-                r,
-                current(r)
-                    .copyWith(priorities: toggle(current(r).priorities, p)),
-              ),
-            ),
-            if (p == Priority.none) const Divider(),
-          ],
-        ]),
-        if (kind.crossProject)
-          submenu('Project', [
-            _LiveCheck(
-              label: 'All Projects',
-              isChecked: (r) => watched(r).projects.isEmpty,
-              onToggle: (r) =>
-                  update(r, current(r).copyWith(projects: const {})),
-            ),
-            _LiveCheck(
-              label: 'No Project',
-              leading: CubeIcon(color: t.tertiary, size: 12),
-              isChecked: (r) => watched(r).projects.contains(noProjectId),
-              onToggle: (r) => update(
-                r,
-                current(r).copyWith(
-                  projects: toggleProjectFilter(
-                    current(r).projects,
-                    noProjectId,
-                  ),
+        submenuItem(
+          'Status',
+          menuChildren: [
+            for (final s in TaskStatus.values)
+              _LiveCheck(
+                label: s.label,
+                leading: StatusIcon(s),
+                isChecked: (r) => watched(r).status.contains(s),
+                onToggle: (r) => update(
+                  r,
+                  current(r).copyWith(status: toggle(current(r).status, s)),
                 ),
               ),
-            ),
-            if (projects.isNotEmpty) const Divider(),
-            for (final p in projects)
+          ],
+        ),
+        submenuItem(
+          'Priority',
+          menuChildren: [
+            for (final p in [
+              Priority.none,
+              Priority.urgent,
+              Priority.high,
+              Priority.medium,
+              Priority.low,
+            ]) ...[
               _LiveCheck(
-                label: p.name,
-                leading: ProjectGlyph(p, size: 12),
-                isChecked: (r) => watched(r).projects.contains(p.id),
+                label: p.label,
+                leading: PriorityIcon(p),
+                isChecked: (r) => watched(r).priorities.contains(p),
+                onToggle: (r) => update(
+                  r,
+                  current(r)
+                      .copyWith(priorities: toggle(current(r).priorities, p)),
+                ),
+              ),
+              if (p == Priority.none) const Divider(),
+            ],
+          ],
+        ),
+        if (kind.crossProject)
+          submenuItem(
+            'Project',
+            menuChildren: [
+              _LiveCheck(
+                label: 'All Projects',
+                isChecked: (r) => watched(r).projects.isEmpty,
+                onToggle: (r) =>
+                    update(r, current(r).copyWith(projects: const {})),
+              ),
+              _LiveCheck(
+                label: 'No Project',
+                leading: CubeIcon(color: t.tertiary, size: 12),
+                isChecked: (r) => watched(r).projects.contains(noProjectId),
                 onToggle: (r) => update(
                   r,
                   current(r).copyWith(
-                    projects: toggleProjectFilter(current(r).projects, p.id),
+                    projects: toggleProjectFilter(
+                      current(r).projects,
+                      noProjectId,
+                    ),
                   ),
                 ),
               ),
-          ]),
-        submenu('Label', [
-          _LiveCheck(
-            label: 'No Label',
-            leading: Icon(Icons.circle_outlined, size: 11, color: t.tertiary),
-            isChecked: (r) => watched(r).labels.contains(noLabelFilterId),
-            onToggle: (r) => update(
-              r,
-              current(r)
-                  .copyWith(labels: toggle(current(r).labels, noLabelFilterId)),
-            ),
+              if (projects.isNotEmpty) const Divider(),
+              for (final p in projects)
+                _LiveCheck(
+                  label: p.name,
+                  leading: ProjectGlyph(p, size: 12),
+                  isChecked: (r) => watched(r).projects.contains(p.id),
+                  onToggle: (r) => update(
+                    r,
+                    current(r).copyWith(
+                      projects: toggleProjectFilter(current(r).projects, p.id),
+                    ),
+                  ),
+                ),
+            ],
           ),
-          if (board.availableLabels.isNotEmpty) const Divider(),
-          for (final (l, p) in projectLabels)
+        submenuItem(
+          'Label',
+          menuChildren: [
             _LiveCheck(
-              label: kind.crossProject ? '${l.name} (${p!.name})' : l.name,
-              leading: LabelGlyph(l),
-              isChecked: (r) => watched(r).labels.contains(l.id),
+              label: 'No Label',
+              leading: Icon(Icons.circle_outlined, size: 11, color: t.tertiary),
+              isChecked: (r) => watched(r).labels.contains(noLabelFilterId),
               onToggle: (r) => update(
                 r,
-                current(r).copyWith(labels: toggle(current(r).labels, l.id)),
+                current(
+                  r,
+                ).copyWith(labels: toggle(current(r).labels, noLabelFilterId)),
               ),
             ),
-          if (projectLabels.isNotEmpty && workspaceLabels.isNotEmpty)
-            const Divider(),
-          for (final (l, _) in workspaceLabels)
-            _LiveCheck(
-              label: l.name,
-              leading: LabelGlyph(l),
-              isChecked: (r) => watched(r).labels.contains(l.id),
-              onToggle: (r) => update(
-                r,
-                current(r).copyWith(labels: toggle(current(r).labels, l.id)),
+            if (board.availableLabels.isNotEmpty) const Divider(),
+            for (final (l, p) in projectLabels)
+              _LiveCheck(
+                label: kind.crossProject ? '${l.name} (${p!.name})' : l.name,
+                leading: LabelGlyph(l),
+                isChecked: (r) => watched(r).labels.contains(l.id),
+                onToggle: (r) => update(
+                  r,
+                  current(r).copyWith(labels: toggle(current(r).labels, l.id)),
+                ),
               ),
-            ),
-        ]),
-        submenu('Due Date', [
-          for (final d in DueFilter.values)
-            _LiveCheck(
-              label: d.label,
-              isChecked: (r) => watched(r).due.contains(d),
-              onToggle: (r) => update(
-                r,
-                current(r).copyWith(due: toggle(current(r).due, d)),
+            if (projectLabels.isNotEmpty && workspaceLabels.isNotEmpty)
+              const Divider(),
+            for (final (l, _) in workspaceLabels)
+              _LiveCheck(
+                label: l.name,
+                leading: LabelGlyph(l),
+                isChecked: (r) => watched(r).labels.contains(l.id),
+                onToggle: (r) => update(
+                  r,
+                  current(r).copyWith(labels: toggle(current(r).labels, l.id)),
+                ),
               ),
-            ),
-        ]),
+          ],
+        ),
+        submenuItem(
+          'Due Date',
+          menuChildren: [
+            for (final d in DueFilter.values)
+              _LiveCheck(
+                label: d.label,
+                isChecked: (r) => watched(r).due.contains(d),
+                onToggle: (r) => update(
+                  r,
+                  current(r).copyWith(due: toggle(current(r).due, d)),
+                ),
+              ),
+          ],
+        ),
         const Divider(),
         menuItem(
           'Clear Filters',

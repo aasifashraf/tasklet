@@ -41,6 +41,10 @@ void main() {
     final files = Directory('lib').listSync(recursive: true).whereType<File>();
     for (final file in files.where((f) => f.path.endsWith('.dart'))) {
       final isTheme = file.path.endsWith('theme.dart');
+      // The menu bar styles its own submenus; every other menu uses submenuItem.
+      final ownsSubmenus =
+          file.path.endsWith('widgets.dart') ||
+          file.path.endsWith('app_menu.dart');
       for (final (i, line) in file.readAsLinesSync().indexed) {
         final where = '${file.path}:${i + 1}';
         if (line.contains('\u2014')) {
@@ -53,6 +57,11 @@ void main() {
         }
         if (!isTheme && line.contains('Color(0x')) {
           problems.add('$where raw color (add a token in theme.dart)');
+        }
+        if (!ownsSubmenus && line.contains('SubmenuButton(')) {
+          problems.add(
+            '$where raw SubmenuButton (use submenuItem so it lines up)',
+          );
         }
       }
     }

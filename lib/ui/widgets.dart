@@ -367,6 +367,26 @@ Widget menuItem(
   );
 }
 
+/// A "Label ▸" submenu row whose label lines up with [menuItem]s (same 16 px leading slot). With no children it
+/// is disabled and its label tertiary.
+Widget submenuItem(
+  String label, {
+  required List<Widget> menuChildren,
+  Widget? leading,
+}) => Builder(
+  builder: (context) => SubmenuButton(
+    menuChildren: menuChildren,
+    leadingIcon: SizedBox(width: 16, child: leading),
+    child: Text(
+      label,
+      style: TextStyle(
+        fontSize: 12,
+        color: menuChildren.isEmpty ? Tokens.of(context).tertiary : null,
+      ),
+    ),
+  ),
+);
+
 /// A checkable menu row with a check mark on the right (status/priority/label pickers).
 Widget checkItem(
   String label, {

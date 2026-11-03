@@ -37,23 +37,22 @@ List<Widget> taskMenuChildren(
           .open(TaskRef(e.project.id, task.id)),
     ),
     const Divider(),
-    SubmenuButton(
+    submenuItem(
+      'Status',
       menuChildren: statusMenuItems(
         task.status,
         (s) => actions.setStatus(e, s),
       ),
-      leadingIcon: const SizedBox(width: 16),
-      child: const Text('Status', style: TextStyle(fontSize: 12)),
     ),
-    SubmenuButton(
+    submenuItem(
+      'Priority',
       menuChildren: priorityMenuItems(
         task.priority,
         (p) => actions.setPriority(e, p),
       ),
-      leadingIcon: const SizedBox(width: 16),
-      child: const Text('Priority', style: TextStyle(fontSize: 12)),
     ),
-    SubmenuButton(
+    submenuItem(
+      'Due Date',
       menuChildren: [
         ...quickDateItems(
           today,
@@ -69,10 +68,9 @@ List<Widget> taskMenuChildren(
               : () => actions.setDue(e, null),
         ),
       ],
-      leadingIcon: const SizedBox(width: 16),
-      child: const Text('Due Date', style: TextStyle(fontSize: 12)),
     ),
-    SubmenuButton(
+    submenuItem(
+      'Labels',
       menuChildren: available.isEmpty
           ? const []
           : labelMenuItems(
@@ -81,24 +79,15 @@ List<Widget> taskMenuChildren(
               (l) => actions.toggleLabel(e, l),
               t,
             ),
-      leadingIcon: const SizedBox(width: 16),
-      child: Text(
-        'Labels',
-        style: TextStyle(
-          fontSize: 12,
-          color: available.isEmpty ? t.tertiary : null,
-        ),
-      ),
     ),
-    SubmenuButton(
+    submenuItem(
+      'Move to Project',
       menuChildren: projectMenuItems(
         projectOptions(ws, alsoInclude: e.project.id),
         e.project.id,
         (p) => actions.moveToProject(e, p),
         t,
       ),
-      leadingIcon: const SizedBox(width: 16),
-      child: const Text('Move to Project', style: TextStyle(fontSize: 12)),
     ),
     const Divider(),
     menuItem(

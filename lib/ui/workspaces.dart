@@ -143,7 +143,8 @@ Widget? moveToWorkspaceMenu(
       if (ws != null && !sameFolder(o.folder, ws.folder)) o,
   ];
   if (others.isEmpty) return null;
-  return SubmenuButton(
+  return submenuItem(
+    'Move to Workspace',
     menuChildren: [
       for (final o in others)
         menuItem(
@@ -168,7 +169,6 @@ Widget? moveToWorkspaceMenu(
           },
         ),
     ],
-    child: const Text('Move to Workspace', style: TextStyle(fontSize: 12)),
   );
 }
 
