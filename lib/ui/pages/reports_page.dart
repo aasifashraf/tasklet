@@ -31,6 +31,31 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   ReportFilters _filters = const ReportFilters();
   final int _firstDayOfWeek = osFirstDayOfWeek() ?? DateTime.monday;
 
+  // The live count filters every task; redo it only when the workspace, filters or period change, not on every
+  // rebuild (the workspace snapshot is the same object while nothing changed on disk).
+  ({Workspace ws, ReportFilters filters, LocalDate from, LocalDate to, int n})?
+  _count;
+
+  int _countFor(Workspace ws, ReportPeriod period) {
+    final c = _count;
+    if (c != null &&
+        identical(c.ws, ws) &&
+        identical(c.filters, _filters) &&
+        c.from == period.from &&
+        c.to == period.to) {
+      return c.n;
+    }
+    final n = reportTasks(ws, _filters, period).length;
+    _count = (
+      ws: ws,
+      filters: _filters,
+      from: period.from,
+      to: period.to,
+      n: n,
+    );
+    return n;
+  }
+
   void _setFilters(ReportFilters f, Workspace ws) {
     // Drop selected labels that are no longer in scope for the chosen projects (SPEC §4.9).
     final scoped = {for (final (l, _) in _labelScope(ws, f)) l.id};
@@ -71,7 +96,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
       customFrom: _customFrom,
       customTo: _customTo,
     );
-    final count = reportTasks(ws, _filters, period).length;
+    final count = _countFor(ws, period);
     final labelScope = _labelScope(ws, _filters);
 
     return PageScaffold(

@@ -255,6 +255,22 @@ void main() {
       expect(p['from'], '2026-10-01');
       expect(p['to'], '2026-10-15');
     });
+
+    test('long descriptions are cut at the limit, never inside an emoji', () {
+      expect(reportDescription('  short  '), 'short');
+      final exact = 'a' * reportDescriptionLimit;
+      expect(reportDescription(exact), exact);
+
+      final long = reportDescription('b' * (reportDescriptionLimit + 50));
+      expect(long.length, reportDescriptionLimit + 1);
+      expect(long, endsWith('b…'));
+
+      // An emoji (two UTF-16 units) straddling the limit is dropped whole.
+      final emoji = reportDescription(
+        '${'c' * (reportDescriptionLimit - 1)}😀tail',
+      );
+      expect(emoji, '${'c' * (reportDescriptionLimit - 1)}…');
+    });
   });
 
   group('prompt text', () {

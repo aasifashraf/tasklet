@@ -20,6 +20,21 @@ enum PeriodPreset {
 }
 
 /// An inclusive date range with a display name.
+/// Longest description copied into the report JSON. Longer ones are cut and end with "…", so one huge description
+/// can't crowd the rest of a prompt out.
+const reportDescriptionLimit = 1000;
+
+/// A task description as the report shows it: trimmed and at most [reportDescriptionLimit] characters.
+String reportDescription(String description) {
+  final d = description.trim();
+  if (d.length <= reportDescriptionLimit) return d;
+  var end = reportDescriptionLimit;
+  // Never split a surrogate pair (an emoji) in half.
+  final unit = d.codeUnitAt(end - 1);
+  if (unit >= 0xD800 && unit <= 0xDBFF) end--;
+  return '${d.substring(0, end).trimRight()}…';
+}
+
 class ReportPeriod {
   const ReportPeriod(this.from, this.to, this.name);
   final LocalDate from;
@@ -334,7 +349,7 @@ Map<String, Object?> _taskJson(
 
   return {
     'title': t.title,
-    'description': t.description.trim(),
+    'description': reportDescription(t.description),
     'atPeriodEnd': atEnd,
     'inPeriod': inPeriod,
     'statusNow': t.status.label,
