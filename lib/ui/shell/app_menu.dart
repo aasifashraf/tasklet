@@ -282,54 +282,59 @@ class AppMenu extends ConsumerWidget {
           ),
           child: Row(
             children: [
-              MenuBar(
-                style: const MenuStyle(
-                  backgroundColor: WidgetStatePropertyAll(Colors.transparent),
-                  elevation: WidgetStatePropertyAll(0),
-                  padding: WidgetStatePropertyAll(
-                    EdgeInsets.symmetric(horizontal: 4),
-                  ),
-                  shape: WidgetStatePropertyAll(RoundedRectangleBorder()),
-                ),
-                children: [
-                  for (final g in groups)
-                    SubmenuButton(
-                      style: ButtonStyle(
-                        minimumSize: const WidgetStatePropertyAll(Size(0, 26)),
-                        padding: const WidgetStatePropertyAll(
-                          EdgeInsets.symmetric(horizontal: 10),
-                        ),
-                        textStyle: WidgetStatePropertyAll(
-                          TextStyle(fontSize: 12, color: t.secondary),
-                        ),
-                      ),
-                      menuChildren: [
-                        for (final c in g.items)
-                          if (c == null)
-                            const Divider()
-                          else
-                            MenuItemButton(
-                              onPressed: c.enabled ? c.run : null,
-                              shortcut: c.shortcut,
-                              trailingIcon: c.checked
-                                  ? Icon(
-                                      Icons.check,
-                                      size: 14,
-                                      color: t.primary,
-                                    )
-                                  : null,
-                              child: Text(
-                                c.label,
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                            ),
-                      ],
-                      child: Text(
-                        g.label,
-                        style: TextStyle(fontSize: 12, color: t.secondary),
-                      ),
+              // Bounded so MenuBar scrolls its own items when large text makes them wider than the window.
+              Flexible(
+                child: MenuBar(
+                  style: const MenuStyle(
+                    backgroundColor: WidgetStatePropertyAll(Colors.transparent),
+                    elevation: WidgetStatePropertyAll(0),
+                    padding: WidgetStatePropertyAll(
+                      EdgeInsets.symmetric(horizontal: 4),
                     ),
-                ],
+                    shape: WidgetStatePropertyAll(RoundedRectangleBorder()),
+                  ),
+                  children: [
+                    for (final g in groups)
+                      SubmenuButton(
+                        style: ButtonStyle(
+                          minimumSize: const WidgetStatePropertyAll(
+                            Size(0, 26),
+                          ),
+                          padding: const WidgetStatePropertyAll(
+                            EdgeInsets.symmetric(horizontal: 10),
+                          ),
+                          textStyle: WidgetStatePropertyAll(
+                            TextStyle(fontSize: 12, color: t.secondary),
+                          ),
+                        ),
+                        menuChildren: [
+                          for (final c in g.items)
+                            if (c == null)
+                              const Divider()
+                            else
+                              MenuItemButton(
+                                onPressed: c.enabled ? c.run : null,
+                                shortcut: c.shortcut,
+                                trailingIcon: c.checked
+                                    ? Icon(
+                                        Icons.check,
+                                        size: 14,
+                                        color: t.primary,
+                                      )
+                                    : null,
+                                child: Text(
+                                  c.label,
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ),
+                        ],
+                        child: Text(
+                          g.label,
+                          style: TextStyle(fontSize: 12, color: t.secondary),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ],
           ),

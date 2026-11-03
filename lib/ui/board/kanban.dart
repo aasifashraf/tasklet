@@ -482,18 +482,39 @@ class _Column extends StatelessWidget {
                 const SizedBox(width: 4),
                 StatusIcon(status),
                 const SizedBox(width: 8),
-                Text(
-                  status.label,
-                  style: TextStyles.section(context).copyWith(fontSize: 12.5),
+                // Narrow columns (900 px window, large text) shorten the label and the hint instead of overflowing.
+                Expanded(
+                  child: Row(
+                    children: [
+                      Flexible(
+                        flex: 2,
+                        child: Text(
+                          status.label,
+                          maxLines: 1,
+                          softWrap: false,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyles.section(context)
+                              .copyWith(fontSize: 12.5),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      CountText(tasks.length),
+                      if (status == TaskStatus.done &&
+                          board.display.order == SortOrder.manual) ...[
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            'Recent first',
+                            maxLines: 1,
+                            softWrap: false,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyles.meta(context),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-                const SizedBox(width: 6),
-                CountText(tasks.length),
-                if (status == TaskStatus.done &&
-                    board.display.order == SortOrder.manual) ...[
-                  const SizedBox(width: 8),
-                  Text('Recent first', style: TextStyles.meta(context)),
-                ],
-                const Spacer(),
                 if (!board.readOnly)
                   IconBtn(
                     icon: Icons.add,

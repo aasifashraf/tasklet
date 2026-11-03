@@ -467,9 +467,15 @@ class _Section extends ConsumerWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Text(
-                    label,
-                    style: TextStyles.sectionLabel(context).copyWith(height: 1),
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyles.sectionLabel(context)
+                          .copyWith(height: 1),
+                    ),
                   ),
                   const SizedBox(width: 5),
                   DisclosureTriangle(
