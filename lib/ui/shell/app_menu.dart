@@ -16,6 +16,7 @@ import '../../state/toast.dart';
 import '../../state/ui_state.dart';
 import '../../state/workspace.dart';
 import '../board/task_tiles.dart';
+import '../diagnostics_export.dart';
 import '../workspaces.dart';
 import '../task/new_task_dialog.dart';
 import '../theme.dart';
@@ -204,6 +205,7 @@ List<CommandGroup> buildCommands(BuildContext context, WidgetRef ref) {
     CommandGroup('Window', [AppCommand('Settings', openSettingsWindow)]),
     CommandGroup('Help', [
       AppCommand("What's New", () => showWhatsNew(context, ref)),
+      AppCommand('Export Diagnostics…', () => exportDiagnostics(ref)),
       AppCommand(
         'About Tasklet',
         () => showAboutDialog(
