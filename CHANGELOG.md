@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.2.0, November 2026
+
+- Repeating tasks, counted from the due date or from completion; completing one creates the next and keeps the
+  finished one in your history (two synced computers completing it create one next task)
+- Quick add in New Task: `Fix login tomorrow !high #bug +WEB` fills the due date, priority, label and project
+- Checklists inside tasks, with progress on cards; Markdown descriptions with clickable checkboxes and links
+- Snooze a task until a day; boards can show only Done tasks from the last 7 or 30 days
+- Calendar layout (month and week) with drag to reschedule; bulk select and edit with one Undo
+- Command palette (Ctrl+K), a tasks-only search across every project (Ctrl+Shift+F) and a keyboard shortcut sheet
+  (Ctrl+/ or ?)
+- Import tasks from CSV (Tasklet, Todoist, Linear or any file with a Title column) and export all tasks as CSV
+- Duplicate Project as a template; insights and charts on the Reports page; Help → Export Diagnostics…
+- Windows: the Settings window says when Windows has turned Tasklet's notifications off
+- Every button, chip, row and tab can be reached with Tab and shows a focus ring; darker accent so button text
+  passes contrast guidelines; the Settings window, menu bar and board fit 200% text at the smallest window
+- Faster: switching back to Tasklet with a huge workspace no longer re-checks every task (200 ms -> 60 ms at
+  100,000 tasks), saving a 20,000-task project blocks the window far less, long label and project menus get a
+  search field, and the app download is about 3 MB smaller
+
 ## 1.1.1, November 2026
 
 - Organizations are now called workspaces everywhere (the Workspace menu, New Workspace…, Settings > Workspaces,

@@ -33,6 +33,61 @@ class ReleaseNotes {
 /// `pubspec.yaml` version has none. The sheet shows the newest release first and earlier ones below it.
 const releases = <ReleaseNotes>[
   ReleaseNotes(
+    version: '1.2.0',
+    month: 'November 2026',
+    features: [
+      ReleaseFeature(
+        Icons.repeat,
+        'Repeating tasks',
+        'Daily, weekly, monthly and more, from the due date or from when you finished. Completing one creates the next, and the finished one stays in your history.',
+      ),
+      ReleaseFeature(
+        Icons.bolt_outlined,
+        'Quick add',
+        'Type "Fix login tomorrow !high #bug +WEB" in New Task and the due date, priority, label and project are filled in for you.',
+      ),
+      ReleaseFeature(
+        Icons.keyboard_command_key,
+        'Command palette and search',
+        'Ctrl+K runs any command and opens any project, quick filter or task. Ctrl+Shift+F searches every task in the workspace. Press ? for all shortcuts.',
+      ),
+      ReleaseFeature(
+        Icons.calendar_month_outlined,
+        'Calendar layout',
+        'See tasks on their due dates by month or week, and drag one to another day to reschedule it. Switch between Board, List and Calendar with one click.',
+      ),
+      ReleaseFeature(
+        Icons.checklist_rounded,
+        'Checklists and Markdown',
+        'Break a task into steps, with progress on the card. Descriptions render headings, lists, links and checkboxes you can tick.',
+      ),
+      ReleaseFeature(
+        Icons.select_all,
+        'Bulk edit and snooze',
+        'Ctrl+click to select tasks and change them all at once, with one Undo. Snooze a task until a later day to clear it off your boards and Today.',
+      ),
+      ReleaseFeature(
+        Icons.import_export,
+        'CSV import and export',
+        'Bring tasks in from Todoist, Linear or any spreadsheet, and take them out again. Duplicate a project to use it as a template.',
+      ),
+      ReleaseFeature(
+        Icons.insights_outlined,
+        'Insights in Reports',
+        'Completed per week, days to complete, open and overdue counts, and charts, right on the Reports page.',
+      ),
+    ],
+    fixes: [
+      'Every button, chip and row can be reached with Tab and shows a focus ring.',
+      'Boards can show only Done tasks from the last 7 or 30 days.',
+      'Ctrl+F on a project board no longer shows an error.',
+      'Text fits at large Windows text sizes, including the Settings window.',
+      'Switching back to Tasklet with a huge workspace is much faster.',
+      "The Settings window says when Windows has turned Tasklet's notifications off.",
+      'Help → Export Diagnostics… saves a report for bug reports.',
+    ],
+  ),
+  ReleaseNotes(
     version: '1.1.1',
     month: 'November 2026',
     fixes: [
