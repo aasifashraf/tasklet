@@ -739,9 +739,8 @@ class _DraggableCardState extends ConsumerState<_DraggableCard>
     _flip.forward(from: 0);
   }
 
-  void _open() => ref
-      .read(openTaskProvider.notifier)
-      .open(TaskRef(widget.entry.project.id, widget.entry.task.id));
+  void _open() =>
+      openOrSelect(ref, TaskRef(widget.entry.project.id, widget.entry.task.id));
 
   @override
   Widget build(BuildContext context) {

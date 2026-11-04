@@ -10,6 +10,7 @@ import '../../state/toast.dart';
 import '../../state/ui_state.dart';
 import '../../state/workspace.dart';
 import '../startup.dart';
+import '../board/bulk_bar.dart';
 import '../task/detail_panel.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -126,6 +127,7 @@ class _AppShellState extends ConsumerState<AppShell> with WindowListener {
               ],
             ),
             if (openTask != null) DetailPanelOverlay(taskRef: openTask),
+            const BulkBar(),
             const ToastHost(),
           ],
         ),

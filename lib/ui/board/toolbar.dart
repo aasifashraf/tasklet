@@ -27,7 +27,6 @@ class BoardToolbar extends ConsumerStatefulWidget {
 class _BoardToolbarState extends ConsumerState<BoardToolbar> {
   final _search = TextEditingController();
   final _searchFocus = FocusNode();
-  late int _seenSearchRequest = ref.read(searchRequestProvider);
 
   BoardActions get _actions => BoardActions(ref, widget.kind);
 
@@ -76,11 +75,9 @@ class _BoardToolbarState extends ConsumerState<BoardToolbar> {
     final searchOpen = ref.watch(
       sessionSearchProvider.select((m) => m[widget.kind.id] != null),
     );
-    final request = ref.watch(searchRequestProvider);
-    if (request != _seenSearchRequest) {
-      _seenSearchRequest = request;
-      _openSearch();
-    }
+    // Ctrl+F (Edit → Find): open the search when the request fires. A listener, not a check in build: opening it
+    // changes the session search, and providers can't change while the tree is building.
+    ref.listen(searchRequestProvider, (_, _) => _openSearch());
     if (board == null) return const SizedBox.shrink();
     final t = Tokens.of(context);
     final isToday = widget.kind is TodayBoard;
@@ -453,17 +450,46 @@ class _LayoutToggle extends ConsumerWidget {
       }
     }
 
-    // One button that flips the layout each click; it shows the current layout.
-    final isBoard = layout == BoardLayout.board;
-    return IconBtn(
-      icon: isBoard ? Icons.view_kanban_outlined : Icons.view_list_rounded,
-      tooltip: isBoard
-          ? 'Board view. Click for List'
-          : 'List view. Click for Board',
-      onPressed: () => set(isBoard ? BoardLayout.list : BoardLayout.board),
+    // All three layouts visible, one click each (a segmented control: 2-5 short options, D17), each with a tooltip.
+    final t = Tokens.of(context);
+    return Container(
+      padding: const EdgeInsets.all(1),
+      decoration: BoxDecoration(
+        border: Border.all(color: t.border),
+        borderRadius: BorderRadius.circular(Radii.small),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final l in BoardLayout.values)
+            Semantics(
+              selected: l == layout,
+              child: IconBtn(
+                icon: layoutIcon(l),
+                size: 24,
+                iconSize: 15,
+                active: l == layout,
+                tooltip: '${layoutName(l)} view',
+                onPressed: () => set(l),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
+
+String layoutName(BoardLayout l) => switch (l) {
+  BoardLayout.board => 'Board',
+  BoardLayout.list => 'List',
+  BoardLayout.calendar => 'Calendar',
+};
+
+IconData layoutIcon(BoardLayout l) => switch (l) {
+  BoardLayout.board => Icons.view_kanban_outlined,
+  BoardLayout.list => Icons.view_list_rounded,
+  BoardLayout.calendar => Icons.calendar_month_outlined,
+};
 
 class _DisplayButton extends ConsumerWidget {
   const _DisplayButton({required this.kind});
@@ -527,6 +553,16 @@ class _DisplayButton extends ConsumerWidget {
                 .copyWith(hideEmptySections: !current(r).hideEmptySections),
           ),
         ),
+        const Divider(),
+        heading('Done'),
+        for (final days in ViewDisplay.doneWindows)
+          _LiveCheck(
+            label: days == null
+                ? 'All Done Tasks'
+                : 'Done in the Last $days Days',
+            isChecked: (r) => watched(r).doneWithinDays == days,
+            onToggle: (r) => set(r, current(r).copyWith(doneWithinDays: days)),
+          ),
         const Divider(),
         heading('Properties'),
         for (final MapEntry(key: p, value: label) in properties.entries)

@@ -15,6 +15,7 @@ import '../icon_picker.dart';
 import '../task/new_task_dialog.dart';
 import '../widgets.dart';
 import 'page_scaffold.dart';
+import '../board/calendar_view.dart';
 
 /// All Tasks (SPEC §4.3).
 class AllTasksPage extends StatelessWidget {
@@ -188,6 +189,9 @@ class BoardBody extends ConsumerWidget {
     void onAdd(TaskStatus status) =>
         openNewTaskForBoard(context, ref, kind, status: status);
     final layout = isToday ? BoardLayout.list : board.display.layout;
+    if (layout == BoardLayout.calendar) {
+      return CalendarView(groups: board.groups, readOnly: readOnly);
+    }
     if (layout == BoardLayout.list) {
       return TaskListView(
         groups: board.groups,
