@@ -216,3 +216,49 @@ It is written only into a fresh folder: no marker, labels.json, views.json or pr
 has Tasklet data, an imported workspace (D15) and the development data-folder override never get it, so existing
 data is never added to or changed. The content lives in `lib/core/starter.dart`.
 
+
+## D17. Features beyond v1 (researched Nov 3, 2026)
+
+Each choice keeps the folder the source of truth: new task fields are optional, written only when set, and kept by
+older versions (D1); no format version bump. Research notes: Todoist and TickTick help pages and user reports,
+todo.txt tools, Linear.
+
+- **Snooze** (`snoozedUntil`) and **checklists** (`checklist: [{id, text, done}]`): see SPEC §2 and §7.3. A
+  checklist merges between computers as one field (newer edit wins), like a task's labels.
+- **Recurring tasks** (`repeat: {every, unit, from}`; unit day, weekday, week, month or year; from `due` or
+  `completion`). Completing creates the next task and leaves the finished one Done: Done is a log and Reports count
+  completions, so rolling one task forward (Todoist) would erase its history. Both anchors are offered because
+  users praise TickTick for it and fault apps without it (chores repeat from completion, bills from the due date).
+  The next due date skips past today, so a late completion never creates an already overdue task; months clamp to
+  their last day (Jan 31 + 1 month = Feb 28). The rule moves to the new task, so reopening and completing the old
+  one doesn't create another. The new task's id is derived from the finished one and its date, so two computers
+  completing the same occurrence produce one next task after the merge (D13), not two. Undo of the completion
+  removes the created task.
+- **Quick add** in New Task: `#label`, `+project` (by key or name start), `!urgent`/`!high`/`!medium`/`!low` or
+  `!1`-`!4`, and dates (`today`, `tomorrow`, weekdays, `next week`, `in 3 days`, `nov 5`, `2026-11-05`). A token is
+  taken only when it matches something (an existing label or project, a real date), so `#1 priority` stays text;
+  recognised tokens show as chips and leave the title. Todoist's `@label` and `p1` are not used: `@` and `p1` are
+  common in developer titles.
+- **Global search**: Ctrl+Shift+F opens the palette's box in a tasks-only mode (VS Code's split: Ctrl+K to go
+  anywhere or run a command, Ctrl+Shift+F to search): every task by ID, title, description and checklist, Done tasks
+  and archived projects included, each with its project, status and due date, up to 200 results. Ctrl+K keeps
+  commands, projects and quick filters first and shows at most 30 tasks.
+- **Auto-archive Done tasks**: not as a separate archive file (todo.txt's done.txt). A second file would hide tasks
+  from older versions, Reports and search. Boards get a display option instead, "Done shown: All / 7 / 30 days",
+  and small files for huge projects stay the v2 plan (chunked project files, SYSTEM_DESIGN option F).
+- **Templates**: Duplicate Project… copies a project with its tasks reset to Todo, completion and dates cleared,
+  checklists unticked. Task templates are a duplicate of a task.
+- **Bulk edit**: Ctrl/Shift-click selects cards and rows; a bar sets status, priority, labels, project or due date,
+  or deletes, with one Undo for all.
+- **Markdown descriptions**: shown rendered (paragraphs, headings, lists, `- [ ]` checkboxes that toggle, links,
+  bold, italic, code) when not being edited; the stored text stays plain Markdown.
+- **Layout switcher**: three layouts are picked with a segmented control (Board / List / Calendar icons), not a
+  button that cycles or a dropdown. Design-system guidance puts 2-5 short options in a segmented control: every option
+  visible, one click each; a cycling button hides two and a dropdown costs two clicks. Linear shows layout icons the
+  same way; Todoist uses a View menu, which Tasklet also has (View → Board/List/Calendar Layout, palette too).
+- **Calendar**: a third board layout, so filters, search and quick filters apply; tasks on their due date (snoozed
+  ones hidden), drag to another day sets the due date with Undo. Week and month.
+- **Import / export**: CSV export of a board; CSV import mapped by column names (title, description, status,
+  priority, due, labels, project), which reads Todoist's and Linear's CSV exports. Imported tasks are new tasks.
+- **Insights in Reports**: throughput per week, cycle time and the open/overdue trend drawn in the Reports page from
+  the same report data the prompt uses.

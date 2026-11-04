@@ -30,11 +30,18 @@ milestone's behavior working. Section numbers refer to [SPEC.md](SPEC.md).
 - [x] **Performance**: incremental reads, patched boards, faster search, dashboard and reports at 100k tasks
       ([PERFORMANCE.md](PERFORMANCE.md))
 
+## v1.2, released November 2026 (DECISIONS D17)
+
+- [x] **Recurring tasks**, **quick add**, **checklists**, **Markdown descriptions**, **snooze**
+- [x] **Calendar layout**, **bulk edit**, Done shown for 7/30 days per board
+- [x] **Command palette** (Ctrl+K), keyboard shortcut sheet, search all tasks
+- [x] **CSV import/export**, Duplicate Project (templates), Reports insights, Export Diagnostics
+- [x] Keyboard focus everywhere, accent contrast, large-text layouts, design tokens
+- [x] Smoother dragging, searchable pickers, frame-time test; faster refresh and saves at 100k-500k tasks
+
 ## Next
 
-- [ ] Smoother dragging, searchable pickers and a frame-time test
-- [ ] Stress runs at 100,000 and 500,000 tasks; Help → Export Diagnostics
-- [ ] Code-signed Windows installer; macOS release (milestone 11)
+- [ ] Frame-time numbers in profile mode; code-signed Windows installer; macOS release (milestone 11)
 
 ## Phase 2, iOS + Android
 

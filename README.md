@@ -45,6 +45,8 @@ planned.
 | **List layout and light theme:** compact rows grouped by status. | **New Task (Ctrl+N):** type a title, set properties with chips, press Enter. |
 | ![Workspace menu listing Acme Corp, Freelance and Open Source with Ctrl+Alt shortcuts, plus New, Open Existing, Edit, Export and Import](docs/screenshots/workspaces.png) | ![Icon picker with search, 16 colors and project-related icons grouped by category](docs/screenshots/icon-picker.png) |
 | **Workspaces:** each one is its own folder; switch at the top of the sidebar or with Ctrl+Alt+1 … 9. | **Icons and colors:** about 640 project-related icons and 16 colors for projects, labels and quick filters. |
+| ![Command palette searching "api": the API Platform project and its tasks with their IDs](docs/screenshots/command-palette.png) | ![Search All Tasks for "ci": tasks only, each with its project, status and due date](docs/screenshots/task-search.png) |
+| **Command palette (Ctrl+K):** run any command or open any project, quick filter or task. | **Search all tasks (Ctrl+Shift+F):** every task in the workspace with its project, status and due date. |
 | ![Export Report dialog with chart preview by status, priority and project](docs/screenshots/reports.png) | |
 | **Reports:** preview charts, then export a prompt for any AI assistant. | |
 
@@ -68,20 +70,34 @@ planned.
 ### Work
 - **Board** with four columns (Backlog, Todo, In Progress, Done). Drag cards between columns to change status, or
   drag within a column to reorder by hand. Cards lift, tilt and settle smoothly, and Escape cancels a drag.
-- **List** layout with collapsible, sticky status sections. Switch between board and list with one click.
+- **List** layout with collapsible, sticky status sections, and a **Calendar** layout that puts tasks on their due
+  dates by month or week; drag a task to another day to reschedule it. Three icons in the toolbar switch between Board, List and Calendar.
+- **Bulk edit**: Ctrl or Shift + click to select tasks, then set status, priority, due date or project, or delete
+  them, with one Undo.
+- **Snooze** a task until a day: it leaves boards, Today and reminders until then, and search still finds it.
+- **Show only recent Done tasks** (last 7 or 30 days) per board, so years of work don't crowd the Done column.
 - **Sorting** by manual order, priority, due date, last updated or newest, in either direction.
-- **Filters** by status, priority, project, label and due date, plus **search** across IDs, titles and descriptions
-  (Ctrl+F).
+- **Filters** by status, priority, project, label and due date, plus **search** across IDs, titles, descriptions and
+  checklists (Ctrl+F). **Ctrl+K** opens a command palette that runs any command and finds any project, quick filter
+  or task in the workspace. **Ctrl+Shift+F** searches only tasks, across every project (Done and archived ones
+  too), showing each task's project, status and due date.
 - **Today** page with everything due today, starting today or overdue.
 - **Dashboard** with a greeting, overdue and due-this-week counts, what's up next, a status overview and what you
   finished recently. It updates on its own when the date changes.
 
 ### Edit quickly
-- **New Task** dialog (Ctrl+N) with status, priority, start date, due date, labels and project, plus "Create more"
-  for entering several tasks in a row.
+- **New Task** dialog (Ctrl+N) with status, priority, start date, due date, labels, project and repeat, plus "Create
+  more" for entering several tasks in a row. **Quick add**: type `Fix login tomorrow !high #bug +WEB` and the date,
+  priority, label and project are filled in.
+- **Repeating tasks** (daily, weekdays, weekly, monthly, yearly…), counted from the due date or from when you
+  finished: completing one creates the next, and the finished one stays in your history.
+- **Checklists** inside a task, with progress on the card ("2/5").
+- **Descriptions in Markdown**: headings, lists, clickable checkboxes, links and code, rendered when you're not
+  editing.
 - **Detail panel** that slides in from the right and saves as you type.
 - **Right-click menu** on every task: change status, priority, due date (Today, Tomorrow, Next Week), labels or
-  project, duplicate, copy the ID, or delete.
+  project, snooze, duplicate, copy the ID, or delete.
+- **Duplicate Project** to reuse a project as a template: its tasks start over.
 - **Undo** for every change, including deletes. Task deletion never asks for confirmation because Undo is always
   there; deleting a project, label or view does ask.
 - A task's start date can never be after its due date.
@@ -97,7 +113,11 @@ Turn on **Reports** in Settings → Sidebar. Pick a period (this week, last mont
 statuses and priorities, and Tasklet shows how many tasks are included. **Export** writes a text file containing a
 ready-made prompt (a full report or a short summary) plus the data, optionally with **Mermaid charts** you can preview
 first. Paste it into the AI assistant you already use. Tasklet itself never calls an AI service or sends your data
-anywhere.
+anywhere. The page also shows **insights**: completed per week, days to complete, open and overdue counts and charts.
+
+### Bring your tasks in or out
+**File → Import Tasks from CSV…** reads Tasklet's own export, Todoist's and Linear's CSV exports, or any spreadsheet
+with a Title column. **Export Tasks as CSV…** writes every task for a spreadsheet or another app.
 
 ### Make it yours
 - Light, dark or automatic theme.
@@ -134,12 +154,15 @@ The installer isn't code-signed yet, so Windows SmartScreen may show a warning t
 | New task | Ctrl+N |
 | New project | Ctrl+Shift+N |
 | Search the current board | Ctrl+F |
+| Command palette: run a command, find a project or task | Ctrl+K |
+| Search all tasks | Ctrl+Shift+F |
+| Keyboard shortcuts | Ctrl+/ or ? |
 | Delete the selected or open task | Delete or Ctrl+Backspace |
 | Go to Dashboard, Today, All Tasks, … (sidebar order) | Ctrl+1 … Ctrl+7 |
 | Switch to the first nine workspaces | Ctrl+Alt+1 … Ctrl+Alt+9 |
 | Settings | Ctrl+, |
 | Refresh from disk | F5 |
-| Close the detail panel or cancel a drag | Esc |
+| Close the detail panel, clear a selection or cancel a drag | Esc |
 
 On macOS, use ⌘ instead of Ctrl.
 

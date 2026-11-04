@@ -66,6 +66,8 @@ concurrent edits are less likely to corrupt unrelated data.
 | createdAt | ISO 8601 | |
 | updatedAt | ISO 8601 | bumped on every edit |
 | completedAt | ISO 8601 \| null | set when status becomes done, cleared otherwise |
+| snoozedUntil | YYYY-MM-DD, optional | snooze: written only when set; see §7.3 |
+| checklist | [{id, text, done}], optional | steps inside a task; written only when non-empty; unreadable lists kept verbatim |
 
 **Project**
 
@@ -235,11 +237,25 @@ the Project filter/column hidden and labels scoped to this project's labels + wo
 - ⋯ / right-click: Add/Remove Favorite, Rename, Archive/Unarchive, Delete Project… (native confirm: "Delete 'X'? The
   project and its N tasks will be moved to Trash/Recycle Bin.", Delete/Cancel, Cancel default).
 - Clicking elsewhere on the row opens the board.
+- **Duplicate Project** (sidebar project menu, D17, a template): a new project "<name> copy" with its own key, placed
+  right after the original. Tasks start over: Todo (Backlog stays Backlog), no dates, completion or snooze, numbers
+  from 1, checklists unticked; repeat rules and labels are kept (the project's own labels are copied with new ids).
+  Opens the copy's board.
 - Create: "+" inserts an inline editable row at the top (not a modal), colored icon (random start color, clickable) + text
   field; typing shows a live preview of the task-ID prefix ("Task IDs: WEB-1"); Enter commits, Escape cancels, clicking
   away commits if non-empty/changed else cancels.
 - Rename works the same in place (double-click or menu).
 - New projects are never created archived ("+" hidden on Archived).
+
+**Import and export (CSV, D17)**, in the File menu:
+
+- **Export Tasks as CSV…** writes every task of the workspace (Done and archived projects included): ID, Title,
+  Description, Status, Priority, Project, Labels, Start Date, Due Date, Created, Completed. UTF-8 with BOM and CRLF so
+  spreadsheets open it.
+- **Import Tasks from CSV…** reads any CSV with a Title (or Name, Content, Task, Summary) column, comma or semicolon
+  separated: Tasklet's export, Todoist's (priority 1 = highest, only `task` rows) and Linear's. Each row becomes a new
+  task in the project it names (by name, ignoring case), else the open project, else No Project. Label names match
+  existing labels; unknown ones become workspace labels. The file's order is kept. Toast "Imported N tasks."
 
 ### 4.6 Views (`/views`)
 
@@ -271,6 +287,10 @@ status → it; exactly one priority → it; any labels → all of them; due filt
 
 A filter builder producing a copyable, AI-ready prompt with simplified task data + instructions, to paste into any LLM.
 Core differentiator, reproduce exactly.
+
+**Insights** (D17): below the card, while tasks match: headline numbers (Completed, Created, Per week, Days to
+complete, Open now, Overdue now) and the charts (status, priority, completed per week/month, open at the end of each
+week/month, tasks per project), from the same data the export uses.
 
 **UI**: one card of stacked rows `[label] [value chip → dropdown]`:
 
@@ -379,6 +399,14 @@ Copying shows a toast naming what was copied and how many tasks it covers.
   - A plain click (no meaningful movement) opens the detail panel; clicking a chip button inside a card never starts a
     drag or opens the task.
 
+### 5.1a Calendar layout (D17)
+
+The toolbar's layout control (§5.3) picks it. The calendar shows the board's tasks (same filters, search and
+Done window) on their due dates, a month (weeks start on the OS first day of week) or a week at a time, with ‹ ›,
+Today, and a note counting tasks with no due date. Today's cell is outlined in accent; overdue titles are red. Drag a
+task to another day to set its due date (Undo toast); click opens it, Ctrl/⌘/Shift + click selects it, right-click
+shows the task menu. Today stays a list.
+
 ### 5.2 List layout
 
 - Same tasks in 4 collapsible status sections, each with a sticky header (next header slides over the previous).
@@ -393,10 +421,15 @@ Copying shows a toast naming what was copied and how many tasks it covers.
 - **Direction**: Asc / Desc, disabled for Manual. Defaults when picked: Priority asc (urgent first), Due asc (soonest),
   Updated desc, Newest desc.
 - **Sections**: "Hide Empty Sections" (board columns and list sections).
+- **Done** (D17): All Done Tasks / Done in the Last 7 Days / Done in the Last 30 Days (`doneWithinDays`, written only
+  when set). Older Done tasks leave the board (a Done task without `completedAt` counts from `updatedAt`); a search
+  still finds them. Snoozed tasks are left out the same way.
 - **Properties**: Task ID, Status Icon, Priority, Start Date, Due Date, Labels, Project (Project only on cross-project
   boards).
 - **Reset to Default** (disabled when already default).
-- A separate "View" toggle in the toolbar switches Board ⇄ List.
+- **Layout control** in the toolbar: three icon segments, Board / List / Calendar (§5.1a), all visible, the current
+  one highlighted, one click each, each with a tooltip ("Board view"). Also View → Board Layout / List Layout /
+  Calendar Layout (checked = current; also in the command palette). Not shown on Today, which is always a list.
 
 **Sort rules** (board columns and list sections identically):
 
@@ -451,13 +484,31 @@ open search there.
   lost.", Discard / Keep Editing (default).
 - Project list: "No Project" at top, every active project, plus the archived project whose board opened the dialog.
 
+**Quick add** (D17): in the title, `#label`, `+project` (key or start of the name), `!urgent`/`!high`/`!medium`/
+`!low` or `!1`-`!4`, and a due date (`today`, `tomorrow`, a weekday, `next week`, `in 3 days`, `nov 5`,
+`2026-11-05`) set those fields and leave the title. Only tokens that match something are taken; a line under the
+title shows what will be set. The dialog also has a Repeat chip.
+
 ### 7.2 Task detail panel (right-side sheet, not a dialog)
 
 - Slides in from the right, full height minus a small margin, ~580px wide, over a dimmed backdrop.
 - Header: task ID, right-aligned trash icon (immediate delete with Undo, §7.4) and close ✕.
 - Top band (fixed): the chip row, editable in place.
 - Middle band (scrolls): large borderless auto-growing title (Enter moves to description) + auto-growing description
-  (real newlines).
+  (real newlines) + Checklist.
+- Chips also include **Repeat** (Daily, Weekdays, Weekly, Every 2 weeks, Monthly, Every 3 months, Yearly; Count From
+  Completion; Don't Repeat) and, while snoozed, "Snoozed until <date>" (click to unsnooze).
+- **Repeating tasks** (D17, `repeat: {every, unit, from}`): moving one to Done (menu, drag, panel, bulk) leaves it
+  Done and creates the next task in the same project at the top of Todo: same title, description, priority, labels,
+  checklist (unticked) and rule; due date one step after the due date (skipping past today) or after the completion
+  day; the start date keeps its distance. The done task loses the rule. Undo of that completion removes the new task.
+  Toast: "WEB-12 done; the next one is due next Tuesday".
+- **Markdown description** (D17): when not being edited and it uses Markdown, the description shows rendered:
+  headings, paragraphs, bullet/numbered lists, `- [ ]` checkboxes (clicking one rewrites that line and saves), code
+  blocks, quotes, **bold**, *italic*, `code`, links and bare URLs (only http/https open, in the browser). A click
+  elsewhere edits the plain text.
+- **Checklist**: steps with a checkbox; Enter in "Add a step" adds one; edit in place; × removes. The card shows
+  "2/5".
 - Bottom band (fixed): muted "Created [long date] · Completed [long date]" (Completed only if done).
 - Autosave: title/description ~500ms after typing pauses AND immediately on blur/close; chips save instantly. An empty
   title reverts to the last saved value on leaving the field.
@@ -472,6 +523,10 @@ open search there.
 4. Priority ▸ (5, checkable, divider after None)
 5. Due Date ▸ Today / Tomorrow / Next Week (always next Monday, independent of the OS first-day-of-week), each with a
    muted weekday/date hint and a checkmark if current;, ; Remove Due Date (disabled if none)
+   Snooze ▸ Tomorrow / Next Week (with weekday hints, checkmark if current) / Pick a Date… (from tomorrow); Unsnooze
+   (disabled unless snoozed). A snoozed open task is left out of boards, Today, the Dashboard, sidebar counts and
+   reminders until its day; a board search still shows it, with a snooze chip on the card. The task panel shows
+   "Snoozed until <date>" as a chip that unsnoozes. Undo toast "WEB-12 snoozed until tomorrow" / "WEB-12 is back".
 6. Labels ▸ every available label, checkable (disabled if none available)
 7. Move to Project ▸ "No Project", every active project (+ the task's own project even if archived), checkable
 8., 9. Duplicate, same project/status/priority/dates/labels, not completion/history, lands at the top of its status; Undo
@@ -483,6 +538,10 @@ Actions not visually obvious from the trigger point (status, priority, due, labe
 ("WEB-12 moved to Done", "WEB-12 due next week", "Added label Bug") whose Undo restores the exact prior state, undoing
 a move to Done restores the previous `completedAt` if any; undoing a project move restores the original number in the
 original project if still free. Only one Undo toast at a time (new replaces old).
+
+**Bulk edit** (D17): Ctrl/⌘ or Shift + click on cards and rows selects tasks (accent outline) instead of opening
+them; a bar at the bottom sets status, priority or due date, moves them to a project, or deletes them, with one Undo
+for all. A plain click clears the selection and opens the task; Esc or × clears it.
 
 ### 7.4 Deleting tasks
 
@@ -595,8 +654,16 @@ Standard menu bar (File/Edit/View/Go/Window/Help) with accelerators (Ctrl on Win
 | Find / search current board | Ctrl+F |
 | Delete selected/focused/open task | Delete or Ctrl+Backspace |
 | Go to Dashboard…Reports (sidebar order) | Ctrl+1 … Ctrl+7 |
+| Command Palette… (View) | Ctrl+K |
+| Keyboard Shortcuts (Help) | Ctrl+/ or ? (not while typing) |
+| Search All Tasks… (Edit) | Ctrl+Shift+F (tasks only: every task with its project, status and due date) |
 
 - Ctrl+N while the New Task dialog is open is a no-op.
+- The **command palette** searches every enabled menu command, project, quick filter and (once something is typed)
+  tasks by ID or words, at most 30; ↑/↓ move, Enter runs, Esc closes. Commands run after it closes.
+- The **shortcut sheet** lists every menu command with a shortcut, read from the same command table as the menus,
+  plus the keys that only work in one place (Esc, Ctrl+Enter in New Task, Enter from title to description,
+  Ctrl+Backspace, Tab, arrows).
 - Delete fires only when a card/row has focus or the detail panel is open, never while typing in a field or when another
   dialog/menu is open.
 - Commands triggered from outside the main window (notification click, Settings' "Show Release Notes") bring the main
@@ -616,8 +683,8 @@ Standard menu bar (File/Edit/View/Go/Window/Help) with accelerators (Ctrl on Win
 
 ## 14. Non-goals
 
-No accounts/login/server/telemetry. No collaboration (assignees, comments, mentions). No sub-tasks, recurring tasks, or
-calendar view. No in-app AI calls (Reports only generates text). No built-in network sync, sync is purely the user's
+No accounts/login/server/telemetry. No collaboration (assignees, comments, mentions). No sub-tasks (a task can have a checklist, §2). Recurring tasks and the calendar view are
+since D17. No in-app AI calls (Reports only generates text). No built-in network sync, sync is purely the user's
 third-party folder sync.
 
 ## 15. Implementation notes (Flutter)
