@@ -79,6 +79,13 @@ void main() {
   });
 
   group('search', () {
+    test('matchesText: every word, any order, ignoring case', () {
+      final q = SearchQuery('proj web');
+      expect(q.matchesText('Website Project'), isTrue);
+      expect(q.matchesText('Website'), isFalse);
+      expect(SearchQuery('').matchesText('anything'), isTrue);
+    });
+
     final e = entry(
       task(
         'a',

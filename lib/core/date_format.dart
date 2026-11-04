@@ -25,6 +25,12 @@ String relativeDate(LocalDate date, LocalDate today) =>
       _ => shortDate(date, today),
     };
 
+/// [relativeDate] inside a sentence: "due today", "due tomorrow", but "due Nov 15" (month names keep their capital).
+String relativeDateInText(LocalDate date, LocalDate today) {
+  final label = relativeDate(date, today);
+  return today.daysUntil(date).abs() <= 1 ? label.toLowerCase() : label;
+}
+
 /// The combined card date pill (SPEC §8.6): "Oct 3 → Oct 10", "Oct 3 →", "Oct 10"; one date if start == due.
 String? datePillLabel(LocalDate? start, LocalDate? due, LocalDate today) {
   if (start == null && due == null) return null;

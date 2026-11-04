@@ -1,3 +1,4 @@
+import 'filters.dart';
 import 'local_date.dart';
 import 'models.dart';
 
@@ -35,7 +36,8 @@ ReminderDigest? buildDigest(
       tomorrow = <ProjectTask>[];
   for (final e in activeTasks) {
     final due = e.task.dueDate;
-    if (e.task.isDone || due == null) continue;
+    // Snoozed tasks stay quiet until their day.
+    if (e.task.isDone || due == null || isSnoozed(e.task, today)) continue;
     if (due == today) {
       dueToday.add(e);
     } else if (includeOverdue && due.isBefore(today)) {

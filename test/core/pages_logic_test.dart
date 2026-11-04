@@ -20,6 +20,15 @@ void main() {
       expect(relativeDate(d('2027-11-09'), today), 'Nov 9, 2027');
     });
 
+    test(
+      'in a sentence: relative words lowercase, month names keep capitals',
+      () {
+        expect(relativeDateInText(today, today), 'today');
+        expect(relativeDateInText(d('2026-10-16'), today), 'tomorrow');
+        expect(relativeDateInText(d('2026-11-03'), today), 'Nov 3');
+      },
+    );
+
     test('combined date pill', () {
       expect(datePillLabel(null, null, today), isNull);
       expect(datePillLabel(d('2026-10-20'), null, today), 'Oct 20 →');

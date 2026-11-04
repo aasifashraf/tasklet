@@ -21,6 +21,37 @@ bool matchesDue(Task task, Set<DueFilter> due, LocalDate today) {
   return false;
 }
 
+/// Snoozed: an open task put away until a later day. It is left out of boards (unless searching), Today, the
+/// dashboard, sidebar counts and reminders, and comes back on that day.
+bool isSnoozed(Task task, LocalDate today) {
+  final until = task.snoozedUntil;
+  return until != null && until.isAfter(today) && !task.isDone;
+}
+
+/// Whether a board shows [entry]: it matches the filters and the search, it isn't snoozed, and if it is Done it was
+/// completed within [doneWithinDays] (when set). A search shows snoozed and older Done tasks too, so they can always
+/// be found.
+bool shownOnBoard(
+  ProjectTask entry,
+  BoardFilters filters,
+  LocalDate today,
+  SearchQuery query, {
+  int? doneWithinDays,
+}) {
+  if (!matchesFilters(entry, filters, today) || !query.matches(entry)) {
+    return false;
+  }
+  if (!query.isEmpty) return true;
+  final task = entry.task;
+  if (isSnoozed(task, today)) return false;
+  if (doneWithinDays != null && task.isDone) {
+    // Done without a completion time (old or hand-edited data) counts from its last edit, as Reports do.
+    final day = task.completedDay ?? LocalDate.fromDateTime(task.updatedAt);
+    if (day.isBefore(today.addDays(-doneWithinDays))) return false;
+  }
+  return true;
+}
+
 bool matchesFilters(ProjectTask entry, BoardFilters filters, LocalDate today) {
   final task = entry.task;
   if (filters.status.isNotEmpty && !filters.status.contains(task.status)) {
@@ -77,6 +108,12 @@ class SearchQuery {
   /// these words (typing more of a search). Words match within one field, so a part of one does too.
   bool narrows(SearchQuery previous) =>
       previous.words.every((p) => words.any((w) => w.contains(p)));
+
+  /// Whether every word appears in [text] (command palette names, places).
+  bool matchesText(String text) {
+    final lower = text.toLowerCase();
+    return words.every(lower.contains);
+  }
 
   bool matches(ProjectTask entry) {
     final text = entry.task.searchText;

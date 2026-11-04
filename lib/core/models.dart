@@ -80,7 +80,8 @@ enum SortOrder {
 
 enum SortDirection { asc, desc }
 
-enum BoardLayout { board, list }
+/// How a board shows its tasks; older versions read `calendar` as board (D17).
+enum BoardLayout { board, list, calendar }
 
 enum DisplayProperty {
   id,
@@ -224,11 +225,16 @@ class Task {
     required this.createdAt,
     required this.updatedAt,
     this.completedAt,
+    this.snoozedUntil,
+    List<ChecklistItem> checklist = const [],
+    this.repeat,
     Map<String, Object?> extra = const {},
   }) : labelIds = List.unmodifiable(labelIds),
+       checklist = List.unmodifiable(checklist),
        extra = Map.unmodifiable(extra);
 
   static const _known = {
+    'snoozedUntil',
     'id',
     'number',
     'title',
@@ -243,6 +249,8 @@ class Task {
 
   factory Task.fromJson(Map<String, Object?> json) {
     final createdAt = _time(json, 'createdAt');
+    final checklist = ChecklistItem.parseList(json['checklist']);
+    final repeat = Repeat.tryParse(json['repeat']);
     return Task(
       id: _req<String>(json, 'id'),
       number: _req<int>(json, 'number'),
@@ -259,7 +267,15 @@ class Task {
           ? createdAt
           : _time(json, 'updatedAt'),
       completedAt: _timeOrNull(json, 'completedAt'),
-      extra: _extra(json, _known),
+      snoozedUntil: LocalDate.fromJson(json['snoozedUntil']),
+      checklist: checklist ?? const [],
+      repeat: repeat,
+      // A checklist this version can't read (newer format, hand edit) stays in `extra`, written back as it was.
+      extra: _extra(json, {
+        ..._known,
+        if (checklist != null) 'checklist',
+        if (repeat != null) 'repeat',
+      }),
     );
   }
 
@@ -276,6 +292,15 @@ class Task {
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? completedAt;
+
+  /// Hidden from boards, Today, the dashboard and reminders until this day (snooze); still found by search.
+  final LocalDate? snoozedUntil;
+
+  /// Steps inside the task, ticked off one by one; the card shows the progress ("2/5").
+  final List<ChecklistItem> checklist;
+
+  /// How the task repeats; completing it creates the next one (D17).
+  final Repeat? repeat;
   final Map<String, Object?> extra;
 
   /// Local calendar days of [createdAt] and [completedAt], converted once per task instance: a timezone conversion
@@ -286,7 +311,11 @@ class Task {
       : LocalDate.fromDateTime(completedAt!);
 
   /// Lowercased title + description for search, built on the first search and kept with this instance.
-  late final String searchText = '$title\n$description'.toLowerCase();
+  late final String searchText = [
+    title,
+    description,
+    for (final item in checklist) item.text,
+  ].join('\n').toLowerCase();
 
   bool get isDone => status == TaskStatus.done;
 
@@ -304,6 +333,9 @@ class Task {
     DateTime? createdAt,
     DateTime? updatedAt,
     Object? completedAt = _unset,
+    Object? snoozedUntil = _unset,
+    List<ChecklistItem>? checklist,
+    Object? repeat = _unset,
   }) => Task(
     id: id ?? this.id,
     number: number ?? this.number,
@@ -320,6 +352,11 @@ class Task {
     completedAt: completedAt == _unset
         ? this.completedAt
         : completedAt as DateTime?,
+    snoozedUntil: snoozedUntil == _unset
+        ? this.snoozedUntil
+        : snoozedUntil as LocalDate?,
+    checklist: checklist ?? this.checklist,
+    repeat: repeat == _unset ? this.repeat : repeat as Repeat?,
     extra: extra,
   );
 
@@ -338,6 +375,146 @@ class Task {
     'createdAt': _timeJson(createdAt),
     'updatedAt': _timeJson(updatedAt),
     'completedAt': completedAt == null ? null : _timeJson(completedAt!),
+    // Written only when set, so files of tasks never snoozed don't change.
+    if (snoozedUntil != null) 'snoozedUntil': snoozedUntil!.toJson(),
+    if (checklist.isNotEmpty)
+      'checklist': [for (final item in checklist) item.toJson()],
+    if (repeat != null) 'repeat': repeat!.toJson(),
+  };
+}
+
+enum RepeatUnit { day, weekday, week, month, year }
+
+/// Whether the next occurrence counts from the due date (bills) or from the day the task was done (chores).
+enum RepeatFrom { due, completion }
+
+/// How a task repeats (D17): every [every] [unit]s, counted from the due or completion date. [day] keeps the day of
+/// the month for monthly and yearly rules when a short month had to use its last day.
+class Repeat {
+  Repeat({
+    this.every = 1,
+    required this.unit,
+    this.from = RepeatFrom.due,
+    this.day,
+    Map<String, Object?> extra = const {},
+  }) : extra = Map.unmodifiable(extra);
+
+  static const _known = {'every', 'unit', 'from', 'day'};
+
+  /// Null when [value] isn't a rule this version can read (then the field is kept verbatim in the task's extra).
+  static Repeat? tryParse(Object? value) {
+    if (value is! Map<String, Object?>) return null;
+    final every = value['every'] ?? 1, day = value['day'];
+    final unit = RepeatUnit.values.where((u) => u.name == value['unit']);
+    final from = RepeatFrom.values.where(
+      (f) => f.name == (value['from'] ?? 'due'),
+    );
+    if (every is! int || every < 1 || unit.isEmpty || from.isEmpty) return null;
+    if (day != null && (day is! int || day < 1 || day > 31)) return null;
+    return Repeat(
+      every: every,
+      unit: unit.single,
+      from: from.single,
+      day: day as int?,
+      extra: _extra(value, _known),
+    );
+  }
+
+  final int every;
+  final RepeatUnit unit;
+  final RepeatFrom from;
+  final int? day;
+  final Map<String, Object?> extra;
+
+  Repeat withDay(int day) =>
+      Repeat(every: every, unit: unit, from: from, day: day, extra: extra);
+
+  Repeat withFrom(RepeatFrom from) =>
+      Repeat(every: every, unit: unit, from: from, day: day, extra: extra);
+
+  /// "Weekly", "Every 2 weeks", "Weekdays", plus ", from completion" when it counts from the done date.
+  String get label {
+    final base = switch ((unit, every)) {
+      (RepeatUnit.day, 1) => 'Daily',
+      (RepeatUnit.weekday, 1) => 'Weekdays',
+      (RepeatUnit.week, 1) => 'Weekly',
+      (RepeatUnit.month, 1) => 'Monthly',
+      (RepeatUnit.year, 1) => 'Yearly',
+      (RepeatUnit.weekday, final n) => 'Every $n weekdays',
+      (final u, final n) => 'Every $n ${u.name}s',
+    };
+    return from == RepeatFrom.completion ? '$base, from completion' : base;
+  }
+
+  /// Same rule (ignoring unknown fields): for pickers' check marks.
+  bool sameAs(Repeat? other) =>
+      other != null &&
+      other.every == every &&
+      other.unit == unit &&
+      other.from == from;
+
+  Map<String, Object?> toJson() => {
+    ...extra,
+    'every': every,
+    'unit': unit.name,
+    'from': from.name,
+    if (day != null) 'day': day,
+  };
+}
+
+/// One step of a task's checklist.
+class ChecklistItem {
+  ChecklistItem({
+    required this.id,
+    required this.text,
+    this.done = false,
+    Map<String, Object?> extra = const {},
+  }) : extra = Map.unmodifiable(extra);
+
+  static const _known = {'id', 'text', 'done'};
+
+  /// A whole checklist, or null when [value] isn't one this version can read (then the field is kept verbatim).
+  static List<ChecklistItem>? parseList(Object? value) {
+    if (value == null) return const [];
+    if (value is! List) return null;
+    final items = <ChecklistItem>[];
+    final ids = <String>{};
+    for (final entry in value) {
+      if (entry is! Map<String, Object?>) return null;
+      final id = entry['id'], text = entry['text'], done = entry['done'];
+      if (id is! String || text is! String || (done != null && done is! bool)) {
+        return null;
+      }
+      if (!ids.add(id)) return null;
+      items.add(
+        ChecklistItem(
+          id: id,
+          text: text,
+          done: done == true,
+          extra: _extra(entry, _known),
+        ),
+      );
+    }
+    return items;
+  }
+
+  final String id;
+  final String text;
+  final bool done;
+  final Map<String, Object?> extra;
+
+  ChecklistItem copyWith({String? text, bool? done}) => ChecklistItem(
+    id: id,
+    text: text ?? this.text,
+    done: done ?? this.done,
+    extra: extra,
+  );
+
+  Map<String, Object?> toJson() => {
+    ...extra,
+    'id': id,
+    'text': text,
+    'done': done,
   };
 }
 
@@ -708,6 +885,7 @@ class ViewDisplay {
     this.direction = SortDirection.asc,
     this.layout = BoardLayout.board,
     this.hideEmptySections = false,
+    this.doneWithinDays,
     Set<DisplayProperty> properties = allProperties,
     Map<String, Object?> extra = const {},
   }) : properties = Set.unmodifiable(properties),
@@ -720,7 +898,11 @@ class ViewDisplay {
     'layout',
     'hideEmptySections',
     'properties',
+    'doneWithinDays',
   };
+
+  /// The choices for [doneWithinDays] (null = all Done tasks).
+  static const doneWindows = [null, 7, 30];
 
   /// Today's own defaults (SPEC §4.2): list layout, Priority and Start Date hidden.
   static final todayDefaults = ViewDisplay(
@@ -741,6 +923,10 @@ class ViewDisplay {
     ),
     layout: _byName(BoardLayout.values, json['layout'], BoardLayout.board),
     hideEmptySections: _opt(json, 'hideEmptySections', false),
+    doneWithinDays: switch (json['doneWithinDays']) {
+      final int days when days > 0 => days,
+      _ => null,
+    },
     properties: json['properties'] is List
         ? {
             for (final p in _strings(json['properties']))
@@ -755,6 +941,9 @@ class ViewDisplay {
   final SortDirection direction;
   final BoardLayout layout;
   final bool hideEmptySections;
+
+  /// Done shows only tasks completed in the last this many days; null shows them all (D17, instead of archiving).
+  final int? doneWithinDays;
   final Set<DisplayProperty> properties;
   final Map<String, Object?> extra;
 
@@ -769,12 +958,16 @@ class ViewDisplay {
     SortDirection? direction,
     BoardLayout? layout,
     bool? hideEmptySections,
+    Object? doneWithinDays = _unset,
     Set<DisplayProperty>? properties,
   }) => ViewDisplay(
     order: order ?? this.order,
     direction: direction ?? this.direction,
     layout: layout ?? this.layout,
     hideEmptySections: hideEmptySections ?? this.hideEmptySections,
+    doneWithinDays: doneWithinDays == _unset
+        ? this.doneWithinDays
+        : doneWithinDays as int?,
     properties: properties ?? this.properties,
     extra: extra,
   );
@@ -785,6 +978,7 @@ class ViewDisplay {
       direction == other.direction &&
       layout == other.layout &&
       hideEmptySections == other.hideEmptySections &&
+      doneWithinDays == other.doneWithinDays &&
       properties.length == other.properties.length &&
       properties.containsAll(other.properties);
 
@@ -794,6 +988,7 @@ class ViewDisplay {
     'direction': direction.name,
     'layout': layout.name,
     'hideEmptySections': hideEmptySections,
+    if (doneWithinDays != null) 'doneWithinDays': doneWithinDays,
     'properties': [
       for (final p in DisplayProperty.values)
         if (properties.contains(p)) p.name,

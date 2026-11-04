@@ -1,3 +1,4 @@
+import 'filters.dart';
 import 'local_date.dart';
 import 'models.dart';
 
@@ -13,6 +14,7 @@ enum TodayRule {
 
 /// Whether [task] belongs on the Today page under any of [rules].
 bool matchesToday(Task task, Set<TodayRule> rules, LocalDate today) {
+  if (isSnoozed(task, today)) return false;
   for (final rule in rules) {
     final match = switch (rule) {
       TodayRule.dueToday => task.dueDate == today,
