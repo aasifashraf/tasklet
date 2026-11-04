@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/date_format.dart';
 import '../core/local_date.dart';
 import '../core/models.dart';
+import '../core/recurrence.dart';
 import 'clock.dart';
 import 'toast.dart';
 import 'ui_state.dart';
@@ -46,13 +47,36 @@ class TaskActions {
     bool toast = true,
   }) async {
     if (e.task.status == status) return;
-    _withUndo(
-      '${e.displayId} moved to ${status.label}',
-      e,
-      (t, before) =>
-          t.copyWith(status: before.status, completedAt: before.completedAt),
-      toast: toast,
-    );
+    final repeat = e.task.repeat;
+    final completesRepeat =
+        repeat != null && !e.task.isDone && status == TaskStatus.done;
+    if (toast) {
+      final before = e.task;
+      _toast.show(
+        completesRepeat
+            ? '${e.displayId} done; the next one is due ${_nextDueLabel(e.task)}'
+            : '${e.displayId} moved to ${status.label}',
+        onUndo: () async {
+          // Undo of a repeating completion also takes back the occurrence it created, and the rule.
+          final next = completesRepeat
+              ? _c.workspace?.findTask(_nextIdOf(before))
+              : null;
+          if (next != null) {
+            await _c.deleteTask(next.project.id, next.task.id);
+          }
+          await _undo(
+            _c.revertTask(
+              before.id,
+              (t) => t.copyWith(
+                status: before.status,
+                completedAt: before.completedAt,
+                repeat: before.repeat,
+              ),
+            ),
+          );
+        },
+      );
+    }
     await _c.updateTask(
       e.project.id,
       e.task.id,
@@ -81,6 +105,64 @@ class TaskActions {
     );
   }
 
+  String _nextIdOf(Task task) => nextOccurrenceId(
+    task.id,
+    nextOccurrence(
+      task.repeat!,
+      task.repeat!.from == RepeatFrom.due ? (task.dueDate ?? _today) : _today,
+      _today,
+    ),
+  );
+
+  String _nextDueLabel(Task task) {
+    final rule = task.repeat!;
+    final anchor = rule.from == RepeatFrom.due
+        ? (task.dueDate ?? _today)
+        : _today;
+    return relativeDateInText(nextOccurrence(rule, anchor, _today), _today);
+  }
+
+  /// Sets or clears how [e] repeats (D17).
+  Future<void> setRepeat(ProjectTask e, Repeat? repeat) async {
+    _withUndo(
+      repeat == null
+          ? '${e.displayId} no longer repeats'
+          : '${e.displayId} repeats ${repeat.label.toLowerCase()}',
+      e,
+      (t, before) => t.copyWith(repeat: before.repeat),
+    );
+    await _c.updateTask(
+      e.project.id,
+      e.task.id,
+      (t) => t.copyWith(repeat: repeat),
+    );
+  }
+
+  /// Replaces [e]'s checklist (from the task panel, which saves as you go, like the title).
+  Future<void> setChecklist(ProjectTask e, List<ChecklistItem> checklist) =>
+      _c.updateTask(
+        e.project.id,
+        e.task.id,
+        (t) => t.copyWith(checklist: checklist),
+      );
+
+  /// Puts [e] away until [until] (null: back now). Snoozed tasks leave boards, Today, the dashboard and reminders.
+  Future<void> snooze(ProjectTask e, LocalDate? until, {String? phrase}) async {
+    if (e.task.snoozedUntil == until) return;
+    _withUndo(
+      until == null
+          ? '${e.displayId} is back'
+          : '${e.displayId} snoozed until ${phrase ?? relativeDateInText(until, _today)}',
+      e,
+      (t, before) => t.copyWith(snoozedUntil: before.snoozedUntil),
+    );
+    await _c.updateTask(
+      e.project.id,
+      e.task.id,
+      (t) => t.copyWith(snoozedUntil: until),
+    );
+  }
+
   Future<void> setDue(
     ProjectTask e,
     LocalDate? due, {
@@ -91,7 +173,7 @@ class TaskActions {
     _withUndo(
       due == null
           ? 'Removed due date from ${e.displayId}'
-          : '${e.displayId} due ${phrase ?? relativeDate(due, _today).toLowerCase()}',
+          : '${e.displayId} due ${phrase ?? relativeDateInText(due, _today)}',
       e,
       (t, before) => t.copyWith(dueDate: before.dueDate),
       toast: toast,
@@ -112,7 +194,7 @@ class TaskActions {
     _withUndo(
       start == null
           ? 'Removed start date from ${e.displayId}'
-          : '${e.displayId} starts ${relativeDate(start, _today).toLowerCase()}',
+          : '${e.displayId} starts ${relativeDateInText(start, _today)}',
       e,
       (t, before) => t.copyWith(startDate: before.startDate),
       toast: toast,
@@ -204,3 +286,72 @@ class TaskActions {
 }
 
 final taskActionsProvider = Provider<TaskActions>(TaskActions.new);
+
+/// Bulk edit (D17): one change to every selected task, with one Undo that reverts only what it changed on each.
+extension BulkTaskActions on TaskActions {
+  Future<void> bulkEdit(
+    List<ProjectTask> entries,
+    String message,
+    Task Function(Task t) change,
+    Task Function(Task now, Task before) revert,
+  ) async {
+    if (entries.isEmpty) return;
+    final befores = [for (final e in entries) e.task];
+    await _c.updateTasks([
+      for (final e in entries) TaskRef(e.project.id, e.task.id),
+    ], change);
+    _toast.show(
+      message,
+      onUndo: () async {
+        final missing = await _c.revertTasks({
+          for (final before in befores) before.id: (t) => revert(t, before),
+        });
+        if (missing > 0) {
+          _toast.show("Can't undo for tasks that no longer exist.");
+        }
+      },
+    );
+  }
+
+  Future<void> bulkMove(List<ProjectTask> entries, Project to) async {
+    final moves = <(String, Task)>[];
+    for (final e in entries) {
+      if (e.project.id == to.id) continue;
+      final before = e.task;
+      if (await _c.moveTaskToProject(e.project.id, e.task.id, to.id) != null) {
+        moves.add((e.project.id, before));
+      }
+    }
+    if (moves.isEmpty) return;
+    _toast.show(
+      'Moved ${moves.length} tasks to ${to.name}',
+      onUndo: () async {
+        for (final (from, before) in moves) {
+          await _c.restoreMovedTask(from, to.id, before);
+        }
+      },
+    );
+  }
+
+  Future<void> bulkDelete(List<ProjectTask> entries) async {
+    final open = _ref.read(openTaskProvider);
+    final deleted = <String>[];
+    for (final e in entries) {
+      if (open?.taskId == e.task.id) {
+        _ref.read(openTaskProvider.notifier).close();
+      }
+      final task = await _c.deleteTask(e.project.id, e.task.id);
+      if (task != null) deleted.add(task.id);
+    }
+    if (deleted.isEmpty) return;
+    _toast.show(
+      'Deleted ${deleted.length} tasks',
+      duration: const Duration(seconds: 8),
+      onUndo: () async {
+        for (final id in deleted) {
+          await _c.undoDelete(id);
+        }
+      },
+    );
+  }
+}

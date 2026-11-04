@@ -191,7 +191,7 @@ final navCountsProvider = Provider<({int today, int allOpen})>((ref) {
   final rules = ref.watch(prefsProvider.select((p) => p.todayRules));
   var allOpen = 0, todayCount = 0;
   for (final e in ws.activeTasks) {
-    if (e.task.isDone) continue;
+    if (e.task.isDone || isSnoozed(e.task, today)) continue;
     allOpen++;
     if (matchesToday(e.task, rules, today)) todayCount++;
   }
@@ -279,9 +279,11 @@ class BoardNotifier extends Notifier<BoardData?> {
       }
     }
     // Typing more of a search: the matches are some of the last ones, already grouped and sorted.
+    // (Not from an empty search: that result left snoozed tasks out, a search shows them.)
     if (last != null &&
         last.inputs == inputs &&
         identical(last.ws, ws) &&
+        !last.query.isEmpty &&
         query.narrows(last.query)) {
       final data = result({
         for (final MapEntry(key: status, value: tasks)
@@ -299,7 +301,13 @@ class BoardNotifier extends Notifier<BoardData?> {
     final data = result(
       groupAndSort(
         scope.where(
-          (e) => matchesFilters(e, filters, today) && query.matches(e),
+          (e) => shownOnBoard(
+            e,
+            filters,
+            today,
+            query,
+            doneWithinDays: display.doneWithinDays,
+          ),
         ),
         display,
       ),
@@ -330,7 +338,14 @@ class BoardNotifier extends Notifier<BoardData?> {
       removed: diff.removed.values,
       added: diff.added.where(
         (e) =>
-            inScope(e) && matchesFilters(e, filters, today) && query.matches(e),
+            inScope(e) &&
+            shownOnBoard(
+              e,
+              filters,
+              today,
+              query,
+              doneWithinDays: previous.display.doneWithinDays,
+            ),
       ),
     );
     final total =

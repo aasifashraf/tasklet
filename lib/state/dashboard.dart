@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/dashboard.dart';
+import '../core/filters.dart';
 import '../core/models.dart';
 import 'clock.dart';
 import 'prefs.dart';
@@ -42,9 +43,13 @@ final dashboardProvider = Provider<DashboardData?>((ref) {
   final activeProjects = ws.projects.where((p) => !p.archived).toList()
     ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
   final project = activeProjects.where((p) => p.id == storedFilter).firstOrNull;
-  final tasks = project == null
-      ? ws.activeTasks.toList()
-      : [for (final task in project.tasks) ProjectTask(project, task)];
+  final tasks = [
+    for (final e
+        in project == null
+            ? ws.activeTasks
+            : [for (final task in project.tasks) ProjectTask(project, task)])
+      if (!isSnoozed(e.task, today)) e,
+  ];
   // "Done this week" only depends on the day, so local midnight stands in for the current time.
   final dayStart = today.toLocalDateTime();
   return DashboardData(

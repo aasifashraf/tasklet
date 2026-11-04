@@ -101,3 +101,20 @@ class NewTaskOpen extends Notifier<bool> {
 final newTaskOpenProvider = NotifierProvider<NewTaskOpen, bool>(
   NewTaskOpen.new,
 );
+
+/// Tasks selected for bulk edit (Ctrl/⌘ or Shift + click on cards and rows, D17). Session only.
+class TaskSelection extends Notifier<Set<TaskRef>> {
+  @override
+  Set<TaskRef> build() => const {};
+
+  void toggle(TaskRef ref) =>
+      state = state.contains(ref) ? ({...state}..remove(ref)) : {...state, ref};
+
+  void clear() {
+    if (state.isNotEmpty) state = const {};
+  }
+}
+
+final taskSelectionProvider = NotifierProvider<TaskSelection, Set<TaskRef>>(
+  TaskSelection.new,
+);

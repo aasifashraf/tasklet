@@ -24,6 +24,23 @@ extension WorkspaceActions on WorkspaceController {
     return project;
   }
 
+  /// Duplicate Project…: a fresh copy of [sourceId] with its tasks reset (a template); null if it's gone.
+  Future<Project?> duplicateProject(String sourceId) async {
+    final ws = _ws;
+    final source = ws.projectById(sourceId);
+    if (source == null || source.isNoProject) return null;
+    final project = wops.duplicateProject(
+      source,
+      id: newId(),
+      existing: ws.projects,
+      newId: newId,
+      now: _now,
+    );
+    _set(ws.copyWith(projects: [...ws.projects, project]));
+    await _save((s) => s.writeProject(project));
+    return project;
+  }
+
   /// Changes a project; does nothing if it's gone (deleted here or by sync while a menu was open).
   Future<void> updateProject(String id, Project Function(Project p) change) {
     final project = workspace?.projectById(id);
@@ -240,6 +257,7 @@ extension WorkspaceActions on WorkspaceController {
     LocalDate? startDate,
     LocalDate? dueDate,
     List<String> labelIds = const [],
+    Repeat? repeat,
   }) async {
     if (!ops.datesInOrder(startDate, dueDate)) {
       _datesOutOfOrder();
@@ -257,8 +275,84 @@ extension WorkspaceActions on WorkspaceController {
       labelIds: labelIds,
       now: _now,
     );
-    await _putProject(project);
-    return ProjectTask(project, task);
+    if (repeat == null) {
+      await _putProject(project);
+      return ProjectTask(project, task);
+    }
+    final repeating = task.copyWith(repeat: repeat);
+    final withRule = ops.putTask(project, repeating, _now);
+    await _putProject(withRule);
+    return ProjectTask(withRule, repeating);
+  }
+
+  /// Import Tasks from CSV… (D17): every task becomes a new task, at the top of its status. It goes to the
+  /// project its row names (matched by name, ignoring case) or else to [intoProjectId] (No Project when null).
+  /// Label names match the project's or the workspace's labels; unknown ones become workspace labels. Returns the
+  /// number imported.
+  Future<int> importTasks(
+    List<ImportedTask> imported, {
+    String? intoProjectId,
+  }) async {
+    final ws = _ws;
+    if (imported.isEmpty) return 0;
+    final byName = {for (final p in ws.projects) p.name.toLowerCase(): p.id};
+    // Unknown label names become workspace labels first, one save.
+    final known = {
+      for (final l in ws.labels) l.name.toLowerCase(): l.id,
+      for (final p in ws.projects)
+        for (final l in p.labels) l.name.toLowerCase(): l.id,
+    };
+    final newLabels = <Label>[];
+    for (final name in {for (final t in imported) ...t.labels}) {
+      if (known.containsKey(name.toLowerCase())) continue;
+      final label = Label(
+        id: newId(),
+        name: name.length > 40 ? name.substring(0, 40) : name,
+        color: TaskletColor.values[newLabels.length % 8],
+      );
+      newLabels.add(label);
+      known[name.toLowerCase()] = label.id;
+    }
+    if (newLabels.isNotEmpty) {
+      final labels = [..._ws.labels, ...newLabels];
+      _set(_ws.copyWith(labels: labels));
+      await _save((s) => s.writeLabels(labels));
+    }
+    final changed = <String, Project>{};
+    // Each new task goes on top, so the last row first: the file's order is kept.
+    for (final t in imported.reversed) {
+      final projectId =
+          (t.project == null ? null : byName[t.project!.toLowerCase()]) ??
+          intoProjectId ??
+          noProjectId;
+      final project = changed[projectId] ?? _project(projectId);
+      final validLabels = {
+        for (final l in project.labels) l.id,
+        for (final l in _ws.labels) l.id,
+      };
+      final (updated, _) = ops.createTask(
+        project,
+        id: newId(),
+        title: t.title,
+        description: t.description,
+        status: t.status,
+        priority: t.priority,
+        startDate: ops.datesInOrder(t.start, t.due) ? t.start : null,
+        dueDate: t.due,
+        labelIds: [
+          for (final name in t.labels)
+            if (known[name.toLowerCase()] case final id?
+                when validLabels.contains(id))
+              id,
+        ],
+        now: _now,
+      );
+      changed[projectId] = updated;
+    }
+    for (final p in changed.values) {
+      await _putProject(p);
+    }
+    return imported.length;
   }
 
   /// Applies [change] to a task; bumps updatedAt and maintains completedAt when the status changes. A task or
@@ -276,7 +370,59 @@ extension WorkspaceActions on WorkspaceController {
       _datesOutOfOrder();
       return Future.value();
     }
-    return _putProject(ops.putTask(project, next, _now));
+    final updated = ops.putTask(project, next, _now);
+    return _putProject(_withNextOccurrence(updated, current, next));
+  }
+
+  /// [updateTask] for many tasks at once (bulk edit, D17): one state change and one save per project. Tasks that
+  /// are gone, or whose edit would put a start after the due date, are left as they are.
+  Future<void> updateTasks(
+    Iterable<TaskRef> tasks,
+    Task Function(Task t) change,
+  ) {
+    final ws = workspace;
+    if (ws == null) return Future.value();
+    final changed = <String, Project>{};
+    for (final ref in tasks) {
+      final project = changed[ref.projectId] ?? ws.projectById(ref.projectId);
+      final current = project?.taskById(ref.taskId);
+      if (project == null || current == null) continue;
+      final next = ops.editTask(current, change, _now);
+      if (next == null) continue;
+      changed[project.id] = _withNextOccurrence(
+        ops.putTask(project, next, _now),
+        current,
+        next,
+      );
+    }
+    return changed.isEmpty
+        ? Future.value()
+        : _putProjects(changed.values.toList());
+  }
+
+  /// [revertTask] for many tasks (Undo of a bulk edit): one state change and one save per project. Returns how
+  /// many tasks no longer exist (those are skipped).
+  Future<int> revertTasks(Map<String, Task Function(Task now)> reverts) async {
+    final ws = workspace;
+    if (ws == null) return reverts.length;
+    final changed = <String, Project>{};
+    var missing = 0;
+    for (final MapEntry(key: id, value: revert) in reverts.entries) {
+      final entry = ws.findTask(id);
+      if (entry == null) {
+        missing++;
+        continue;
+      }
+      final project = changed[entry.project.id] ?? entry.project;
+      final task = project.taskById(id)!;
+      changed[project.id] = ops.putTask(
+        project,
+        revert(task).copyWith(updatedAt: _now),
+        _now,
+      );
+    }
+    if (changed.isNotEmpty) await _putProjects(changed.values.toList());
+    return missing;
   }
 
   /// Undo of a field edit: applies [revert] to the task as it is now, wherever it lives, so fields changed since
@@ -379,6 +525,17 @@ extension WorkspaceActions on WorkspaceController {
     return true;
   }
 
+  /// [project] after [before] became [after], plus the next occurrence if a repeating task was just completed (D17).
+  Project _withNextOccurrence(Project project, Task before, Task after) =>
+      completeRepeating(
+        project,
+        before,
+        after,
+        today: LocalDate.fromDateTime(_now),
+        now: _now,
+      )?.$1 ??
+      project;
+
   /// Drag-and-drop: sets the dropped task's status and/or manual position, plus new positions for neighbours that
   /// had to be re-spaced to make room (see `placeInColumn`). Re-spacing isn't an edit, so those tasks keep their
   /// `updatedAt`.
@@ -410,7 +567,11 @@ extension WorkspaceActions on WorkspaceController {
       status ?? current.status,
       _now,
     );
-    changed[project.id] = ops.putTask(project, moved, _now);
+    changed[project.id] = _withNextOccurrence(
+      ops.putTask(project, moved, _now),
+      current,
+      moved,
+    );
     await _putProjects(changed.values.toList());
   }
 
