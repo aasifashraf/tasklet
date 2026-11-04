@@ -5,6 +5,7 @@ import '../../core/date_format.dart';
 import '../../core/local_date.dart';
 import '../../core/models.dart';
 import '../../core/report.dart';
+import '../../core/report_charts.dart';
 import '../../platform/native.dart';
 import '../../state/clock.dart';
 import '../../state/workspace.dart';
@@ -14,6 +15,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'list_parts.dart';
 import 'page_scaffold.dart';
+import 'report_chart_view.dart';
 import 'report_export_dialog.dart';
 
 /// Reports (SPEC §4.9): build a filter, then copy an AI-ready prompt or JSON. Never calls an AI service.
@@ -35,6 +37,45 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   // rebuild (the workspace snapshot is the same object while nothing changed on disk).
   ({Workspace ws, ReportFilters filters, LocalDate from, LocalDate to, int n})?
   _count;
+
+  // The report data behind the insights, rebuilt only when the workspace, filters or period change.
+  ({
+    Workspace ws,
+    ReportFilters filters,
+    LocalDate from,
+    LocalDate to,
+    Map<String, Object?> json,
+  })?
+  _report;
+
+  Map<String, Object?> _reportFor(
+    Workspace ws,
+    ReportPeriod period,
+    LocalDate today,
+  ) {
+    final r = _report;
+    if (r != null &&
+        identical(r.ws, ws) &&
+        identical(r.filters, _filters) &&
+        r.from == period.from &&
+        r.to == period.to) {
+      return r.json;
+    }
+    final json = buildReportJson(
+      ws: ws,
+      filters: _filters,
+      period: period,
+      today: today,
+    );
+    _report = (
+      ws: ws,
+      filters: _filters,
+      from: period.from,
+      to: period.to,
+      json: json,
+    );
+    return json;
+  }
 
   int _countFor(Workspace ws, ReportPeriod period) {
     final c = _count;
@@ -191,6 +232,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                       ],
                     ),
                   ),
+                  if (count > 0) ..._insights(context, ws, period, today),
                 ],
               ),
             ),
@@ -198,6 +240,50 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
         ],
       ),
     );
+  }
+
+  /// Insights (D17): headline numbers and the charts, from the same data the export uses.
+  List<Widget> _insights(
+    BuildContext context,
+    Workspace ws,
+    ReportPeriod period,
+    LocalDate today,
+  ) {
+    final t = Tokens.of(context);
+    final json = _reportFor(ws, period, today);
+    return [
+      const SizedBox(height: 24),
+      Text('Insights', style: TextStyles.section(context)),
+      const SizedBox(height: 10),
+      Wrap(
+        spacing: 10,
+        runSpacing: 10,
+        children: [
+          for (final (label, value) in reportInsights(json))
+            Container(
+              width: 116,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: t.surface,
+                border: Border.all(color: t.border),
+                borderRadius: BorderRadius.circular(Radii.medium),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(value, style: TextStyles.pageTitle(context)),
+                  const SizedBox(height: 2),
+                  Text(label, style: TextStyles.meta(context)),
+                ],
+              ),
+            ),
+        ],
+      ),
+      for (final chart in chartsForReport(json)) ...[
+        const SizedBox(height: 20),
+        ReportChartView(chart: chart),
+      ],
+    ];
   }
 
   Widget _divider(Tokens t) =>
