@@ -70,91 +70,99 @@ class _SidebarState extends ConsumerState<Sidebar> {
               ],
             ),
           ),
+          // Slivers all the way down: each section's list builds only the rows in view, so hundreds of projects
+          // cost what a screenful does.
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(8, 4, 8, 12),
-              children: [
-                _navList(context, prefs, ws, path),
-                if (pinned.isNotEmpty)
-                  _Section(
-                    id: 'views',
-                    label: 'Quick Filters',
-                    child: _Reorderable<SavedView>(
-                      items: pinned,
-                      keyOf: (v) => 'view:${v.id}',
-                      onMove: (v, before, after) => _controller.moveView(
-                        v.id,
-                        before: before?.id,
-                        after: after?.id,
-                      ),
-                      itemBuilder: (v, i) =>
-                          _viewRow(context, v, pinned, i, path),
-                    ),
-                  ),
-                if (favorites.isNotEmpty)
-                  _Section(
-                    id: 'favorites',
-                    label: 'Favorites',
-                    child: _Reorderable<Project>(
-                      items: favorites,
-                      keyOf: (p) => 'fav:${p.id}',
-                      onMove: (p, before, after) => _controller.moveProject(
-                        p.id,
-                        before: before?.id,
-                        after: after?.id,
-                        favorites: true,
-                      ),
-                      itemBuilder: (p, i) => _projectRow(
-                        context,
-                        p,
-                        favorites,
-                        i,
-                        path,
-                        favoritesList: true,
-                      ),
-                    ),
-                  ),
-                if (plain.isNotEmpty)
-                  _Section(
-                    id: 'projects',
-                    label: 'Projects',
-                    child: _Reorderable<Project>(
-                      items: plain,
-                      keyOf: (p) => 'project:${p.id}',
-                      onMove: (p, before, after) => _controller.moveProject(
-                        p.id,
-                        before: before?.id,
-                        after: after?.id,
-                        favorites: false,
-                      ),
-                      itemBuilder: (p, i) => _projectRow(
-                        context,
-                        p,
-                        plain,
-                        i,
-                        path,
-                        favoritesList: false,
-                      ),
-                    ),
-                  ),
-                if (archived.isNotEmpty)
-                  _Section(
-                    id: 'archived',
-                    label: 'Archived',
-                    child: Column(
-                      children: [
-                        for (final (i, p) in archived.indexed)
-                          _projectRow(
-                            context,
-                            p,
-                            archived,
-                            i,
-                            path,
-                            favoritesList: false,
+            child: CustomScrollView(
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(8, 4, 8, 12),
+                  sliver: SliverMainAxisGroup(
+                    slivers: [
+                      _navList(context, prefs, ws, path),
+                      if (pinned.isNotEmpty)
+                        _Section(
+                          id: 'views',
+                          label: 'Quick Filters',
+                          sliver: _Reorderable<SavedView>(
+                            items: pinned,
+                            keyOf: (v) => 'view:${v.id}',
+                            onMove: (v, before, after) => _controller.moveView(
+                              v.id,
+                              before: before?.id,
+                              after: after?.id,
+                            ),
+                            itemBuilder: (v, i) =>
+                                _viewRow(context, v, pinned, i, path),
                           ),
-                      ],
-                    ),
+                        ),
+                      if (favorites.isNotEmpty)
+                        _Section(
+                          id: 'favorites',
+                          label: 'Favorites',
+                          sliver: _Reorderable<Project>(
+                            items: favorites,
+                            keyOf: (p) => 'fav:${p.id}',
+                            onMove: (p, before, after) =>
+                                _controller.moveProject(
+                                  p.id,
+                                  before: before?.id,
+                                  after: after?.id,
+                                  favorites: true,
+                                ),
+                            itemBuilder: (p, i) => _projectRow(
+                              context,
+                              p,
+                              favorites,
+                              i,
+                              path,
+                              favoritesList: true,
+                            ),
+                          ),
+                        ),
+                      if (plain.isNotEmpty)
+                        _Section(
+                          id: 'projects',
+                          label: 'Projects',
+                          sliver: _Reorderable<Project>(
+                            items: plain,
+                            keyOf: (p) => 'project:${p.id}',
+                            onMove: (p, before, after) =>
+                                _controller.moveProject(
+                                  p.id,
+                                  before: before?.id,
+                                  after: after?.id,
+                                  favorites: false,
+                                ),
+                            itemBuilder: (p, i) => _projectRow(
+                              context,
+                              p,
+                              plain,
+                              i,
+                              path,
+                              favoritesList: false,
+                            ),
+                          ),
+                        ),
+                      if (archived.isNotEmpty)
+                        _Section(
+                          id: 'archived',
+                          label: 'Archived',
+                          sliver: SliverList.builder(
+                            itemCount: archived.length,
+                            itemBuilder: (context, i) => _projectRow(
+                              context,
+                              archived[i],
+                              archived,
+                              i,
+                              path,
+                              favoritesList: false,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
+                ),
               ],
             ),
           ),
@@ -212,9 +220,9 @@ class _SidebarState extends ConsumerState<Sidebar> {
       );
     }
 
-    return Column(
-      children: [
-        row(NavItem.dashboard),
+    return SliverMainAxisGroup(
+      slivers: [
+        SliverToBoxAdapter(child: row(NavItem.dashboard)),
         _Reorderable<NavItem>(
           items: movable,
           keyOf: (n) => 'nav:${n.name}',
@@ -267,6 +275,15 @@ class _SidebarState extends ConsumerState<Sidebar> {
         onPressed: () {
           context.go('/projects');
           ref.read(newProjectRequestProvider.notifier).fire();
+        },
+      ),
+      menuItem(
+        'Duplicate Project',
+        onPressed: () async {
+          final copy = await _controller.duplicateProject(p.id);
+          if (copy != null && context.mounted) {
+            context.go('/projects/${copy.id}');
+          }
         },
       ),
       const Divider(),
@@ -444,55 +461,57 @@ Future<void> confirmDeleteView(
   await ref.read(workspaceProvider.notifier).deleteView(v.id);
 }
 
+/// A collapsible sidebar section as slivers: its header, then [sliver] while expanded.
 class _Section extends ConsumerWidget {
-  const _Section({required this.id, required this.label, required this.child});
+  const _Section({required this.id, required this.label, required this.sliver});
   final String id;
   final String label;
-  final Widget child;
+  final Widget sliver;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final prefs = ref.watch(prefsProvider);
     final collapsed = prefs.sidebarSectionCollapsed(id);
     final t = Tokens.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(top: 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Pressable(
-            onTap: () => ref.read(prefsProvider.notifier).set(
-              PrefKeys.collapsedSidebarSections,
-              {...prefs.collapsedSidebarSections, id: !collapsed},
-            ),
-            semanticLabel: collapsed ? 'Expand $label' : 'Collapse $label',
-            builder: (context, hovered) => Padding(
-              padding: const EdgeInsets.fromLTRB(8, 2, 8, 4),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Flexible(
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      softWrap: false,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyles.sectionLabel(context)
-                          .copyWith(height: 1),
+    return SliverMainAxisGroup(
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.only(top: 14),
+          sliver: SliverToBoxAdapter(
+            child: Pressable(
+              onTap: () => ref.read(prefsProvider.notifier).set(
+                PrefKeys.collapsedSidebarSections,
+                {...prefs.collapsedSidebarSections, id: !collapsed},
+              ),
+              semanticLabel: collapsed ? 'Expand $label' : 'Collapse $label',
+              builder: (context, hovered) => Padding(
+                padding: const EdgeInsets.fromLTRB(8, 2, 8, 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyles.sectionLabel(context)
+                            .copyWith(height: 1),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 5),
-                  DisclosureTriangle(
-                    collapsed: collapsed,
-                    color: hovered ? t.secondary : t.tertiary,
-                  ),
-                ],
+                    const SizedBox(width: 5),
+                    DisclosureTriangle(
+                      collapsed: collapsed,
+                      color: hovered ? t.secondary : t.tertiary,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-          if (!collapsed) child,
-        ],
-      ),
+        ),
+        if (!collapsed) sliver,
+      ],
     );
   }
 }
@@ -606,7 +625,8 @@ class _RenameRow extends StatelessWidget {
   );
 }
 
-/// A drag-reorderable list whose drags start only after vertical movement, so plain clicks still navigate.
+/// A drag-reorderable sliver list (built lazily) whose drags start only after vertical movement, so plain clicks
+/// still navigate.
 class _Reorderable<T> extends StatelessWidget {
   const _Reorderable({
     required this.items,
@@ -622,10 +642,7 @@ class _Reorderable<T> extends StatelessWidget {
   final Widget Function(T item, int index) itemBuilder;
 
   @override
-  Widget build(BuildContext context) => ReorderableListView.builder(
-    shrinkWrap: true,
-    physics: const NeverScrollableScrollPhysics(),
-    buildDefaultDragHandles: false,
+  Widget build(BuildContext context) => SliverReorderableList(
     itemCount: items.length,
     proxyDecorator: (child, index, animation) => Material(
       color: Tokens.of(context).raised,

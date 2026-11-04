@@ -10,17 +10,22 @@ import '../../platform/lifecycle.dart';
 import '../../platform/native.dart';
 import '../../platform/whats_new_notes.dart';
 import '../../platform/windows.dart';
+import '../../state/boards.dart';
 import '../../state/prefs.dart';
 import '../../state/task_actions.dart';
 import '../../state/toast.dart';
 import '../../state/ui_state.dart';
 import '../../state/workspace.dart';
 import '../board/task_tiles.dart';
+import '../board/toolbar.dart';
+import '../csv_transfer.dart';
 import '../diagnostics_export.dart';
 import '../workspaces.dart';
 import '../task/new_task_dialog.dart';
 import '../theme.dart';
 import '../whats_new.dart';
+import 'command_palette.dart';
+import 'shortcut_sheet.dart';
 
 /// One menu command: label, accelerator, and action (SPEC §12). The same table builds the Windows in-window menu
 /// bar, the macOS native menu bar, and the keyboard shortcuts.
@@ -54,6 +59,27 @@ bool get _mac => Platform.isMacOS;
 /// Ctrl on Windows, ⌘ on macOS.
 SingleActivator accel(LogicalKeyboardKey key, {bool shift = false}) =>
     SingleActivator(key, control: !_mac, meta: _mac, shift: shift);
+
+/// How a shortcut reads in hints and the shortcut sheet: "Ctrl+Shift+N" on Windows, "⇧⌘N" on macOS.
+String shortcutLabel(SingleActivator a) {
+  final key = switch (a.trigger) {
+    LogicalKeyboardKey.delete => 'Delete',
+    LogicalKeyboardKey.backspace => _mac ? '⌫' : 'Backspace',
+    LogicalKeyboardKey.enter => _mac ? '↩' : 'Enter',
+    LogicalKeyboardKey.comma => ',',
+    LogicalKeyboardKey.slash => '/',
+    final k => k.keyLabel,
+  };
+  if (_mac) {
+    return '${a.control ? '⌃' : ''}${a.alt ? '⌥' : ''}${a.shift ? '⇧' : ''}${a.meta ? '⌘' : ''}$key';
+  }
+  return [
+    if (a.control) 'Ctrl',
+    if (a.alt) 'Alt',
+    if (a.shift) 'Shift',
+    key,
+  ].join('+');
+}
 
 bool _typingInTextField() {
   final context = FocusManager.instance.primaryFocus?.context;
@@ -103,6 +129,24 @@ List<CommandGroup> buildCommands(BuildContext context, WidgetRef ref) {
     ref.read(taskActionsProvider).delete(ProjectTask(project, task));
   }
 
+  // Layout commands (D17) act on the open board; Today and non-board pages have none.
+  final path = GoRouterState.of(context).uri.path;
+  final onBoard =
+      path == '/my-tasks' ||
+      path.startsWith('/projects/') ||
+      path.startsWith('/views/');
+  final layoutKind = onBoard ? boardForLocation(path) : null;
+  final layoutBoard = layoutKind == null
+      ? null
+      : ref.read(boardProvider(layoutKind));
+  void setLayout(BoardLayout l) {
+    if (layoutKind == null || layoutBoard == null) return;
+    BoardActions(
+      ref,
+      layoutKind,
+    ).setDisplay(layoutBoard.display.copyWith(layout: l));
+  }
+
   final nav = prefs.visibleNav;
   final digits = [
     LogicalKeyboardKey.digit1,
@@ -134,6 +178,23 @@ List<CommandGroup> buildCommands(BuildContext context, WidgetRef ref) {
         openSettingsWindow,
         shortcut: accel(LogicalKeyboardKey.comma),
       ),
+      AppCommand(
+        'Import Tasks from CSV…',
+        () => importTasksCsv(
+          ref,
+          projectId: switch (GoRouterState.of(context).uri.pathSegments) {
+            ['projects', final id] => id,
+            _ => null,
+          },
+        ),
+        enabled: !readOnly,
+      ),
+      AppCommand(
+        'Export Tasks as CSV…',
+        () => exportTasksCsv(ref),
+        enabled: ws != null,
+      ),
+      null,
       AppCommand('Show Data Folder', () {
         final folder = ref.read(workspaceDataProvider)?.folder;
         if (folder != null) openInFileManager(folder);
@@ -153,6 +214,11 @@ List<CommandGroup> buildCommands(BuildContext context, WidgetRef ref) {
       ),
       null,
       AppCommand('Find', find, shortcut: accel(LogicalKeyboardKey.keyF)),
+      AppCommand(
+        'Search All Tasks…',
+        () => showTaskSearch(context),
+        shortcut: accel(LogicalKeyboardKey.keyF, shift: true),
+      ),
       null,
       AppCommand(
         'Delete Task',
@@ -162,6 +228,19 @@ List<CommandGroup> buildCommands(BuildContext context, WidgetRef ref) {
       ),
     ]),
     CommandGroup('View', [
+      for (final l in BoardLayout.values)
+        AppCommand(
+          '${layoutName(l)} Layout',
+          () => setLayout(l),
+          enabled: layoutBoard != null,
+          checked: layoutBoard?.display.layout == l,
+        ),
+      null,
+      AppCommand(
+        'Command Palette…',
+        () => showCommandPalette(context, ref, buildCommands(context, ref)),
+        shortcut: accel(LogicalKeyboardKey.keyK),
+      ),
       AppCommand(
         'Refresh',
         () => ref.read(workspaceProvider.notifier).refresh(full: true),
@@ -205,6 +284,11 @@ List<CommandGroup> buildCommands(BuildContext context, WidgetRef ref) {
     CommandGroup('Window', [AppCommand('Settings', openSettingsWindow)]),
     CommandGroup('Help', [
       AppCommand("What's New", () => showWhatsNew(context, ref)),
+      AppCommand(
+        'Keyboard Shortcuts',
+        () => showShortcutSheet(context, buildCommands(context, ref)),
+        shortcut: accel(LogicalKeyboardKey.slash),
+      ),
       AppCommand('Export Diagnostics…', () => exportDiagnostics(ref)),
       AppCommand(
         'About Tasklet',
@@ -243,9 +327,20 @@ class AppMenu extends ConsumerWidget {
         }
       },
     };
-    final body = CallbackShortcuts(
-      bindings: bindings,
-      child: Focus(autofocus: true, child: child),
+    // ? opens the shortcut sheet. Its action is disabled while typing, so the key reaches the text field.
+    final body = Shortcuts(
+      shortcuts: const {CharacterActivator('?'): _ShortcutSheetIntent()},
+      child: Actions(
+        actions: {
+          _ShortcutSheetIntent: _NotWhileTyping(
+            () => showShortcutSheet(context, buildCommands(context, ref)),
+          ),
+        },
+        child: CallbackShortcuts(
+          bindings: bindings,
+          child: Focus(autofocus: true, child: child),
+        ),
+      ),
     );
 
     if (_mac) {
@@ -353,5 +448,25 @@ class AppMenu extends ConsumerWidget {
       }
     }
     return sections.where((s) => s.isNotEmpty).toList();
+  }
+}
+
+class _ShortcutSheetIntent extends Intent {
+  const _ShortcutSheetIntent();
+}
+
+/// Runs [onInvoke] unless a text field has focus; when it has, the action is disabled and the key goes on to be
+/// typed.
+class _NotWhileTyping extends Action<_ShortcutSheetIntent> {
+  _NotWhileTyping(this.onInvoke);
+  final VoidCallback onInvoke;
+
+  @override
+  bool isEnabled(_ShortcutSheetIntent intent) => !_typingInTextField();
+
+  @override
+  Object? invoke(_ShortcutSheetIntent intent) {
+    onInvoke();
+    return null;
   }
 }
