@@ -483,6 +483,77 @@ class _ToggleItemState extends State<_ToggleItem> {
   );
 }
 
+/// How a task repeats (D17): common rules, "from completion" and "Don't Repeat".
+class RepeatPicker extends StatelessWidget {
+  const RepeatPicker({
+    super.key,
+    required this.repeat,
+    required this.onPick,
+    this.enabled = true,
+  });
+  final Repeat? repeat;
+  final ValueChanged<Repeat?> onPick;
+  final bool enabled;
+
+  static final _rules = [
+    Repeat(unit: RepeatUnit.day),
+    Repeat(unit: RepeatUnit.weekday),
+    Repeat(unit: RepeatUnit.week),
+    Repeat(unit: RepeatUnit.week, every: 2),
+    Repeat(unit: RepeatUnit.month),
+    Repeat(every: 3, unit: RepeatUnit.month),
+    Repeat(unit: RepeatUnit.year),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Tokens.of(context);
+    final current = repeat;
+    final fromCompletion = current?.from == RepeatFrom.completion;
+    return _MenuChip(
+      enabled: enabled,
+      menuChildren: () => [
+        for (final r in _rules)
+          checkItem(
+            r.label,
+            checked: r
+                .withFrom(current?.from ?? RepeatFrom.due)
+                .sameAs(current),
+            onPressed: () =>
+                onPick(r.withFrom(current?.from ?? RepeatFrom.due)),
+          ),
+        const Divider(),
+        checkItem(
+          'Count From Completion',
+          checked: fromCompletion,
+          onPressed: current == null
+              ? null
+              : () => onPick(
+                  current.withFrom(
+                    fromCompletion ? RepeatFrom.due : RepeatFrom.completion,
+                  ),
+                ),
+        ),
+        const Divider(),
+        menuItem(
+          "Don't Repeat",
+          onPressed: current == null ? null : () => onPick(null),
+        ),
+      ],
+      chip: (onTap) => PropChip(
+        icon: Icon(
+          Icons.repeat,
+          size: 12,
+          color: current == null ? t.tertiary : t.secondary,
+        ),
+        label: current?.label ?? 'Repeat',
+        maxLabelWidth: 200,
+        onTap: onTap,
+      ),
+    );
+  }
+}
+
 /// Project chip: cube + name, "No Project" for the bucket.
 class ProjectPicker extends StatelessWidget {
   const ProjectPicker({

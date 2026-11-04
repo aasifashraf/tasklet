@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/date_format.dart';
+import '../../core/dates.dart';
 import '../../core/models.dart';
 import '../../state/clock.dart';
 import '../../state/task_actions.dart';
@@ -66,6 +68,45 @@ List<Widget> taskMenuChildren(
           onPressed: task.dueDate == null
               ? null
               : () => actions.setDue(e, null),
+        ),
+      ],
+    ),
+    // Puts the task away until a day: off boards, Today, the dashboard and reminders until then.
+    submenuItem(
+      'Snooze',
+      menuChildren: [
+        for (final (label, date, phrase) in [
+          ('Tomorrow', tomorrowOf(today), 'tomorrow'),
+          ('Next Week', nextMondayAfter(today), 'next week'),
+        ])
+          menuItem(
+            label,
+            hint: weekdayHint(date),
+            checked: task.snoozedUntil == date,
+            onPressed: readOnly
+                ? null
+                : () => actions.snooze(e, date, phrase: phrase),
+          ),
+        menuItem(
+          'Pick a Date…',
+          leading: const Icon(Icons.calendar_month_outlined, size: 14),
+          onPressed: readOnly
+              ? null
+              : () async {
+                  final picked = await pickCalendarDate(
+                    context,
+                    initial: task.snoozedUntil ?? tomorrowOf(today),
+                    earliest: tomorrowOf(today),
+                  );
+                  if (picked != null) await actions.snooze(e, picked);
+                },
+        ),
+        const Divider(),
+        menuItem(
+          'Unsnooze',
+          onPressed: readOnly || task.snoozedUntil == null
+              ? null
+              : () => actions.snooze(e, null),
         ),
       ],
     ),

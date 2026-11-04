@@ -22,7 +22,7 @@ import 'app_flow_test.dart' show settle;
 void main() {
   late String folder;
 
-  Future<void> openPanel(WidgetTester tester) async {
+  Future<void> openPanel(WidgetTester tester, {String description = ''}) async {
     tester.view.physicalSize = const Size(1400, 900);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -39,7 +39,14 @@ void main() {
           'p1',
           name: 'Website',
           key: 'WEB',
-          tasks: [task('t1', number: 1, title: 'Write the homepage copy')],
+          tasks: [
+            task(
+              't1',
+              number: 1,
+              title: 'Write the homepage copy',
+              description: description,
+            ),
+          ],
         ),
       );
       final prefs = await PrefsStore.open(
@@ -125,6 +132,23 @@ void main() {
     await settle(tester, rounds: 3);
     expect(find.text('Write the homepage copy'), findsWidgets);
     expect(current(tester).title, 'Write the homepage copy');
+    await close(tester);
+  });
+
+  testWidgets('a Markdown description: checkboxes toggle, a click edits', (
+    tester,
+  ) async {
+    const before = 'Steps:\n- [ ] draft\n- [x] review';
+    const after = 'Steps:\n- [x] draft\n- [x] review';
+    await openPanel(tester, description: before);
+    expect(find.text('draft'), findsOneWidget); // rendered, not the raw text
+    await tester.tap(find.byType(Checkbox).first);
+    await settle(tester, rounds: 12);
+    expect(current(tester).description, after);
+
+    await tester.tap(find.text('Steps:'));
+    await settle(tester, rounds: 3);
+    expect(find.widgetWithText(TextField, after), findsOneWidget);
     await close(tester);
   });
 }

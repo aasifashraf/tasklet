@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/date_format.dart';
 import '../../core/local_date.dart';
+import '../../core/filters.dart';
 import '../../core/models.dart';
 import '../../state/clock.dart';
 import '../../state/task_actions.dart';
@@ -29,6 +31,19 @@ class FocusedTask extends Notifier<TaskRef?> {
 final focusedTaskProvider = NotifierProvider<FocusedTask, TaskRef?>(
   FocusedTask.new,
 );
+
+/// A click on a card or row: with Ctrl/⌘ or Shift it adds or removes the task from the bulk selection (D17);
+/// a plain click clears any selection and opens the task.
+void openOrSelect(WidgetRef ref, TaskRef task) {
+  final keys = HardwareKeyboard.instance;
+  final selection = ref.read(taskSelectionProvider.notifier);
+  if (keys.isControlPressed || keys.isMetaPressed || keys.isShiftPressed) {
+    selection.toggle(task);
+    return;
+  }
+  selection.clear();
+  ref.read(openTaskProvider.notifier).open(task);
+}
 
 /// Color for a due date: red if overdue (and not done), orange if due today (SPEC §4.1, §9).
 Color? dueColor(Task task, LocalDate today, Tokens t) {
@@ -109,6 +124,11 @@ class TaskCard extends ConsumerWidget {
     final isOpen = ref.watch(
       openTaskProvider.select((open) => open?.taskId == entry.task.id),
     );
+    final selected = ref.watch(
+      taskSelectionProvider.select(
+        (s) => s.contains(TaskRef(entry.project.id, entry.task.id)),
+      ),
+    );
     final actions = ref.read(taskActionsProvider);
     final task = entry.task;
     final readOnly = ws?.readOnly ?? true;
@@ -129,6 +149,24 @@ class TaskCard extends ConsumerWidget {
         start: display.shows(DisplayProperty.startDate),
         due: display.shows(DisplayProperty.dueDate),
       ),
+      if (task.repeat case final repeat?)
+        PropChip(
+          icon: Icon(Icons.repeat, size: 12, color: t.secondary),
+          tooltip: repeat.label,
+        ),
+      if (task.checklist.isNotEmpty)
+        PropChip(
+          icon: Icon(Icons.checklist_rounded, size: 12, color: t.secondary),
+          label:
+              '${task.checklist.where((i) => i.done).length}/${task.checklist.length}',
+          tooltip: 'Checklist',
+        ),
+      // Shown only while searching (boards leave snoozed tasks out otherwise).
+      if (isSnoozed(task, today))
+        PropChip(
+          icon: Icon(Icons.snooze, size: 12, color: t.secondary),
+          tooltip: 'Snoozed until ${fullDate(task.snoozedUntil!)}',
+        ),
       if (display.shows(DisplayProperty.labels) && labels.isNotEmpty)
         labelsChipContent(context, labels),
       if (crossProject &&
@@ -144,8 +182,10 @@ class TaskCard extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
       decoration: BoxDecoration(
-        color: isOpen ? Color.alphaBlend(t.openHighlight, t.raised) : t.raised,
-        border: Border.all(color: t.border),
+        color: isOpen || selected
+            ? Color.alphaBlend(t.openHighlight, t.raised)
+            : t.raised,
+        border: Border.all(color: selected ? t.accent : t.border),
         borderRadius: BorderRadius.circular(Radii.medium),
         boxShadow: t.cardShadow(lifted: lifted),
       ),
@@ -232,6 +272,11 @@ class TaskRow extends ConsumerWidget {
     final isOpen = ref.watch(
       openTaskProvider.select((open) => open?.taskId == entry.task.id),
     );
+    final selected = ref.watch(
+      taskSelectionProvider.select(
+        (s) => s.contains(TaskRef(entry.project.id, entry.task.id)),
+      ),
+    );
     final actions = ref.read(taskActionsProvider);
     final task = entry.task;
     final readOnly = ws?.readOnly ?? true;
@@ -246,15 +291,17 @@ class TaskRow extends ConsumerWidget {
           cursor: SystemMouseCursors.click,
           builder: (context, hovered) => GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: () => ref.read(openTaskProvider.notifier).open(taskRef),
+            onTap: () => openOrSelect(ref, taskRef),
             child: Container(
               height: 38,
               padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
-                color: isOpen
+                color: isOpen || selected
                     ? t.openHighlight
                     : (hovered ? t.hover : Colors.transparent),
-                border: focused
+                border: selected
+                    ? Border.all(color: t.accent)
+                    : focused
                     ? Border.all(color: t.accent.withValues(alpha: 0.6))
                     : null,
                 borderRadius: BorderRadius.circular(Radii.small),

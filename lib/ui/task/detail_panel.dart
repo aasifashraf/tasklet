@@ -5,12 +5,17 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/date_format.dart';
+import '../../core/filters.dart';
+import '../../core/markdown.dart';
 import '../../core/models.dart';
+import '../../state/clock.dart';
 import '../../state/task_actions.dart';
 import '../../state/ui_state.dart';
 import '../../state/workspace.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'checklist_editor.dart';
+import 'markdown_view.dart';
 import 'pickers.dart';
 
 /// The task detail sheet sliding in from the right over a dimmed backdrop (SPEC §7.2).
@@ -113,6 +118,9 @@ class _PanelBodyState extends ConsumerState<_PanelBody> {
   final _titleFocus = FocusNode();
   final _descriptionFocus = FocusNode();
 
+  /// The description shows rendered Markdown (D17) unless it is being edited or has nothing to render.
+  bool _editingDescription = false;
+
   /// The panel takes focus when it opens so Escape and Delete reach it (focus returns to the card on close).
   final _panelFocus = FocusScopeNode(debugLabel: 'Task panel');
   Timer? _debounce;
@@ -133,7 +141,11 @@ class _PanelBodyState extends ConsumerState<_PanelBody> {
       if (!_titleFocus.hasFocus) _flush(revertEmptyTitle: true);
     });
     _descriptionFocus.addListener(() {
-      if (!_descriptionFocus.hasFocus) _flush();
+      if (!_descriptionFocus.hasFocus) {
+        _flush();
+        // Back to the rendered view.
+        if (mounted) setState(() => _editingDescription = false);
+      }
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _panelFocus.requestFocus();
@@ -293,6 +305,19 @@ class _PanelBodyState extends ConsumerState<_PanelBody> {
                   enabled: enabled,
                   onPick: (p) => _actions.moveToProject(entry, p),
                 ),
+                RepeatPicker(
+                  repeat: task.repeat,
+                  enabled: enabled,
+                  onPick: (r) => _actions.setRepeat(entry, r),
+                ),
+                if (isSnoozed(task, ref.watch(todayProvider)))
+                  PropChip(
+                    icon: Icon(Icons.snooze, size: 12, color: t.secondary),
+                    label: 'Snoozed until ${fullDate(task.snoozedUntil!)}',
+                    maxLabelWidth: 240,
+                    tooltip: 'Unsnooze',
+                    onTap: enabled ? () => _actions.snooze(entry, null) : null,
+                  ),
               ],
             ),
           ),
@@ -321,17 +346,46 @@ class _PanelBodyState extends ConsumerState<_PanelBody> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  TextField(
-                    controller: _description,
-                    focusNode: _descriptionFocus,
-                    enabled: enabled,
-                    maxLines: null,
-                    minLines: 4,
-                    keyboardType: TextInputType.multiline,
-                    style: TextStyles.bodyLarge(context).copyWith(height: 1.5),
-                    decoration: fieldDecoration.copyWith(
-                      hintText: 'Add a description…',
+                  if (!_editingDescription && hasMarkdown(_description.text))
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 88),
+                      child: MarkdownView(
+                        text: _description.text,
+                        enabled: enabled,
+                        onToggle: (line) => setState(
+                          () => _description.text = toggleCheckbox(
+                            _description.text,
+                            line,
+                          ),
+                        ),
+                        onEdit: () {
+                          setState(() => _editingDescription = true);
+                          WidgetsBinding.instance.addPostFrameCallback(
+                            (_) => _descriptionFocus.requestFocus(),
+                          );
+                        },
+                      ),
+                    )
+                  else
+                    TextField(
+                      controller: _description,
+                      focusNode: _descriptionFocus,
+                      enabled: enabled,
+                      maxLines: null,
+                      minLines: 4,
+                      keyboardType: TextInputType.multiline,
+                      style: TextStyles.bodyLarge(context)
+                          .copyWith(height: 1.5),
+                      decoration: fieldDecoration.copyWith(
+                        hintText: 'Add a description…',
+                      ),
                     ),
+                  const SizedBox(height: 16),
+                  ChecklistEditor(
+                    items: task.checklist,
+                    enabled: enabled,
+                    newId: newId,
+                    onChanged: (items) => _actions.setChecklist(entry, items),
                   ),
                 ],
               ),

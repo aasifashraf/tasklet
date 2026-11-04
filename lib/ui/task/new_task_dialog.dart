@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/local_date.dart';
+import '../../core/quick_add.dart';
+import '../../core/date_format.dart';
 import '../../core/models.dart';
 import '../../state/boards.dart';
 import '../../state/clock.dart';
@@ -151,6 +153,7 @@ class _NewTaskDialogState extends ConsumerState<_NewTaskDialog> {
   late LocalDate? _due = widget.defaults.dueDate;
   late List<String> _labels = [...widget.defaults.labelIds];
   bool _createMore = false;
+  Repeat? _repeat;
   bool _closing = false;
   bool _submitting = false;
 
@@ -194,10 +197,47 @@ class _NewTaskDialogState extends ConsumerState<_NewTaskDialog> {
   bool get _dirty =>
       _title.text.trim().isNotEmpty || _description.text.trim().isNotEmpty;
 
+  /// What the title says beyond the title itself (quick add, D17): any project's labels can be named, since
+  /// `+project` may change the project; labels the final project can't use are dropped.
+  QuickAdd _quickAdd() {
+    final ws = ref.read(workspaceDataProvider);
+    if (ws == null) return QuickAdd(title: _title.text.trim());
+    final options = projectOptions(
+      ws,
+      alsoInclude: widget.defaults.archivedProjectId,
+    );
+    return parseQuickAdd(
+      _title.text,
+      today: ref.read(todayProvider),
+      labels: [for (final p in options) ...p.labels, ...ws.labels],
+      projects: [
+        for (final p in options)
+          if (!p.isNoProject) p,
+      ],
+    );
+  }
+
+  /// Applies what [_quickAdd] found to the chips (the typed fields win over the chips' values).
+  void _applyQuickAdd(QuickAdd q) {
+    if (q.project case final project?) _projectId = project.id;
+    if (q.priority case final priority?) _priority = priority;
+    if (q.due case final due?) {
+      _due = due;
+      if (_start != null && _start!.isAfter(due)) _start = null;
+    }
+    _labels = _validLabels([
+      ..._labels,
+      for (final l in q.labels)
+        if (!_labels.contains(l.id)) l.id,
+    ]);
+  }
+
   Future<void> _submit() async {
-    final title = _title.text.trim();
+    final quick = _quickAdd();
+    final title = quick.title;
     // Enter and Ctrl+Enter both submit; a slow (synced) save must not create the task twice.
     if (title.isEmpty || _submitting) return;
+    _applyQuickAdd(quick);
     // The chosen project may have been deleted (here or by sync) while the dialog was open.
     final projectGone =
         ref.read(workspaceDataProvider)?.projectById(_projectId) == null;
@@ -214,6 +254,7 @@ class _NewTaskDialogState extends ConsumerState<_NewTaskDialog> {
             startDate: _start,
             dueDate: _due,
             labelIds: projectGone ? const [] : _labels,
+            repeat: _repeat,
           );
     } catch (e) {
       ref.read(toastProvider.notifier).show("Couldn't create the task: $e");
@@ -328,6 +369,28 @@ class _NewTaskDialogState extends ConsumerState<_NewTaskDialog> {
                     ),
                     onSubmitted: (_) => _submit(),
                   ),
+                  // Quick add: what the title will set, before Enter.
+                  Builder(
+                    builder: (context) {
+                      final q = _quickAdd();
+                      if (q.isEmpty) return const SizedBox.shrink();
+                      final today = ref.read(todayProvider);
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Text(
+                          [
+                            if (q.due case final due?)
+                              'Due ${relativeDateInText(due, today)}',
+                            if (q.priority case final p?) p.label,
+                            for (final l in q.labels) '#${l.name}',
+                            if (q.project case final p?) 'in ${p.name}',
+                          ].join(' · '),
+                          style: TextStyles.meta(context)
+                              .copyWith(color: t.accent),
+                        ),
+                      );
+                    },
+                  ),
                   ConstrainedBox(
                     constraints: const BoxConstraints(
                       minHeight: 70,
@@ -383,6 +446,10 @@ class _NewTaskDialogState extends ConsumerState<_NewTaskDialog> {
                                 ]
                               : [..._labels, l.id];
                         }),
+                      ),
+                      RepeatPicker(
+                        repeat: _repeat,
+                        onPick: (r) => setState(() => _repeat = r),
                       ),
                       ProjectPicker(
                         project: project,
