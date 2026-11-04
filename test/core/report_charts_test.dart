@@ -108,4 +108,34 @@ void main() {
       'Tasklet Report Prompt 2026-11-01.txt',
     );
   });
+
+  test('insights and the open trend', () {
+    final json = <String, Object?>{
+      'totals': {
+        'completedInPeriod': 12,
+        'createdInPeriod': 9,
+        'openNow': 30,
+        'overdueNow': 2,
+        'averageDaysToCompleteInPeriod': 3.5,
+      },
+      'timeline': {
+        'weeks': [
+          {'label': 'W1', 'completed': 5, 'openAtEnd': 20},
+          {'label': 'W2', 'completed': 4, 'openAtEnd': 24},
+          {'label': 'W3', 'completed': 3, 'openAtEnd': 30},
+        ],
+      },
+    };
+    expect(reportInsights(json), [
+      ('Completed', '12'),
+      ('Created', '9'),
+      ('Per week', '4.0'),
+      ('Days to complete', '3.5'),
+      ('Open now', '30'),
+      ('Overdue now', '2'),
+    ]);
+    final open = chartsForReport(json)
+        .firstWhere((c) => c.title == 'Open at the end of each week');
+    expect(open.points.map((p) => p.value), [20, 24, 30]);
+  });
 }

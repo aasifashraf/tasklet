@@ -113,4 +113,56 @@ void main() {
       expect(back2.nextNumber, 9);
     });
   });
+
+  test('Duplicate Project starts the tasks over and keeps their labels', () {
+    var n = 0;
+    final source = project(
+      'p1',
+      name: 'Release',
+      key: 'REL',
+      nextNumber: 40,
+      labels: [Label(id: 'l1', name: 'qa', color: TaskletColor.red)],
+      tasks: [
+        task(
+          'a',
+          number: 12,
+          title: 'Tag it',
+          status: TaskStatus.done,
+          due: d('2026-11-01'),
+          labels: ['l1', 'ws-label'],
+          completed: t0,
+        ).copyWith(
+          checklist: [ChecklistItem(id: 'c', text: 'Push', done: true)],
+        ),
+        task('b', number: 3, title: 'Plan', status: TaskStatus.backlog),
+      ],
+    );
+    final copy = duplicateProject(
+      source,
+      id: 'p2',
+      existing: [source],
+      newId: () => 'new${n++}',
+      now: t0,
+    );
+    expect(copy.name, 'Release copy');
+    expect(copy.key, isNot('REL'));
+    expect(copy.tasks.map((t) => (t.number, t.title)), [
+      (1, 'Plan'),
+      (2, 'Tag it'),
+    ]);
+    expect(copy.nextNumber, 3);
+    final tag = copy.tasks.last;
+    expect(tag.status, TaskStatus.todo);
+    expect(tag.completedAt, isNull);
+    expect(tag.dueDate, isNull);
+    expect(tag.checklist.single.done, isFalse);
+    expect(copy.tasks.first.status, TaskStatus.backlog);
+    final label = copy.labels.single;
+    expect(label.id, isNot('l1'));
+    expect(tag.labelIds, [label.id, 'ws-label']);
+    expect(
+      copy.tasks.map((t) => t.id).toSet().intersection({'a', 'b'}),
+      isEmpty,
+    );
+  });
 }

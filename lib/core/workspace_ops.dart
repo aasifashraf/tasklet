@@ -116,3 +116,59 @@ Project projectForTransfer(
     updatedAt: now,
   );
 }
+
+/// Duplicate Project… (D17 templates): a new project like [source] ("Name copy", its own key, right after it in
+/// the sidebar) whose tasks start over: Todo (Backlog stays Backlog), no dates, completion or snooze, checklists
+/// unticked, numbers from 1. Labels are copied with new ids so the tasks keep theirs; repeat rules are kept.
+Project duplicateProject(
+  Project source, {
+  required String id,
+  required List<Project> existing,
+  required String Function() newId,
+  required DateTime now,
+}) {
+  final labelIds = {for (final l in source.labels) l.id: newId()};
+  final tasks = [...source.tasks]..sort((a, b) => a.number.compareTo(b.number));
+  final name = '${source.name} copy';
+  return Project(
+    id: id,
+    name: name,
+    key: keyForNewProject(name, existing),
+    color: source.color,
+    unknownColor: source.unknownColor,
+    icon: source.icon,
+    sortOrder: source.sortOrder + sortOrderGap / 2,
+    labels: [
+      for (final l in source.labels)
+        Label(
+          id: labelIds[l.id]!,
+          name: l.name,
+          color: l.color,
+          unknownColor: l.unknownColor,
+          icon: l.icon,
+        ),
+    ],
+    nextNumber: tasks.length + 1,
+    createdAt: now,
+    updatedAt: now,
+    tasks: [
+      for (final (i, t) in tasks.indexed)
+        Task(
+          id: newId(),
+          number: i + 1,
+          title: t.title,
+          description: t.description,
+          status: t.status == TaskStatus.backlog
+              ? TaskStatus.backlog
+              : TaskStatus.todo,
+          priority: t.priority,
+          labelIds: [for (final l in t.labelIds) labelIds[l] ?? l],
+          checklist: [for (final c in t.checklist) c.copyWith(done: false)],
+          repeat: t.repeat,
+          sortOrder: (i + 1) * sortOrderGap,
+          createdAt: now,
+          updatedAt: now,
+        ),
+    ],
+  );
+}

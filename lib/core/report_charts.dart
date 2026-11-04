@@ -97,6 +97,22 @@ List<ReportChart> chartsForReport(Map<String, Object?> json) {
     );
   }
 
+  // The backlog trend: open tasks at the end of each week (or month).
+  final open = [
+    for (final b in buckets)
+      ChartPoint('${_map(b)['label'] ?? ''}', _num(_map(b)['openAtEnd'])),
+  ];
+  if (open.length > 1 && open.any((p) => p.value > 0)) {
+    final unit = _list(timeline['weeks']).isNotEmpty ? 'week' : 'month';
+    charts.add(
+      ReportChart(
+        title: 'Open at the end of each $unit',
+        kind: ChartKind.bar,
+        points: open,
+      ),
+    );
+  }
+
   final projects = [
     for (final p in _list(json['projects']))
       ChartPoint(
@@ -115,4 +131,23 @@ List<ReportChart> chartsForReport(Map<String, Object?> json) {
   }
 
   return charts;
+}
+
+/// The headline numbers above the charts (Reports, D17 insights): (label, value) pairs, empty values left out.
+List<(String, String)> reportInsights(Map<String, Object?> json) {
+  final totals = _map(json['totals']);
+  final timeline = _map(json['timeline']);
+  final weeks = _list(timeline['weeks']);
+  final completed = _num(totals['completedInPeriod']);
+  final average = totals['averageDaysToCompleteInPeriod'];
+  return [
+    ('Completed', '$completed'),
+    // The report leaves zero counts out, so a missing count is 0.
+    ('Created', '${_num(totals['createdInPeriod'])}'),
+    if (weeks.length > 1)
+      ('Per week', (completed / weeks.length).toStringAsFixed(1)),
+    if (average is num) ('Days to complete', '$average'),
+    ('Open now', '${_num(totals['openNow'])}'),
+    ('Overdue now', '${_num(totals['overdueNow'])}'),
+  ];
 }
